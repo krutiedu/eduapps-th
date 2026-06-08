@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "eduapps-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "f8b8a469-49e4-4f99-beb8-3b53d765345e"
