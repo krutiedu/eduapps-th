@@ -1,0 +1,326 @@
+// ═══════════════════════════════════════════════════════
+// EduApps TH — Backend API
+// Cloudflare Pages Functions  →  /functions/api/[[route]].js
+// ═══════════════════════════════════════════════════════
+
+const CORS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+const ok  = (data, h={})  => new Response(JSON.stringify(data),  { status: 200, headers: { ...CORS, ...h } });
+const err = (msg,  s=400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: CORS });
+// public GET ที่ cache ได้ — browser/edge เก็บ 60 วิ ลดภาระ D1
+const okCache = (data) => ok(data, { 'Cache-Control': 'public, max-age=60' });
+
+// ── ENTRY POINT ──────────────────────────────────────────
+export async function onRequest(ctx) {
+  const { request, env, params } = ctx;
+  if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+
+  const segments = params.route || [];
+  const path     = '/' + segments.join('/');
+  const method   = request.method;
+
+  // ── AUTH CHECK ──
+  const needsAuth = (
+    path.startsWith('/articles/admin') ||                                  // admin บทความ (รวม draft) ต้อง auth เสมอ
+    (path.startsWith('/articles') && method !== 'GET') ||
+    (path.startsWith('/apps')     && method !== 'GET') ||
+    (path.startsWith('/settings') && method !== 'GET') ||
+    path.startsWith('/comments/admin') ||                                  // admin คอมเมนต์ต้อง auth เสมอ
+    (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE')) ||
+    path === '/upload'
+  );
+
+  if (needsAuth) {
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!token || !(await validToken(env, token))) return err('กรุณาเข้าสู่ระบบ', 401);
+  }
+
+  try {
+    // ── ROUTER ──
+    if (path === '/auth/login'  && method === 'POST')   return login(request, env);
+    if (path === '/auth/logout' && method === 'POST')   return logout(request, env);
+    if (path === '/auth/check'  && method === 'GET')    return authCheck(request, env);
+
+    if (path.startsWith('/articles'))  return articles(request,  env, segments, method);
+    if (path.startsWith('/apps'))      return apps(request,      env, segments, method);
+    if (path.startsWith('/settings'))  return settings(request,  env, segments, method);
+    if (path.startsWith('/comments'))  return comments(request,  env, segments, method);
+    if (path === '/upload' && method === 'POST') return upload(request, env);
+
+    return err('ไม่พบ endpoint', 404);
+  } catch (e) {
+    return err(e.message, 500);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════
+async function login(req, env) {
+  const { password } = await req.json();
+  const { results }  = await env.DB.prepare('SELECT value FROM settings WHERE key=?').bind('admin_password').all();
+  const stored       = results[0]?.value;
+  const hashed       = await sha256(password);
+  if (hashed !== stored) return err('รหัสผ่านไม่ถูกต้อง', 401);
+
+  const token   = crypto.randomUUID();
+  const expires = new Date(Date.now() + 7 * 86400000).toISOString();
+  await env.DB.prepare("INSERT INTO sessions VALUES (?,datetime('now'),?)").bind(token, expires).run();
+  return ok({ token, expires });
+}
+
+async function logout(req, env) {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (token) await env.DB.prepare('DELETE FROM sessions WHERE token=?').bind(token).run();
+  return ok({ ok: true });
+}
+
+async function authCheck(req, env) {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  const valid = token ? await validToken(env, token) : false;
+  return ok({ authenticated: valid });
+}
+
+async function validToken(env, token) {
+  const { results } = await env.DB
+    .prepare("SELECT token FROM sessions WHERE token=? AND expires_at > datetime('now')")
+    .bind(token).all();
+  return results.length > 0;
+}
+
+async function sha256(text) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// ARTICLES
+// ════════════════════════════════════════════════════════
+async function articles(req, env, segs, method) {
+  const id   = segs[1];
+  const page = parseInt(new URL(req.url).searchParams.get('page') || '1');
+  const cat  = new URL(req.url).searchParams.get('category') || '';
+  const q    = new URL(req.url).searchParams.get('q') || '';
+  const per  = 9;
+
+  // GET /articles — public list
+  if (!id && method === 'GET') {
+    let where    = 'WHERE published=1';
+    const wArgs  = [];
+    if (cat) { where += ' AND category=?'; wArgs.push(cat); }
+    if (q)   { where += ' AND (title LIKE ? OR excerpt LIKE ?)'; wArgs.push('%'+q+'%','%'+q+'%'); }
+
+    const listSql  = `SELECT id,title,slug,category,excerpt,image_url,views,created_at FROM articles ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const countSql = `SELECT COUNT(*) as n FROM articles ${where}`;
+
+    const [data, count] = await Promise.all([
+      env.DB.prepare(listSql).bind(...wArgs, per, (page-1)*per).all(),
+      env.DB.prepare(countSql).bind(...wArgs).all(),
+    ]);
+    return okCache({ articles: data.results, total: count.results[0]?.n || 0, page, per });
+  }
+
+  // GET /articles/admin/list — admin list (includes drafts) — must come BEFORE single GET
+  if (segs[1] === 'admin' && segs[2] === 'list' && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT id,title,slug,category,published,views,created_at FROM articles ORDER BY created_at DESC')
+      .all();
+    return ok({ articles: results });
+  }
+
+  // GET /articles/admin/:id — admin single (full content, includes drafts)
+  if (segs[1] === 'admin' && segs[2] && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM articles WHERE id=?').bind(segs[2]).all();
+    if (!results[0]) return err('ไม่พบบทความ', 404);
+    return ok(results[0]);
+  }
+
+  // GET /articles/:slug — public single
+  if (id && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM articles WHERE slug=? AND published=1')
+      .bind(id).all();
+    if (!results[0]) return err('ไม่พบบทความ', 404);
+    await env.DB.prepare('UPDATE articles SET views=views+1 WHERE slug=?').bind(id).run();
+    return okCache(results[0]);
+  }
+
+  // POST /articles — create (admin)
+  if (!id && method === 'POST') {
+    const b    = await req.json();
+    const slug = b.slug || toSlug(b.title);
+    await env.DB.prepare(
+      'INSERT INTO articles (title,slug,category,excerpt,content,image_url,published) VALUES (?,?,?,?,?,?,?)'
+    ).bind(b.title, slug, b.category||'ทั่วไป', b.excerpt||'', b.content||'', b.image_url||'', b.published?1:0).run();
+    const { results } = await env.DB.prepare('SELECT * FROM articles WHERE slug=?').bind(slug).all();
+    return ok(results[0]);
+  }
+
+  // PUT /articles/:id — update (admin)
+  if (id && method === 'PUT') {
+    const b = await req.json();
+    await env.DB.prepare(
+      "UPDATE articles SET title=?,slug=?,category=?,excerpt=?,content=?,image_url=?,published=?,updated_at=datetime('now') WHERE id=?"
+    ).bind(b.title, b.slug||toSlug(b.title), b.category||'ทั่วไป', b.excerpt||'', b.content||'', b.image_url||'', b.published?1:0, id).run();
+    return ok({ ok: true });
+  }
+
+  // DELETE /articles/:id (admin)
+  if (id && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM articles WHERE id=?').bind(id).run();
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
+}
+
+// ════════════════════════════════════════════════════════
+// APPS
+// ════════════════════════════════════════════════════════
+async function apps(req, env, segs, method) {
+  const id = segs[1];
+
+  if (!id && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM apps ORDER BY sort_order ASC, created_at ASC').all();
+    return okCache({ apps: results });
+  }
+
+  if (!id && method === 'POST') {
+    const b = await req.json();
+    await env.DB.prepare(
+      'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order) VALUES (?,?,?,?,?,?,?)'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0).run();
+    return ok({ ok: true });
+  }
+
+  if (id && method === 'PUT') {
+    const b = await req.json();
+    await env.DB.prepare(
+      'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=? WHERE id=?'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, id).run();
+    return ok({ ok: true });
+  }
+
+  if (id && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM apps WHERE id=?').bind(id).run();
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
+}
+
+// ════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════
+async function settings(req, env, segs, method) {
+  if (method === 'GET') {
+    const { results } = await env.DB
+      .prepare("SELECT key,value FROM settings WHERE key != 'admin_password'").all();
+    const s = Object.fromEntries(results.map(r => [r.key, r.value]));
+    return okCache(s);
+  }
+
+  if (method === 'PUT') {
+    const b = await req.json();
+    for (const [key, value] of Object.entries(b)) {
+      if (key === 'admin_password' && value) {
+        await env.DB.prepare('UPDATE settings SET value=? WHERE key=?').bind(await sha256(value), key).run();
+      } else if (key !== 'admin_password') {
+        await env.DB.prepare('INSERT OR REPLACE INTO settings VALUES (?,?)').bind(key, value).run();
+      }
+    }
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
+}
+
+// ════════════════════════════════════════════════════════
+// COMMENTS
+// ════════════════════════════════════════════════════════
+async function comments(req, env, segs, method) {
+  const articleId = segs[1];
+  const action    = segs[2];
+  const commentId = segs[1];
+
+  // GET /comments/:article_id
+  if (articleId && method === 'GET' && !action) {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM comments WHERE article_id=? AND approved=1 ORDER BY created_at DESC')
+      .bind(articleId).all();
+    return ok({ comments: results });
+  }
+
+  // POST /comments — ส่งคอมเมนต์ใหม่
+  if (!action && method === 'POST') {
+    const b = await req.json();
+    if (!b.article_id || !b.name || !b.content) return err('กรุณากรอกข้อมูลให้ครบ');
+    await env.DB.prepare(
+      'INSERT INTO comments (article_id,name,content) VALUES (?,?,?)'
+    ).bind(b.article_id, b.name.substring(0,50), b.content.substring(0,500)).run();
+    return ok({ ok: true, message: 'ส่งคอมเมนต์แล้ว รอการอนุมัติ' });
+  }
+
+  // GET /comments/admin/list
+  if (segs[0] === 'comments' && segs[1] === 'admin') {
+    const { results } = await env.DB
+      .prepare('SELECT c.*,a.title as article_title FROM comments c JOIN articles a ON c.article_id=a.id ORDER BY c.created_at DESC')
+      .all();
+    return ok({ comments: results });
+  }
+
+  // PUT /comments/:id/approve
+  if (commentId && action === 'approve' && method === 'PUT') {
+    await env.DB.prepare('UPDATE comments SET approved=1 WHERE id=?').bind(commentId).run();
+    return ok({ ok: true });
+  }
+
+  // DELETE /comments/:id
+  if (commentId && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM comments WHERE id=?').bind(commentId).run();
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
+}
+
+// ════════════════════════════════════════════════════════
+// IMAGE UPLOAD (imgbb API)
+// ════════════════════════════════════════════════════════
+async function upload(req, env) {
+  const { results } = await env.DB.prepare("SELECT value FROM settings WHERE key='imgbb_key'").all();
+  const key = results[0]?.value;
+  if (!key) return err('ยังไม่ได้ตั้งค่า imgbb API key');
+
+  const formData = await req.formData();
+  const file     = formData.get('image');
+  if (!file) return err('ไม่พบไฟล์รูป');
+
+  const body = new FormData();
+  body.append('image', file);
+  const res  = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method: 'POST', body });
+  const data = await res.json();
+
+  if (!data.success) return err('อัปโหลดรูปไม่สำเร็จ: ' + (data.error?.message || 'unknown'));
+  return ok({ url: data.data.url, thumb: data.data.thumb?.url || data.data.url });
+}
+
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+function toSlug(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\u0E00-\u0E7Fa-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+    || Date.now().toString();
+}
