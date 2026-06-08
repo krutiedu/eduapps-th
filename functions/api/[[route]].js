@@ -26,12 +26,14 @@ export async function onRequest(ctx) {
 
   // ── AUTH CHECK ──
   const needsAuth = (
-    path.startsWith('/articles/admin') ||                                  // admin บทความ (รวม draft) ต้อง auth เสมอ
+    path.startsWith('/articles/admin') ||
     (path.startsWith('/articles') && method !== 'GET') ||
-    (path.startsWith('/apps')     && method !== 'GET') ||
+    path.startsWith('/apps/admin') ||
+    (path.startsWith('/apps') && method !== 'GET' && !path.includes('/unlock')) ||
     (path.startsWith('/settings') && method !== 'GET') ||
-    path.startsWith('/comments/admin') ||                                  // admin คอมเมนต์ต้อง auth เสมอ
+    path.startsWith('/comments/admin') ||
     (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE')) ||
+    path.startsWith('/codes') ||   // codes ต้อง auth ทุก method
     path === '/upload'
   );
 
@@ -50,6 +52,7 @@ export async function onRequest(ctx) {
     if (path.startsWith('/apps'))      return apps(request,      env, segments, method);
     if (path.startsWith('/settings'))  return settings(request,  env, segments, method);
     if (path.startsWith('/comments'))  return comments(request,  env, segments, method);
+    if (path.startsWith('/codes'))     return codes(request,     env, segments, method);
     if (path === '/upload' && method === 'POST') return upload(request, env);
 
     return err('ไม่พบ endpoint', 404);
@@ -186,25 +189,68 @@ async function articles(req, env, segs, method) {
 async function apps(req, env, segs, method) {
   const id = segs[1];
 
-  if (!id && method === 'GET') {
+  // GET /apps/admin/list — admin ดูทุกแอป รวม hidden (with lock_code)
+  if (segs[1] === 'admin' && segs[2] === 'list' && method === 'GET') {
     const { results } = await env.DB
       .prepare('SELECT * FROM apps ORDER BY sort_order ASC, created_at ASC').all();
-    return okCache({ apps: results });
+    return ok({ apps: results });
+  }
+
+  // POST /apps/:id/unlock — ตรวจรหัส (เช็ค access_codes ก่อน แล้ว fallback ไป per-app code)
+  if (id && segs[2] === 'unlock' && method === 'POST') {
+    const b = await req.json();
+    const code = (b.code || '').trim();
+
+    // ── ตรวจ access_codes table (ระบบกลาง) ──
+    const { results: codeRows } = await env.DB
+      .prepare("SELECT * FROM access_codes WHERE code=? AND active=1").bind(code).all();
+    if (codeRows[0]) {
+      const row = codeRows[0];
+      // เช็ควันหมดอายุ
+      if (row.expires_at && new Date(row.expires_at) < new Date()) return err('รหัสหมดอายุแล้ว', 403);
+      // เช็คสิทธิ์แอป
+      let appIds = [];
+      try { appIds = JSON.parse(row.app_ids || '[]'); } catch {}
+      const canAccess = appIds.includes('all') || appIds.includes(parseInt(id)) || appIds.includes(String(id));
+      if (!canAccess) return err('รหัสนี้ไม่สามารถปลดล็อกแอปนี้ได้', 403);
+      const { results: ar } = await env.DB
+        .prepare('SELECT url FROM apps WHERE id=? AND locked=1 AND visible=1').bind(id).all();
+      if (!ar[0]) return err('ไม่พบแอป', 404);
+      return ok({ url: ar[0].url });
+    }
+
+    // ── fallback: ตรวจรหัสของแอปโดยตรง ──
+    const { results } = await env.DB
+      .prepare('SELECT lock_code, url FROM apps WHERE id=? AND locked=1 AND visible=1').bind(id).all();
+    if (!results[0]) return err('ไม่พบแอป', 404);
+    if (results[0].lock_code !== code) return err('รหัสไม่ถูกต้อง', 403);
+    return ok({ url: results[0].url });
+  }
+
+  // GET /apps — สาธารณะ เฉพาะ visible=1, ไม่ส่ง lock_code, locked=1 ไม่ส่ง url
+  if (!id && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,sort_order,created_at FROM apps WHERE visible=1 ORDER BY sort_order ASC, created_at ASC').all();
+    const safe = results.map(a => ({
+      ...a,
+      url: a.locked ? null : a.url,   // ซ่อน URL ถ้า locked
+    }));
+    return okCache({ apps: safe });
   }
 
   if (!id && method === 'POST') {
     const b = await req.json();
     await env.DB.prepare(
-      'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order) VALUES (?,?,?,?,?,?,?)'
-    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0).run();
+      'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0).run();
     return ok({ ok: true });
   }
 
   if (id && method === 'PUT') {
     const b = await req.json();
     await env.DB.prepare(
-      'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=? WHERE id=?'
-    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, id).run();
+      'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=?,locked=?,lock_code=?,visible=? WHERE id=?'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, id).run();
     return ok({ ok: true });
   }
 
@@ -310,6 +356,64 @@ async function upload(req, env) {
 
   if (!data.success) return err('อัปโหลดรูปไม่สำเร็จ: ' + (data.error?.message || 'unknown'));
   return ok({ url: data.data.url, thumb: data.data.thumb?.url || data.data.url });
+}
+
+// ════════════════════════════════════════════════════════
+// ACCESS CODES (ระบบรหัสปลดล็อกแบบกลาง)
+// ════════════════════════════════════════════════════════
+async function codes(req, env, segs, method) {
+  const id = segs[1];
+
+  // GET /codes — รายการโค้ดทั้งหมด
+  if (!id && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM access_codes ORDER BY created_at DESC').all();
+    return ok({ codes: results });
+  }
+
+  // POST /codes — สร้างโค้ดใหม่
+  if (!id && method === 'POST') {
+    const b = await req.json();
+    if (!b.code || !b.label) return err('กรุณาใส่รหัสและชื่อแพ็กเกจ');
+    // เช็คว่าโค้ดซ้ำไหม
+    const { results: exist } = await env.DB
+      .prepare('SELECT id FROM access_codes WHERE code=?').bind(b.code.trim()).all();
+    if (exist[0]) return err('รหัสนี้มีอยู่แล้ว');
+    await env.DB.prepare(
+      'INSERT INTO access_codes (code,label,app_ids,expires_at,active) VALUES (?,?,?,?,?)'
+    ).bind(
+      b.code.trim().toUpperCase(),
+      b.label.trim(),
+      JSON.stringify(b.app_ids || []),
+      b.expires_at || null,
+      1
+    ).run();
+    return ok({ ok: true });
+  }
+
+  // PUT /codes/:id — แก้ไขโค้ด
+  if (id && method === 'PUT') {
+    const b = await req.json();
+    await env.DB.prepare(
+      'UPDATE access_codes SET code=?,label=?,app_ids=?,expires_at=?,active=? WHERE id=?'
+    ).bind(
+      b.code.trim().toUpperCase(),
+      b.label.trim(),
+      JSON.stringify(b.app_ids || []),
+      b.expires_at || null,
+      b.active ? 1 : 0,
+      id
+    ).run();
+    return ok({ ok: true });
+  }
+
+  // DELETE /codes/:id — ลบโค้ด
+  if (id && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM access_codes WHERE id=?').bind(id).run();
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
 }
 
 // ════════════════════════════════════════════════════════
