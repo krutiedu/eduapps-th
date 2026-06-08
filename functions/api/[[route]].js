@@ -386,7 +386,7 @@ async function codes(req, env, segs, method) {
       b.label.trim(),
       JSON.stringify(b.app_ids || []),
       b.expires_at || null,
-      1
+      b.active !== false ? 1 : 0   // รับค่า active จริงๆ ไม่ hardcode
     ).run();
     return ok({ ok: true });
   }
