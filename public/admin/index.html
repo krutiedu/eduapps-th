@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จัดการเว็บ — EduApps TH</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -172,6 +173,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item" data-page="apps" onclick="nav('apps')"><span class="ni">🎮</span> จัดการแอป</div>
     <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
     <div class="sidebar-sec">ระบบ</div>
+    <div class="nav-item" data-page="codes" onclick="nav('codes')"><span class="ni">🔑</span> รหัสปลดล็อก</div>
     <div class="nav-item" data-page="settings" onclick="nav('settings')"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
   </nav>
   <div class="sidebar-footer">
@@ -268,6 +270,7 @@ function nav(page) {
   if (page==='new-article')  renderArticleEditor(null);
   if (page==='apps')         renderApps();
   if (page==='comments')     renderComments();
+  if (page==='codes')        renderCodes();
   if (page==='settings')     renderSettings();
 }
 
@@ -400,7 +403,7 @@ function renderArticleEditor(art) {
       <div class="form-group">
         <label class="form-label">หมวดหมู่</label>
         <select class="form-select" id="artCat">
-          ${['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู','ทั่วไป'].map(c=>
+          ${(()=>{let c=[];try{c=JSON.parse(localStorage.getItem('_cats')||'[]')}catch{}if(!c.length)c=['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู','ทั่วไป'];return c})().map(c=>
             `<option value="${c}" ${art?.category===c?'selected':''}>${c}</option>`).join('')}
         </select>
       </div>
@@ -512,7 +515,7 @@ async function saveArticle() {
 // APPS
 // ══════════════════════════════════════════════════════════
 async function renderApps() {
-  const data = await api.get('/apps');
+  const data = await api.get('/apps/admin/list');
   const appsArr = data.apps || [];
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
@@ -522,12 +525,15 @@ async function renderApps() {
   <div class="card">
     <div class="table-wrap">
     <table>
-      <thead><tr><th>แอป</th><th>หมวด</th><th>URL</th><th>Prompt</th><th>จัดการ</th></tr></thead>
+      <thead><tr><th>แอป</th><th>หมวด</th><th>สถานะ</th><th>Prompt</th><th>จัดการ</th></tr></thead>
       <tbody>
-        ${appsArr.length ? appsArr.map(a=>`<tr>
+        ${appsArr.length ? appsArr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}">
           <td>${a.icon} <strong>${a.title}</strong></td>
           <td><span class="badge badge-gray">${a.category}</span></td>
-          <td style="font-size:.8rem;color:#2563eb;">${a.url ? `<a href="${a.url}" target="_blank">🔗 เปิดแอป</a>` : '-'}</td>
+          <td style="white-space:nowrap;">
+            ${!a.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
+            ${a.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':''}
+          </td>
           <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
           <td style="white-space:nowrap">
             <button class="btn btn-outline btn-sm" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
@@ -542,9 +548,7 @@ async function renderApps() {
 }
 
 function openAppModal(id) {
-  const apps = window._apps || [];
-  const a = id ? apps.find(x=>x.id===id) : null;
-  api.get('/apps').then(d => {
+  api.get('/apps/admin/list').then(d => {
     window._apps = d.apps || [];
     const app = id ? window._apps.find(x=>x.id===id) : null;
     document.getElementById('modal').innerHTML = `
@@ -562,6 +566,26 @@ function openAppModal(id) {
           <label class="form-label">Prompt (สำหรับแจกให้คนอื่นสร้างแอปเอง)</label>
           <textarea class="form-ta" id="aPrompt" style="font-family:'Fira Code',monospace;font-size:.82rem;">${app?.prompt||''}</textarea>
         </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-weight:700;font-size:.9rem;margin-bottom:10px;color:#0f172a;">🔒 การเข้าถึงแอป</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
+              <input type="checkbox" id="aVisible" ${app?.visible!==0?'checked':''} onchange="document.getElementById('visibleNote').style.display=this.checked?'none':'block'">
+              <span>แสดงบนเว็บ (visible)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
+              <input type="checkbox" id="aLocked" ${app?.locked?'checked':''} onchange="document.getElementById('lockCodeWrap').style.display=this.checked?'block':'none'">
+              <span>ล็อกด้วยรหัส (lock)</span>
+            </label>
+          </div>
+          <div id="visibleNote" style="display:${app?.visible===0?'block':'none'};font-size:.83rem;color:#64748b;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:8px;">
+            🙈 แอปนี้ซ่อนอยู่ — คนเข้าเว็บไม่เห็น เห็นแค่ใน admin
+          </div>
+          <div id="lockCodeWrap" style="display:${app?.locked?'block':'none'};">
+            <label class="form-label">รหัสผ่านแอป</label>
+            <input type="text" class="form-input" id="aLockCode" value="${app?.lock_code||''}" placeholder="ตั้งรหัสที่ต้องการ เช่น VIP2025">
+          </div>
+        </div>
         <div class="modal-footer">
           <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
           <button class="btn btn-primary" onclick="saveApp(${app?.id||'null'})">💾 บันทึก</button>
@@ -574,6 +598,7 @@ function openAppModal(id) {
 async function saveApp(id) {
   const title = document.getElementById('aTitle').value.trim();
   if (!title) { alert('กรุณาใส่ชื่อแอป'); return; }
+  const locked = document.getElementById('aLocked').checked;
   const body = {
     icon: document.getElementById('aIcon').value || '🎮',
     title,
@@ -581,6 +606,9 @@ async function saveApp(id) {
     description: document.getElementById('aDesc').value.trim(),
     url: document.getElementById('aUrl').value.trim(),
     prompt: document.getElementById('aPrompt').value,
+    visible: document.getElementById('aVisible').checked,
+    locked: locked,
+    lock_code: locked ? (document.getElementById('aLockCode').value.trim()) : '',
   };
   const res = id && id !== 'null'
     ? await api.put('/apps/'+id, body)
@@ -653,8 +681,172 @@ async function delCmt(id) {
 // ══════════════════════════════════════════════════════════
 // SETTINGS
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// CODES — รหัสปลดล็อก
+// ══════════════════════════════════════════════════════════
+async function renderCodes() {
+  const [codesData, appsData] = await Promise.all([
+    api.get('/codes'),
+    api.get('/apps/admin/list'),
+  ]);
+  const codeList = codesData.codes || [];
+  const allApps  = (appsData.apps || []).filter(a => a.locked);
+  window._allApps = appsData.apps || [];
+
+  function appNames(ids) {
+    if (!ids) return '-';
+    let arr = []; try { arr = JSON.parse(ids); } catch {}
+    if (arr.includes('all')) return '🌟 ทุกแอปที่ล็อก';
+    return arr.map(id => {
+      const a = (appsData.apps||[]).find(x=>x.id===parseInt(id)||x.id===id);
+      return a ? a.icon+' '+a.title : id;
+    }).join(', ') || '-';
+  }
+  function expLabel(exp) {
+    if (!exp) return '<span style="color:#059669;font-weight:700;">ไม่หมดอายุ</span>';
+    const d = new Date(exp), now = new Date();
+    if (d < now) return '<span style="color:#dc2626;font-weight:700;">หมดอายุแล้ว</span>';
+    return '<span style="color:#d97706;font-weight:700;">'+d.toLocaleDateString('th-TH')+'</span>';
+  }
+
+  document.getElementById('content').innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div class="page-title" style="margin:0;">🔑 จัดการรหัสปลดล็อก</div>
+    <button class="btn btn-primary" onclick="openCodeModal(null)">+ สร้างรหัสใหม่</button>
+  </div>
+  ${allApps.length===0 ? `<div class="alert alert-info">⚠️ ยังไม่มีแอปที่เปิดระบบล็อกไว้ ไปที่ <a href="#" onclick="nav('apps')">จัดการแอป</a> แล้วเปิด 🔒 ก่อน</div>` : ''}
+  <div class="card">
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>รหัส</th><th>ชื่อแพ็กเกจ</th><th>ปลดล็อก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+      <tbody>
+        ${codeList.length ? codeList.map(c=>`<tr style="${!c.active?'opacity:.5;':''}">
+          <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${c.code}</code></td>
+          <td><strong>${c.label}</strong></td>
+          <td style="font-size:.82rem;max-width:200px;">${appNames(c.app_ids)}</td>
+          <td>${expLabel(c.expires_at)}</td>
+          <td>${c.active
+            ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
+            : '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-outline btn-sm" onclick="openCodeModal(${c.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${c.code}')">🗑</button>
+          </td>
+        </tr>`).join('')
+        : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีรหัสปลดล็อก — กด "+ สร้างรหัสใหม่" เพื่อเริ่ม</td></tr>`}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card" style="background:#f8fafc;">
+    <div class="card-title" style="font-size:.9rem;">💡 วิธีใช้งาน</div>
+    <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
+      <li>สร้างรหัส → กำหนดว่าปลดล็อกแอปไหนบ้าง → แชร์รหัสให้ผู้ที่จ่ายเงิน</li>
+      <li>รหัสเดียวสามารถปลดล็อกได้หลายแอปพร้อมกัน</li>
+      <li>ตั้ง "ปลดทุกแอป" สำหรับแพ็กเกจ VIP ที่เข้าถึงได้ทุกอย่าง</li>
+      <li>ตั้งวันหมดอายุสำหรับรหัสแบบรายเดือน/รายปี</li>
+      <li>ปิดรหัสได้ทันทีโดยไม่ต้องลบ</li>
+    </ul>
+  </div>`;
+  window._codesData = codesData;
+}
+
+function openCodeModal(id) {
+  api.get('/codes').then(d => {
+    const c = id ? (d.codes||[]).find(x=>x.id===id) : null;
+    let appIds = [];
+    try { appIds = JSON.parse(c?.app_ids || '[]'); } catch {}
+    const allApps = window._allApps || [];
+    const lockedApps = allApps.filter(a => a.locked);
+
+    document.getElementById('modal').innerHTML = `
+    <div class="modal-ov" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:520px;">
+        <h3>${c ? '✏️ แก้ไขรหัส' : '🔑 สร้างรหัสใหม่'}</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">รหัส (ตัวพิมพ์ใหญ่/ตัวเลข)</label>
+            <input type="text" class="form-input" id="cCode" value="${c?.code||''}"
+              placeholder="เช่น VIP2025, PREMIUM1" style="font-weight:700;letter-spacing:1px;text-transform:uppercase;"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อแพ็กเกจ</label>
+            <input type="text" class="form-input" id="cLabel" value="${c?.label||''}" placeholder="เช่น VIP รายเดือน">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">วันหมดอายุ (เว้นว่าง = ไม่หมดอายุ)</label>
+          <input type="date" class="form-input" id="cExpiry" value="${c?.expires_at?c.expires_at.split('T')[0]:''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">แอปที่ปลดล็อก</label>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
+              <input type="checkbox" id="cAll" ${appIds.includes('all')?'checked':''}
+                onchange="document.getElementById('cAppList').style.opacity=this.checked?.3:1;document.querySelectorAll('.cAppCb').forEach(cb=>cb.disabled=this.checked)">
+              🌟 ปลดทุกแอปที่ล็อก (VIP)
+            </label>
+            <div id="cAppList" style="opacity:${appIds.includes('all')?.3:1};display:flex;flex-direction:column;gap:6px;">
+              ${lockedApps.length
+                ? lockedApps.map(a=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
+                    <input type="checkbox" class="cAppCb" value="${a.id}"
+                      ${(appIds.includes(a.id)||appIds.includes(String(a.id)))?'checked':''}
+                      ${appIds.includes('all')?'disabled':''}>
+                    ${a.icon} ${a.title}
+                  </label>`).join('')
+                : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีแอปที่ล็อก</span>'
+              }
+            </div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;font-size:.92rem;">
+          <input type="checkbox" id="cActive" ${c ? (c.active?'checked':'') : 'checked'}>
+          <span>เปิดใช้งานรหัสนี้</span>
+        </label>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+          <button class="btn btn-primary" onclick="saveCode(${c?.id||'null'})">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+async function saveCode(id) {
+  const code  = document.getElementById('cCode').value.trim();
+  const label = document.getElementById('cLabel').value.trim();
+  if (!code || !label) { alert('กรุณาใส่รหัสและชื่อแพ็กเกจ'); return; }
+  const allChecked = document.getElementById('cAll').checked;
+  let appIds = allChecked ? ['all'] : [];
+  if (!allChecked) {
+    document.querySelectorAll('.cAppCb:checked').forEach(cb => appIds.push(parseInt(cb.value)));
+  }
+  const body = {
+    code, label, app_ids: appIds,
+    expires_at: document.getElementById('cExpiry').value || null,
+    active: document.getElementById('cActive').checked,
+  };
+  const res = id && id !== 'null'
+    ? await api.put('/codes/'+id, body)
+    : await api.post('/codes', body);
+  if (res.error) { toast('❌ '+res.error); return; }
+  closeModal(); toast('✅ บันทึกรหัสแล้ว');
+  renderCodes();
+}
+
+async function delCode(id, code) {
+  if (!confirm(`ลบรหัส "${code}" ?`)) return;
+  await api.delete('/codes/'+id);
+  toast('🗑 ลบรหัสแล้ว'); renderCodes();
+}
+
+// ══════════════════════════════════════════════════════════
 async function renderSettings() {
   const s = await api.get('/settings');
+  let cats = [];
+  try { cats = JSON.parse(s.article_categories || '[]'); } catch {}
+  if (!cats.length) cats = ['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู'];
   document.getElementById('content').innerHTML = `
   <div class="page-title">⚙️ ตั้งค่าเว็บ</div>
   <div id="settingsAlert"></div>
@@ -666,6 +858,19 @@ async function renderSettings() {
     </div>
     <div class="form-group"><label class="form-label">Tagline</label><input type="text" class="form-input" id="sTagline" value="${s.site_tagline||''}"></div>
     <div class="form-group"><label class="form-label">คำอธิบายเว็บ (SEO)</label><textarea class="form-ta" id="sDesc" style="min-height:80px;">${s.site_desc||''}</textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📂 หมวดหมู่บทความ</div>
+    <div id="catList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      ${cats.map((c,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:5px 12px;border-radius:100px;font-size:.88rem;font-weight:700;">
+        ${c}<button onclick="removeCat(${i})" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.9rem;padding:0;line-height:1;">✕</button>
+      </span>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="newCatInput" class="form-input" placeholder="ชื่อหมวดหมู่ใหม่..." style="flex:1;" onkeydown="if(event.key==='Enter')addCat()">
+      <button class="btn btn-outline" onclick="addCat()">+ เพิ่ม</button>
+    </div>
+    <p style="font-size:.82rem;color:#94a3b8;margin-top:8px;">หมวดหมู่นี้จะแสดงใน filter บทความและ dropdown เขียนบทความ</p>
   </div>
   <div class="card">
     <div class="card-title">🖼️ รูปภาพ — imgbb.com</div>
@@ -686,6 +891,29 @@ async function renderSettings() {
   <div class="btn-group">
     <button class="btn btn-success" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
   </div>`;
+  window._cats = [...cats];
+}
+
+function getCatList() { return window._cats || []; }
+function renderCatList() {
+  const cats = getCatList();
+  document.getElementById('catList').innerHTML = cats.map((c,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:5px 12px;border-radius:100px;font-size:.88rem;font-weight:700;">
+      ${c}<button onclick="removeCat(${i})" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.9rem;padding:0;line-height:1;">✕</button>
+    </span>`
+  ).join('');
+}
+function addCat() {
+  const inp = document.getElementById('newCatInput');
+  const v = inp.value.trim();
+  if (!v || getCatList().includes(v)) return;
+  window._cats.push(v);
+  renderCatList();
+  inp.value = '';
+}
+function removeCat(i) {
+  window._cats.splice(i, 1);
+  renderCatList();
 }
 
 async function saveSettings() {
@@ -699,6 +927,7 @@ async function saveSettings() {
     site_desc:   document.getElementById('sDesc').value,
     imgbb_key:   document.getElementById('sImgbb').value,
     adsense_id:  document.getElementById('sAdsense').value,
+    article_categories: JSON.stringify(getCatList()),
   };
   if (pwd) body.admin_password = pwd;
   const res = await api.put('/settings', body);
@@ -724,6 +953,7 @@ async function init() {
       showAdmin();
       const s = await api.get('/settings').catch(()=>({}));
       if (s.site_title) document.getElementById('sideTitle').textContent = '✦ '+s.site_title;
+      if (s.article_categories) localStorage.setItem('_cats', s.article_categories);
       nav('dash');
     } else {
       localStorage.removeItem('_admtok');
@@ -739,6 +969,12 @@ window.editArticle = editArticle;
 window.delArticle = delArticle;
 window.openAppModal = openAppModal;
 window.saveApp = saveApp;
+window.delApp = delApp;
+window.addCat = addCat;
+window.removeCat = removeCat;
+window.openCodeModal = openCodeModal;
+window.saveCode = saveCode;
+window.delCode = delCode;
 window.delApp = delApp;
 window.approveCmt = approveCmt;
 window.delCmt = delCmt;
