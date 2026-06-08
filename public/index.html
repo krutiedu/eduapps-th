@@ -770,9 +770,10 @@ function artCard(a) {
 
 function appCard(a) {
   const pid = `p_${a.id}`;
-  const storedUrl = sessionStorage.getItem('unlocked_'+a.id);
+  const raw = sessionStorage.getItem('unlocked_'+a.id);
+  const storedUrl = (raw && raw.startsWith('http')) ? raw : null;  // กัน '1' หรือค่าขยะ
   const isLocked = a.locked && !storedUrl;
-  const appUrl = storedUrl || a.url;   // ใช้ URL จาก sessionStorage ถ้าปลดล็อกแล้ว
+  const appUrl = storedUrl || a.url;
   const previewImg = a.preview_image
     ? `<img src="${esc(a.preview_image)}" alt="Preview" loading="lazy" onerror="this.parentNode.innerHTML='<div class=app-preview-ph>${a.icon||'🎮'}</div>'">`
     : `<div class="app-preview-ph">${a.icon||'🎮'}</div>`;
