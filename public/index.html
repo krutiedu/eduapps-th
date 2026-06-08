@@ -770,7 +770,9 @@ function artCard(a) {
 
 function appCard(a) {
   const pid = `p_${a.id}`;
-  const isLocked = a.locked && !sessionStorage.getItem('unlocked_'+a.id);
+  const storedUrl = sessionStorage.getItem('unlocked_'+a.id);
+  const isLocked = a.locked && !storedUrl;
+  const appUrl = storedUrl || a.url;   // ใช้ URL จาก sessionStorage ถ้าปลดล็อกแล้ว
   const previewImg = a.preview_image
     ? `<img src="${esc(a.preview_image)}" alt="Preview" loading="lazy" onerror="this.parentNode.innerHTML='<div class=app-preview-ph>${a.icon||'🎮'}</div>'">`
     : `<div class="app-preview-ph">${a.icon||'🎮'}</div>`;
@@ -793,7 +795,7 @@ function appCard(a) {
     <div class="app-btns">
       ${isLocked
         ? `<button class="btn-open" style="background:#64748b;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
-        : (a.url ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(a.url)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
+        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
       }
       ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
     </div>
@@ -944,7 +946,7 @@ async function submitLock() {
     });
     const d = await r.json();
     if (r.ok && d.url) {
-      sessionStorage.setItem('unlocked_' + _lockAppId, '1');
+      sessionStorage.setItem('unlocked_' + _lockAppId, d.url);  // เก็บ URL จริง ไม่ใช่ '1'
       closeLockModal();
       openAppViewer(d.url, _lockTitle, _lockIcon);
     } else {
