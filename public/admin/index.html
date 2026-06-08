@@ -845,17 +845,37 @@ async function saveCode(id) {
 }
 
 async function uploadPreviewImg() {
+  const s = await api.get('/settings');
+  if (!s.imgbb_key) {
+    alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ');
+    return;
+  }
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
   inp.onchange = async () => {
     const f = inp.files[0]; if (!f) return;
     const fd = new FormData(); fd.append('image', f);
-    toast('⏳ กำลังอัปโหลด...');
-    const r = await fetch(API+'/upload', { method:'POST', headers:{'Authorization':'Bearer '+(localStorage.getItem('_admtok')||'')}, body:fd }).then(x=>x.json());
-    if (r.url) {
-      document.getElementById('aPreview').value = r.url;
-      toast('✅ อัปโหลดรูป preview แล้ว');
-    } else { toast('❌ อัปโหลดไม่สำเร็จ'); }
+    const btn = document.querySelector('[onclick="uploadPreviewImg()"]');
+    if (btn) btn.textContent = '⏳ กำลังอัปโหลด...';
+    try {
+      const r = await fetch(API+'/upload', {
+        method:'POST',
+        headers:{'Authorization':'Bearer '+(localStorage.getItem('_admtok')||'')},
+        body:fd
+      }).then(x=>x.json());
+      if (r.url) {
+        document.getElementById('aPreview').value = r.url;
+        // แสดง thumbnail
+        const wrap = document.getElementById('aPreview').parentNode;
+        let img = wrap.parentNode.querySelector('.preview-thumb');
+        if (!img) { img = document.createElement('img'); img.className='preview-thumb'; img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;'; wrap.parentNode.appendChild(img); }
+        img.src = r.url;
+        toast('✅ อัปโหลดรูป preview แล้ว');
+      } else {
+        toast('❌ อัปโหลดไม่สำเร็จ: '+(r.error||'unknown'));
+      }
+    } catch(e) { toast('❌ เกิดข้อผิดพลาด'); }
+    if (btn) btn.textContent = '📷 อัปโหลด';
   };
   inp.click();
 }
