@@ -473,23 +473,52 @@ function fmtLink()  {
   if (url) { document.execCommand('createLink', false, url); document.getElementById('editorBody').focus(); }
 }
 function insertImg() {
-  const url = prompt('กรอก URL รูปภาพ (หรืออัปโหลดก่อนแล้วเอา URL มาวาง):');
-  if (url) { document.execCommand('insertHTML', false, `<img src="${url}" alt="รูปภาพ">`); }
+  // เปิด file picker อัปโหลดตรง
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    toast('⏳ กำลังอัปโหลดรูป...');
+    try {
+      const url = await uploadToImgbb(f);
+      if (url) {
+        document.execCommand('insertHTML', false, `<img src="${url}" alt="รูปภาพ" style="max-width:100%;">`);
+        toast('✅ แทรกรูปแล้ว');
+      }
+    } catch(e) { toast('❌ '+e.message); }
+  };
+  // ถ้าอยากใส่ URL แทน — Shift+Click
+  inp.click();
+}
+
+// ── UPLOAD ตรงไปที่ imgbb (ไม่ผ่าน Cloudflare proxy — เสถียรกว่า) ─────────
+let _imgbbKey = null;  // cache key ใน session
+async function getImgbbKey() {
+  if (_imgbbKey) return _imgbbKey;
+  const s = await api.get('/settings');
+  _imgbbKey = s.imgbb_key || '';
+  return _imgbbKey;
+}
+async function uploadToImgbb(file) {
+  const key = await getImgbbKey();
+  if (!key) { alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ'); return null; }
+  const fd = new FormData(); fd.append('image', file);
+  const r = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd }).then(x=>x.json());
+  if (r.success && r.data?.url) return r.data.url;
+  throw new Error(r.error?.message || 'อัปโหลดไม่สำเร็จ');
 }
 
 async function uploadImg() {
   const file = document.getElementById('imgFile').files[0];
   if (!file) return;
-  const fd = new FormData(); fd.append('image', file);
   toast('⏳ กำลังอัปโหลดรูป...');
-  const res = await fetch(API+'/upload', { method:'POST', headers:{ 'Authorization':'Bearer '+tok() }, body: fd }).then(r=>r.json());
-  if (res.url) {
-    document.getElementById('artImg').value = res.url;
-    document.getElementById('imgPreview').innerHTML = `<img src="${res.url}" style="max-height:120px;border-radius:8px;">`;
+  try {
+    const url = await uploadToImgbb(file);
+    if (!url) return;
+    document.getElementById('artImg').value = url;
+    document.getElementById('imgPreview').innerHTML = `<img src="${url}" style="max-height:120px;border-radius:8px;">`;
     toast('✅ อัปโหลดรูปสำเร็จ');
-  } else {
-    toast('❌ ' + (res.error||'อัปโหลดไม่สำเร็จ'));
-  }
+  } catch(e) { toast('❌ ' + e.message); }
 }
 
 async function saveArticle() {
@@ -845,36 +874,25 @@ async function saveCode(id) {
 }
 
 async function uploadPreviewImg() {
-  const s = await api.get('/settings');
-  if (!s.imgbb_key) {
-    alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ');
-    return;
-  }
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
   inp.onchange = async () => {
     const f = inp.files[0]; if (!f) return;
-    const fd = new FormData(); fd.append('image', f);
     const btn = document.querySelector('[onclick="uploadPreviewImg()"]');
     if (btn) btn.textContent = '⏳ กำลังอัปโหลด...';
     try {
-      const r = await fetch(API+'/upload', {
-        method:'POST',
-        headers:{'Authorization':'Bearer '+(localStorage.getItem('_admtok')||'')},
-        body:fd
-      }).then(x=>x.json());
-      if (r.url) {
-        document.getElementById('aPreview').value = r.url;
-        // แสดง thumbnail
-        const wrap = document.getElementById('aPreview').parentNode;
-        let img = wrap.parentNode.querySelector('.preview-thumb');
-        if (!img) { img = document.createElement('img'); img.className='preview-thumb'; img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;'; wrap.parentNode.appendChild(img); }
-        img.src = r.url;
-        toast('✅ อัปโหลดรูป preview แล้ว');
-      } else {
-        toast('❌ อัปโหลดไม่สำเร็จ: '+(r.error||'unknown'));
+      const url = await uploadToImgbb(f);
+      if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
+      document.getElementById('aPreview').value = url;
+      let img = document.querySelector('.preview-thumb');
+      if (!img) {
+        img = document.createElement('img'); img.className='preview-thumb';
+        img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;';
+        document.getElementById('aPreview').parentNode.appendChild(img);
       }
-    } catch(e) { toast('❌ เกิดข้อผิดพลาด'); }
+      img.src = url;
+      toast('✅ อัปโหลดรูป preview แล้ว');
+    } catch(e) { toast('❌ ' + e.message); }
     if (btn) btn.textContent = '📷 อัปโหลด';
   };
   inp.click();
@@ -970,7 +988,7 @@ async function saveSettings() {
   };
   if (pwd) body.admin_password = pwd;
   const res = await api.put('/settings', body);
-  if (res.ok) toast('✅ บันทึกการตั้งค่าแล้ว');
+  if (res.ok) { _imgbbKey = null; toast('✅ บันทึกการตั้งค่าแล้ว'); }
   else toast('❌ '+(res.error||'เกิดข้อผิดพลาด'));
 }
 
