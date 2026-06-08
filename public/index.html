@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" id="metaDesc" content="">
 <title id="pageTitle">EduApps TH</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:#f8f9fb;color:#1e293b;}
+body{font-family:'Sarabun',sans-serif;background:#f8f9fb;color:#1e293b;display:flex;flex-direction:column;min-height:100vh;}
+main#app{flex:1;}
 a{text-decoration:none;color:inherit;}
 img{max-width:100%;}
 
@@ -250,7 +252,24 @@ footer{background:#0f172a;color:#64748b;padding:28px;margin-top:8px;}
 
 <main id="app"><div class="loading"><div class="spinner"></div><br>กำลังโหลด...</div></main>
 
-<!-- APP PLAYER (เล่นในเว็บ ขนาดปกติ + ปุ่มขยายเต็มจอ) -->
+<!-- LOCK MODAL -->
+<div id="lockModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.7);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:2.2rem;margin-bottom:8px;">🔒</div>
+      <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;" id="lockTitle">แอปนี้ต้องใช้รหัสผ่าน</h3>
+      <p style="font-size:.88rem;color:#64748b;margin-top:6px;">กรอกรหัสที่ได้รับเพื่อใช้งานแอปนี้</p>
+    </div>
+    <input id="lockInput" type="password" placeholder="ใส่รหัสที่นี่..." autocomplete="off"
+      style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"
+      onkeydown="if(event.key==='Enter')submitLock()">
+    <p id="lockErr" style="color:#dc2626;font-size:.85rem;margin-bottom:8px;display:none;">รหัสไม่ถูกต้อง กรุณาลองใหม่</p>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button onclick="submitLock()" style="flex:2;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
+    </div>
+  </div>
+</div>
 <div id="appViewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.88);align-items:center;justify-content:center;padding:12px;">
   <div id="viewerBox" style="display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#0f172a;flex-shrink:0;">
@@ -436,10 +455,10 @@ async function renderBlog(q, cat, page) {
   activateAds();
 }
 
-async function loadBlogCats() {
+function loadBlogCats() {
   const el = document.getElementById('blogCats');
   if (!el) return;
-  const cats = ['ทั้งหมด','เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู'];
+  const cats = ['ทั้งหมด', ...getCats()];
   el.innerHTML = cats.map(c =>
     `<span class="cat-pill ${blogCat===c?'active':''}" onclick="renderBlog(undefined,'${c}',1)">${c}</span>`
   ).join('');
@@ -515,22 +534,100 @@ async function submitComment(articleId) {
 }
 
 // ── APPS PAGE ────────────────────────────────────────────
+let _allApps = [], _appFilter = 'all', _appSort = 'newest';
+
 async function renderApps() {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
   const data = await get('/apps');
-  const appsArr = data.apps || [];
+  _allApps = data.apps || [];
+  _appFilter = 'all';
+  _appSort = 'newest';
+  drawApps();
+}
+
+function drawApps() {
+  const app = document.getElementById('app');
+  const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
+
+  // --- sort ---
+  const sorted = [..._allApps].sort((a, b) => {
+    if (_appSort === 'oldest') return (a.created_at||'') > (b.created_at||'') ? 1 : -1;
+    if (_appSort === 'name')   return (a.title||'').localeCompare(b.title||'', 'th');
+    return (a.created_at||'') < (b.created_at||'') ? 1 : -1; // newest
+  });
+
+  // --- filter ---
+  let filtered = sorted;
+  if (_appFilter === 'free')   filtered = sorted.filter(a => !a.locked);
+  else if (_appFilter === 'locked') filtered = sorted.filter(a => a.locked);
+  else if (_appFilter !== 'all')    filtered = sorted.filter(a => a.category === _appFilter);
+
+  // --- filter pills ---
+  const pills = [
+    {k:'all',    label:'ทั้งหมด'},
+    {k:'free',   label:'🆓 ฟรี'},
+    {k:'locked', label:'🔒 พรีเมียม'},
+    ...cats.map(c => ({k:c, label:c})),
+  ];
+
+  const pillHTML = pills.map(p =>
+    `<span class="cat-pill${_appFilter===p.k?' active':''}"
+      onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">
+      ${p.label}${_appFilter===p.k&&_allApps.length?'':''}</span>`
+  ).join('');
+
+  const sortHTML = `
+    <select onchange="setAppSort(this.value)"
+      style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:9px;font-family:'Sarabun',sans-serif;
+             font-size:.85rem;font-weight:700;color:#1e293b;background:#fff;cursor:pointer;outline:none;">
+      <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
+      <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
+      <option value="name"   ${_appSort==='name'  ?'selected':''}>🔤 ชื่อ A-Z</option>
+    </select>`;
+
+  // --- content ---
+  let content = '';
+  if (_appFilter === 'all' && filtered.length > 0) {
+    // แยก 2 หมวดเมื่อไม่ได้กรอง
+    const free   = filtered.filter(a => !a.locked);
+    const locked = filtered.filter(a =>  a.locked);
+    if (free.length > 0) content += `
+      <div style="margin-bottom:28px;">
+        <h2 style="font-size:1.05rem;font-weight:800;color:#059669;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          🆓 แอปฟรี <span style="background:#f0fdf4;color:#059669;padding:2px 10px;border-radius:100px;font-size:.78rem;">${free.length}</span>
+        </h2>
+        <div class="apps-grid">${free.map(appCard).join('')}</div>
+      </div>`;
+    if (locked.length > 0) content += `
+      <div style="margin-bottom:28px;">
+        <h2 style="font-size:1.05rem;font-weight:800;color:#7c3aed;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          🔒 แอปพรีเมียม <span style="background:#faf5ff;color:#7c3aed;padding:2px 10px;border-radius:100px;font-size:.78rem;">${locked.length}</span>
+        </h2>
+        <div class="apps-grid">${locked.map(appCard).join('')}</div>
+      </div>`;
+  } else if (filtered.length > 0) {
+    content = `<div class="apps-grid">${filtered.map(appCard).join('')}</div>`;
+  } else {
+    content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
+  }
+
   app.innerHTML = `
-  <div class="container" style="padding-top:32px;padding-bottom:32px;">
-    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:20px;">🎮 แอปทั้งหมด</h1>
+  <div class="container" style="padding-top:28px;padding-bottom:32px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <h1 style="font-size:1.5rem;font-weight:800;">🎮 แอปทั้งหมด</h1>
+      ${sortHTML}
+    </div>
+    <div class="cat-strip" style="margin-bottom:20px;">${pillHTML}</div>
     ${adSlot()}
-    ${appsArr.length
-      ? `<div class="apps-grid">${appsArr.map(appCard).join('')}</div>`
-      : `<div class="empty">📭<br>ยังไม่มีแอป</div>`}
+    ${content}
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
   activateAds();
 }
+
+function setAppFilter(f) { _appFilter = f; drawApps(); }
+function setAppSort(s)   { _appSort   = s; drawApps(); }
 
 // ── ABOUT ─────────────────────────────────────────────────
 function renderAbout() {
@@ -657,14 +754,19 @@ function artCard(a) {
 
 function appCard(a) {
   const pid = `p_${a.id}`;
-  return `<div class="app-card">
+  const isLocked = a.locked && !sessionStorage.getItem('unlocked_'+a.id);
+  return `<div class="app-card" ${isLocked?'style="position:relative;"':''}>
+    ${isLocked?'<div style="position:absolute;top:10px;right:10px;font-size:1.1rem;" title="แอปนี้ต้องใช้รหัสผ่าน">🔒</div>':''}
     <div class="app-top">
       <div class="app-icon icon-blue">${a.icon||'🎮'}</div>
       <div><h4>${esc(a.title)}</h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
     </div>
     <p>${esc(a.description||'')}</p>
     <div class="app-btns">
-      ${a.url ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(a.url)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : ''}
+      ${isLocked
+        ? `<button class="btn-open" style="background:#64748b;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
+        : (a.url ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(a.url)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
+      }
       ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
     </div>
     ${a.prompt ? `<div class="pmt-box" id="${pid}">
@@ -781,13 +883,47 @@ function showMsg(el, text, color) {
   setTimeout(() => el.style.display = 'none', 4000);
 }
 
-async function loadCategories() {
+// ── CATEGORIES (อ่านจาก settings) ────────────────────────
+function getCats() {
+  try { return JSON.parse(S.article_categories || '[]'); } catch { return ['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู']; }
+}
+function loadCategories() {
   const el = document.getElementById('catStrip');
   if (!el) return;
-  const cats = ['ทั้งหมด','เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู'];
+  const cats = ['ทั้งหมด', ...getCats()];
   el.innerHTML = cats.map(c =>
     `<span class="cat-pill" onclick="go('/blog');setTimeout(()=>renderBlog(undefined,'${c}',1),50)">${c}</span>`
   ).join('');
+}
+
+// ── LOCK MODAL ────────────────────────────────────────────
+let _lockAppId = null, _lockTitle = '', _lockIcon = '';
+function openLockModal(id, title, icon) {
+  _lockAppId = id; _lockTitle = title; _lockIcon = icon;
+  document.getElementById('lockTitle').textContent = title;
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockErr').style.display = 'none';
+  document.getElementById('lockModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('lockInput').focus(), 100);
+}
+function closeLockModal() { document.getElementById('lockModal').style.display = 'none'; }
+async function submitLock() {
+  const code = document.getElementById('lockInput').value.trim();
+  if (!code) return;
+  try {
+    const r = await fetch(API + '/apps/' + _lockAppId + '/unlock', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code})
+    });
+    const d = await r.json();
+    if (r.ok && d.url) {
+      sessionStorage.setItem('unlocked_' + _lockAppId, '1');
+      closeLockModal();
+      openAppViewer(d.url, _lockTitle, _lockIcon);
+    } else {
+      document.getElementById('lockErr').style.display = 'block';
+      document.getElementById('lockInput').select();
+    }
+  } catch { document.getElementById('lockErr').style.display = 'block'; }
 }
 
 // ── INIT ──────────────────────────────────────────────────
@@ -842,6 +978,11 @@ window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderPrivacy = renderPrivacy;
+window.openLockModal = openLockModal;
+window.closeLockModal = closeLockModal;
+window.submitLock = submitLock;
+window.setAppFilter = setAppFilter;
+window.setAppSort = setAppSort;
 window.go = go;
 window.toggleNav = toggleNav;
 window.renderBlog = renderBlog;
