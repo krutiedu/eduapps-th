@@ -901,7 +901,7 @@ function adSlot() {
     return `<ins class="adsbygoogle" style="display:block;margin:20px 0;"
       data-ad-client="${S.adsense_id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
   }
-  return `<div class="ad-slot">📢 พื้นที่โฆษณา (ตั้งค่า AdSense ID ในหน้า Admin เพื่อแสดงโฆษณาจริง)</div>`;
+  return '';  // ยังไม่มี AdSense → ไม่แสดงอะไรเลย ไม่กินพื้นที่
 }
 
 function activateAds() {
