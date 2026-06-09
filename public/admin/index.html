@@ -443,6 +443,7 @@ function renderArticleEditor(art) {
       <button onclick="fmt('insertOrderedList')" title="รายการตัวเลข">1. รายการ</button>
       <button onclick="fmtLink()" title="ลิงก์">🔗 ลิงก์</button>
       <button onclick="insertImg()" title="แทรกรูป">📷 รูป</button>
+      <button onclick="insertDownload()" title="ปุ่มดาวน์โหลดไฟล์" style="color:#059669;">📥 ดาวน์โหลด</button>
       <button onclick="fmtBlock()" title="ข้อความอ้างอิง">❝ Quote</button>
       <button onclick="fmtCode()" title="โค้ด">‹ โค้ด</button>
       <button onclick="document.getElementById('editorBody').innerHTML=''" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
@@ -489,6 +490,50 @@ function insertImg() {
   };
   // ถ้าอยากใส่ URL แทน — Shift+Click
   inp.click();
+}
+
+function insertDownload() {
+  const overlay = document.createElement('div');
+  overlay.style='position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <h3 style="font-size:1rem;font-weight:800;margin-bottom:16px;">📥 แทรกปุ่มดาวน์โหลด</h3>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:.85rem;font-weight:700;display:block;margin-bottom:5px;">URL ไฟล์ *</label>
+        <input id="_dlUrl" type="text" placeholder="https://drive.google.com/uc?export=download&id=..."
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:.85rem;font-weight:700;display:block;margin-bottom:5px;">ชื่อที่แสดงบนปุ่ม *</label>
+        <input id="_dlLabel" type="text" placeholder="เช่น: ใบงาน ป.1 เรื่องการบวกลบ (.pdf)"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:.8rem;color:#166534;">
+        💡 Google Drive: Share → Anyone with link → Copy link แล้วแปลงเป็น download link ได้เลย
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="_dlCancel" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
+        <button id="_dlOk" style="flex:2;padding:10px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">📥 แทรกปุ่ม</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('_dlUrl').focus();
+  const close = () => document.body.removeChild(overlay);
+  document.getElementById('_dlCancel').onclick = close;
+  document.getElementById('_dlOk').onclick = () => {
+    const url   = document.getElementById('_dlUrl').value.trim();
+    const label = document.getElementById('_dlLabel').value.trim();
+    if (!url || !label) { alert('กรุณาใส่ URL และชื่อปุ่มให้ครบ'); return; }
+    document.getElementById('editorBody').focus();
+    document.execCommand('insertHTML', false,
+      `<a href="${url}" target="_blank" rel="noopener" class="dl-btn">📥 ${label}</a><p><br></p>`
+    );
+    close(); toast('✅ แทรกปุ่มดาวน์โหลดแล้ว');
+  };
+  overlay.addEventListener('keydown', e => {
+    if (e.key==='Enter') document.getElementById('_dlOk').click();
+    if (e.key==='Escape') close();
+  });
 }
 
 // ── UPLOAD ตรงไปที่ imgbb (ไม่ผ่าน Cloudflare proxy — เสถียรกว่า) ─────────
@@ -1039,6 +1084,7 @@ window.openCodeModal = openCodeModal;
 window.saveCode = saveCode;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
+window.insertDownload = insertDownload;
 window.delApp = delApp;
 window.approveCmt = approveCmt;
 window.delCmt = delCmt;
