@@ -105,7 +105,8 @@ async function sha256(text) {
 // ARTICLES
 // ════════════════════════════════════════════════════════
 async function articles(req, env, segs, method) {
-  const id   = segs[1];
+  const rawId = segs[1];
+  const id    = rawId ? decodeURIComponent(rawId) : null;  // decode %E0%B9%81... → แ
   const page = parseInt(new URL(req.url).searchParams.get('page') || '1');
   const cat  = new URL(req.url).searchParams.get('category') || '';
   const q    = new URL(req.url).searchParams.get('q') || '';
