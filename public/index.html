@@ -6,7 +6,7 @@
 <meta name="description" id="metaDesc" content="">
 <title id="pageTitle">EduApps TH</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Sarabun',sans-serif;background:#f8f9fb;color:#1e293b;display:flex;flex-direction:column;min-height:100vh;}
@@ -121,7 +121,7 @@ img{max-width:100%;}
 .art-body p{margin-bottom:12px;line-height:1.85;font-size:1rem;}
 .art-body ul,.art-body ol{margin:0 0 12px 22px;}
 .art-body li{margin-bottom:5px;line-height:1.75;}
-.art-body code{font-family:'Fira Code',monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.86em;color:#ea580c;}
+.art-body code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.86em;color:#ea580c;}
 .art-body pre{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin:12px 0;overflow-x:auto;}
 .art-body pre code{background:none;padding:0;font-size:.88rem;color:#059669;}
 .art-body blockquote{border-left:3px solid #2563eb;padding:10px 16px;margin:12px 0;background:#eff6ff;border-radius:0 8px 8px 0;color:#475569;}
@@ -186,7 +186,7 @@ img{max-width:100%;}
 .pmt-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;
          padding:10px;margin-top:8px;display:none;}
 .pmt-box.open{display:block;}
-.pmt-box pre{font-family:'Fira Code',monospace;font-size:.75rem;color:#64748b;
+.pmt-box pre{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.75rem;color:#64748b;
              white-space:pre-wrap;word-break:break-word;margin-bottom:7px;}
 .btn-copy{background:none;border:none;color:#2563eb;font-family:'Sarabun',sans-serif;
           font-size:.78rem;font-weight:700;cursor:pointer;}
@@ -985,13 +985,16 @@ async function init() {
       sc.crossOrigin = 'anonymous';
       document.head.appendChild(sc);
     }
-
-    // Ticker
-    const artData = await get('/articles?page=1');
-    const ticker = (artData.articles||[]).map(a=>a.title).join('  |  ');
-    document.getElementById('tickerText').textContent = ticker || '';
   } catch(e) { console.log('Settings load error', e); }
-  route();
+
+  route();   // render เนื้อหาหลักทันที ไม่รอ ticker
+
+  // Ticker เติมทีหลัง (ใช้ cache จาก renderHome — ไม่ยิงซ้ำ)
+  get('/articles?page=1').then(artData => {
+    const ticker = (artData.articles||[]).map(a=>a.title).join('  |  ');
+    const el = document.getElementById('tickerText');
+    if (el) el.textContent = ticker || '';
+  }).catch(()=>{});
 }
 
 function setMeta(prop, content) {
