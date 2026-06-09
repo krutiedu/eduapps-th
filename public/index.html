@@ -498,7 +498,7 @@ async function renderArticle(slug) {
     <div class="art-info">
       <span class="${catTag(art.category)}">${art.category}</span>
       <span>📅 ${fmt(art.created_at)}</span>
-      <span>✍️ ${S.author_name||'ผู้เขียน'}</span>
+      <span>✍️ ${art.author_name || S.author_name||'ผู้เขียน'}</span>
       <span>👁 ${art.views||0} ครั้ง</span>
     </div>
     ${adSlot()}
