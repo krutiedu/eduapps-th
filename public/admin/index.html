@@ -162,7 +162,7 @@ tr:hover td{background:#fafafa;}
 <div class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="sidebar-logo-text" id="sideTitle">✦ EduApps TH</div>
-    <div class="sidebar-logo-sub">ระบบจัดการเว็บ</div>
+    <div id="sideUser" style="font-size:.75rem;color:#94a3b8;margin-top:3px;padding:0 18px;"></div>
   </div>
   <nav class="sidebar-nav">
     <div class="sidebar-sec">หลัก</div>
@@ -170,11 +170,14 @@ tr:hover td{background:#fafafa;}
     <div class="sidebar-sec">เนื้อหา</div>
     <div class="nav-item" data-page="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
     <div class="nav-item" data-page="new-article" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
-    <div class="nav-item" data-page="apps" onclick="nav('apps')"><span class="ni">🎮</span> จัดการแอป</div>
+    <div class="nav-item admin-only" data-page="apps" onclick="nav('apps')" style="display:none;"><span class="ni">🎮</span> จัดการแอป</div>
     <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
-    <div class="sidebar-sec">ระบบ</div>
-    <div class="nav-item" data-page="codes" onclick="nav('codes')"><span class="ni">🔑</span> รหัสปลดล็อก</div>
-    <div class="nav-item" data-page="settings" onclick="nav('settings')"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
+    <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
+    <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
+    <div class="nav-item admin-only" data-page="users" onclick="nav('users')" style="display:none;"><span class="ni">👥</span> จัดการผู้ใช้</div>
+    <div class="nav-item admin-only" data-page="settings" onclick="nav('settings')" style="display:none;"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
+    <div class="sidebar-sec">บัญชีของฉัน</div>
+    <div class="nav-item" data-page="profile" onclick="nav('profile')"><span class="ni">👤</span> โปรไฟล์</div>
   </nav>
   <div class="sidebar-footer">
     <div class="nav-item" onclick="doLogout()" style="border-left-color:transparent;">
@@ -198,6 +201,11 @@ tr:hover td{background:#fafafa;}
     <div class="login-sub">ระบบจัดการเว็บ</div>
     <div id="loginAlert"></div>
     <div class="form-group">
+      <label class="form-label">ชื่อผู้ใช้ <span style="color:#94a3b8;font-weight:400;">(เว้นว่าง = admin หลัก)</span></label>
+      <input type="text" class="form-input" id="usernameInput" placeholder="username"
+             onkeydown="if(event.key==='Enter')document.getElementById('pwdInput').focus()">
+    </div>
+    <div class="form-group">
       <label class="form-label">รหัสผ่าน</label>
       <input type="password" class="form-input" id="pwdInput" placeholder="กรอกรหัสผ่าน"
              onkeydown="if(event.key==='Enter')doLogin()">
@@ -210,9 +218,11 @@ tr:hover td{background:#fafafa;}
 
 <script>
 'use strict';
-const API = '/api';
-const tok = () => localStorage.getItem('_admtok');
-const hdr = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok() });
+const tok    = () => localStorage.getItem('_admtok');
+const myRole = () => localStorage.getItem('_role') || 'super_admin';
+const myName = () => localStorage.getItem('_display_name') || 'Admin';
+const myUid  = () => localStorage.getItem('_uid') || '0';
+const hdr    = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok() });
 
 const api = {
   get:    url       => fetch(API+url, { headers: hdr(), cache: 'no-store' }).then(r=>r.json()),
@@ -223,14 +233,19 @@ const api = {
 
 // ── AUTH ──────────────────────────────────────────────────
 async function doLogin() {
-  const pw  = document.getElementById('pwdInput').value;
+  const username = document.getElementById('usernameInput').value.trim();
+  const pw       = document.getElementById('pwdInput').value;
+  const body     = username ? { username, password: pw } : { password: pw };
   const res = await fetch(API+'/auth/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: pw })
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
   }).then(r=>r.json());
   if (res.token) {
     localStorage.setItem('_admtok', res.token);
-    showAdmin(); nav('dash');
+    localStorage.setItem('_role', res.role || 'super_admin');
+    localStorage.setItem('_display_name', res.display_name || 'Admin');
+    localStorage.setItem('_username', res.username || 'admin');
+    localStorage.setItem('_uid', res.user_id || '0');
+    showAdmin(); applyRole(); nav('dash');
   } else {
     document.getElementById('loginAlert').innerHTML =
       `<div class="alert alert-danger">❌ ${res.error||'รหัสผ่านไม่ถูกต้อง'}</div>`;
@@ -239,8 +254,20 @@ async function doLogin() {
 
 async function doLogout() {
   await fetch(API+'/auth/logout', { method:'POST', headers: hdr() });
-  localStorage.removeItem('_admtok');
+  ['_admtok','_role','_display_name','_username','_uid'].forEach(k=>localStorage.removeItem(k));
   showLogin();
+}
+
+function applyRole() {
+  const isAdmin = myRole() === 'super_admin';
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  const sideUser = document.getElementById('sideUser');
+  if (sideUser) {
+    const badge = isAdmin
+      ? '<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">admin</span>'
+      : '<span style="background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">editor</span>';
+    sideUser.innerHTML = myName() + ' ' + badge;
+  }
 }
 
 function showLogin() {
@@ -271,6 +298,8 @@ function nav(page) {
   if (page==='apps')         renderApps();
   if (page==='comments')     renderComments();
   if (page==='codes')        renderCodes();
+  if (page==='users')        renderUsers();
+  if (page==='profile')      renderProfile();
   if (page==='settings')     renderSettings();
 }
 
@@ -950,6 +979,156 @@ async function uploadPreviewImg() {
 }
 
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// USERS — จัดการผู้ใช้ (super_admin only)
+// ══════════════════════════════════════════════════════════
+async function renderUsers() {
+  if (myRole() !== 'super_admin') { document.getElementById('content').innerHTML = `<div class="page-title">⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้</div>`; return; }
+  const d = await api.get('/users');
+  const list = d.users || [];
+  document.getElementById('content').innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div class="page-title" style="margin:0;">👥 จัดการผู้ใช้</div>
+    <button class="btn btn-primary" onclick="openUserModal(null)">+ เพิ่ม Editor</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>ชื่อแสดง</th><th>Username</th><th>Role</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
+      <tbody>
+        ${list.length ? list.map(u=>`<tr>
+          <td><strong>${u.display_name}</strong></td>
+          <td><code style="background:#f1f5f9;padding:2px 8px;border-radius:5px;">${u.username}</code></td>
+          <td>${u.role==='super_admin'
+            ?'<span class="badge" style="background:#fef3c7;color:#92400e;">👑 Super Admin</span>'
+            :'<span class="badge badge-blue">✏️ Editor</span>'}</td>
+          <td style="font-size:.82rem;color:#64748b;">${fmtD(u.created_at)}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-outline btn-sm" onclick="openUserModal(${u.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delUser(${u.id},'${u.display_name}')">🗑</button>
+          </td>
+        </tr>`).join('')
+        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มี Editor — กด "+ เพิ่ม Editor" ด้านบน</td></tr>`}
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card" style="background:#f8fafc;">
+    <p style="font-size:.88rem;color:#475569;line-height:2;">
+      <strong>Editor</strong> สามารถเขียนและแก้ไขบทความ จัดการความคิดเห็น และแก้โปรไฟล์ตัวเองได้<br>
+      <strong>Super Admin</strong> มีสิทธิ์ทุกอย่าง รวมถึงจัดการแอป รหัสปลดล็อก ตั้งค่าเว็บ และผู้ใช้
+    </p>
+  </div>`;
+}
+
+function fmtD(dt) { if(!dt)return'-'; try{return new Date(dt).toLocaleDateString('th-TH')}catch{return dt;} }
+
+function openUserModal(id) {
+  api.get('/users').then(d => {
+    const u = id ? (d.users||[]).find(x=>x.id===id) : null;
+    document.getElementById('modal').innerHTML = `
+    <div class="modal-ov" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>${u ? '✏️ แก้ไขผู้ใช้' : '👤 เพิ่ม Editor ใหม่'}</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username *</label>
+            <input type="text" class="form-input" id="uUsername" value="${u?.username||''}" ${u?'readonly style="background:#f8fafc;"':''} placeholder="เช่น teacher1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="uRole">
+              <option value="editor" ${(!u||u.role==='editor')?'selected':''}>✏️ Editor</option>
+              <option value="super_admin" ${u?.role==='super_admin'?'selected':''}>👑 Super Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อที่แสดง *</label>
+          <input type="text" class="form-input" id="uDisplayName" value="${u?.display_name||''}" placeholder="เช่น ครูสมชาย">
+        </div>
+        <div class="form-group">
+          <label class="form-label">${u?'รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)':'รหัสผ่าน *'}</label>
+          <input type="password" class="form-input" id="uPassword" placeholder="${u?'เว้นว่างเพื่อคงรหัสเดิม':'ตั้งรหัสผ่าน'}">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+          <button class="btn btn-primary" onclick="saveUser(${u?.id||'null'})">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+async function saveUser(id) {
+  const un   = document.getElementById('uUsername').value.trim();
+  const dn   = document.getElementById('uDisplayName').value.trim();
+  const pw   = document.getElementById('uPassword').value;
+  const role = document.getElementById('uRole').value;
+  if (!dn || (!id && (!un || !pw))) { alert('กรุณาใส่ข้อมูลให้ครบ'); return; }
+  const body = { username:un, display_name:dn, role };
+  if (pw) body.password = pw;
+  const r = id && id!=='null'
+    ? await api.put('/users/'+id, body)
+    : await api.post('/users', body);
+  if (r.error) { toast('❌ '+r.error); return; }
+  closeModal(); toast('✅ บันทึกแล้ว'); renderUsers();
+}
+
+async function delUser(id, name) {
+  if (!confirm(`ลบผู้ใช้ "${name}" ?`)) return;
+  const r = await api.delete('/users/'+id);
+  if (r.error) { toast('❌ '+r.error); return; }
+  toast('🗑 ลบแล้ว'); renderUsers();
+}
+
+// ══════════════════════════════════════════════════════════
+// PROFILE — โปรไฟล์ของตัวเอง (ทุก role)
+// ══════════════════════════════════════════════════════════
+async function renderProfile() {
+  const uid = myUid();
+  document.getElementById('content').innerHTML = `
+  <div class="page-title">👤 โปรไฟล์ของฉัน</div>
+  <div class="card">
+    <div class="card-title">ข้อมูลส่วนตัว</div>
+    <div class="form-group">
+      <label class="form-label">ชื่อที่แสดงบนเว็บ (ผู้เขียนบทความ)</label>
+      <input type="text" class="form-input" id="pDisplayName" value="${myName()}">
+    </div>
+    <p style="font-size:.82rem;color:#64748b;margin-bottom:16px;">ชื่อนี้จะแสดงบนบทความที่คุณเขียน</p>
+    <div class="card-title">เปลี่ยนรหัสผ่าน</div>
+    <div class="settings-grid">
+      <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input type="password" class="form-input" id="pPwd" placeholder="เว้นว่าง = ไม่เปลี่ยน"></div>
+      <div class="form-group"><label class="form-label">ยืนยัน</label><input type="password" class="form-input" id="pPwd2" placeholder="ยืนยันรหัสผ่านใหม่"></div>
+    </div>
+    <button class="btn btn-success" onclick="saveProfile()">💾 บันทึกโปรไฟล์</button>
+  </div>`;
+}
+
+async function saveProfile() {
+  const dn   = document.getElementById('pDisplayName').value.trim();
+  const pwd  = document.getElementById('pPwd').value;
+  const pwd2 = document.getElementById('pPwd2').value;
+  if (!dn) { alert('กรุณาใส่ชื่อที่แสดง'); return; }
+  if (pwd && pwd !== pwd2) { toast('❌ รหัสผ่านไม่ตรงกัน'); return; }
+  const uid = myUid();
+  let r;
+  if (uid === '0') {
+    // Admin หลัก — บันทึกผ่าน settings
+    const body = { author_name: dn };
+    if (pwd) body.admin_password = pwd;
+    r = await api.put('/settings', body);
+  } else {
+    const body = { display_name: dn };
+    if (pwd) body.password = pwd;
+    r = await api.put('/users/'+uid, body);
+  }
+  if (r.ok || !r.error) {
+    localStorage.setItem('_display_name', dn);
+    applyRole();
+    toast('✅ บันทึกโปรไฟล์แล้ว');
+  } else { toast('❌ '+r.error); }
+}
+
+// ══════════════════════════════════════════════════════════
 async function renderSettings() {
   const s = await api.get('/settings');
   let cats = [];
@@ -1058,7 +1237,11 @@ async function init() {
   if (t) {
     const check = await fetch(API+'/auth/check', { headers: hdr() }).then(r=>r.json()).catch(()=>({authenticated:false}));
     if (check.authenticated) {
-      showAdmin();
+      // อัปเดต role/displayName จาก server
+      if (check.role) localStorage.setItem('_role', check.role);
+      if (check.display_name) localStorage.setItem('_display_name', check.display_name);
+      if (check.username) localStorage.setItem('_username', check.username);
+      showAdmin(); applyRole();
       const s = await api.get('/settings').catch(()=>({}));
       if (s.site_title) document.getElementById('sideTitle').textContent = '✦ '+s.site_title;
       if (s.article_categories) localStorage.setItem('_cats', s.article_categories);
@@ -1085,6 +1268,10 @@ window.saveCode = saveCode;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
 window.insertDownload = insertDownload;
+window.openUserModal = openUserModal;
+window.saveUser = saveUser;
+window.delUser = delUser;
+window.saveProfile = saveProfile;
 window.delApp = delApp;
 window.approveCmt = approveCmt;
 window.delCmt = delCmt;
