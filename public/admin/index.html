@@ -873,6 +873,12 @@ async function saveCode(id) {
   renderCodes();
 }
 
+async function delCode(id, code) {
+  if (!confirm(`ลบรหัส "${code}" ?`)) return;
+  await api.delete('/codes/'+id);
+  toast('🗑 ลบรหัสแล้ว'); renderCodes();
+}
+
 async function uploadPreviewImg() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
