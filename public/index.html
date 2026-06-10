@@ -401,9 +401,12 @@ function route() {
 }
 
 const go = hash => { location.hash = hash; };
-let _focusSearch = false;
+let _focusSearch = false, _focusAppsSearch = false;
 function goSearch() {
-  if (location.hash === '#/blog') {
+  const h = location.hash;
+  if (h === '#/apps') {
+    document.getElementById('appSearch')?.focus();
+  } else if (h === '#/blog') {
     document.getElementById('blogSearch')?.focus();
   } else {
     _focusSearch = true;
@@ -639,6 +642,15 @@ function drawApps() {
   else if (_appFilter === 'locked') filtered = sorted.filter(a => a.locked);
   else if (_appFilter !== 'all')    filtered = sorted.filter(a => a.category === _appFilter);
 
+  // --- text search ---
+  if (_appQ.trim()) {
+    const q = _appQ.trim().toLowerCase();
+    filtered = filtered.filter(a =>
+      (a.title||'').toLowerCase().includes(q) ||
+      (a.description||'').toLowerCase().includes(q)
+    );
+  }
+
   // --- filter pills ---
   const pills = [
     {k:'all',    label:'ทั้งหมด'},
@@ -705,6 +717,10 @@ function drawApps() {
       <h1 style="font-size:1.5rem;font-weight:800;">🎮 แอปทั้งหมด</h1>
       ${sortHTML}
     </div>
+    <div class="search-row" style="margin-bottom:14px;">
+      <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..." value="${_appQ}"
+        oninput="filterApps(this.value)">
+    </div>
     <div class="cat-strip" style="margin-bottom:20px;">${pillHTML}</div>
     ${redeemHTML}
     ${adSlot()}
@@ -712,6 +728,7 @@ function drawApps() {
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
   activateAds();
+  if (_focusAppsSearch) { _focusAppsSearch = false; document.getElementById('appSearch')?.focus(); }
 }
 
 // ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
@@ -736,6 +753,7 @@ async function redeemAll() {
   }
 }
 
+function filterApps(q)   { _appQ     = q; drawApps(); }
 function setAppFilter(f) { _appFilter = f; drawApps(); }
 function setAppSort(s)   { _appSort   = s; drawApps(); }
 
