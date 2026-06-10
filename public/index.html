@@ -64,6 +64,27 @@ h1,h2,h3,h4{font-family:'Kanit',sans-serif;font-weight:600;line-height:1.3;}
 .tag-thai{background:var(--mint-soft);color:var(--mint);}
 .tag-mgmt{background:#fdf0f5;color:#b3457a;}
 
+/* REDEEM CODE BOX (ปลดล็อกรวม) */
+.redeem-box{background:linear-gradient(135deg,#fff8ec,#fef3e0);border:1.5px solid rgba(240,168,48,.35);
+            border-radius:16px;padding:18px 22px;margin-bottom:22px;display:flex;align-items:center;
+            justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.redeem-text{display:flex;flex-direction:column;gap:2px;}
+.redeem-text strong{font-family:'Kanit';font-size:1.02rem;color:var(--ink);}
+.redeem-text span{font-size:.85rem;color:var(--ink-soft);}
+.redeem-input{display:flex;gap:9px;align-items:center;}
+.redeem-input input{background:#fff;border:1.5px solid rgba(240,168,48,.4);border-radius:10px;
+                    padding:11px 15px;font-family:'Sarabun';font-size:.95rem;color:var(--ink);
+                    outline:none;width:190px;transition:border-color .2s,box-shadow .2s;}
+.redeem-input input:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(240,168,48,.15);}
+.redeem-input .btn-primary{padding:11px 22px;}
+#redeemMsg{width:100%;font-size:.88rem;font-weight:700;}
+#redeemMsg:empty{display:none;}
+@media(max-width:560px){
+  .redeem-box{flex-direction:column;align-items:stretch;}
+  .redeem-input{width:100%;}
+  .redeem-input input{flex:1;width:auto;}
+}
+
 /* AD SLOTS (ซ่อนเมื่อไม่มี AdSense — adSlot() คืนค่าว่าง) */
 .ad-slot{display:none;}
 
@@ -661,6 +682,22 @@ function drawApps() {
     content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
   }
 
+  // --- redeem banner (แสดงเมื่อมีแอปล็อก) ---
+  const hasLocked = _allApps.some(a => a.locked);
+  const redeemHTML = hasLocked ? `
+    <div class="redeem-box">
+      <div class="redeem-text">
+        <strong>🔑 มีรหัสปลดล็อก?</strong>
+        <span>ใส่รหัสเดียว ปลดล็อกได้ทุกแอปที่รหัสนั้นเข้าได้ — ไม่ต้องปลดทีละแอป</span>
+      </div>
+      <div class="redeem-input">
+        <input id="redeemCode" placeholder="กรอกรหัสปลดล็อก"
+               onkeydown="if(event.key==='Enter')redeemAll()">
+        <button class="btn-primary" onclick="redeemAll()">ปลดล็อก</button>
+      </div>
+      <div id="redeemMsg"></div>
+    </div>` : '';
+
   app.innerHTML = `
   <div class="container" style="padding-top:28px;padding-bottom:32px;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
@@ -668,11 +705,34 @@ function drawApps() {
       ${sortHTML}
     </div>
     <div class="cat-strip" style="margin-bottom:20px;">${pillHTML}</div>
+    ${redeemHTML}
     ${adSlot()}
     ${content}
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
   activateAds();
+}
+
+// ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
+async function redeemAll() {
+  const inp = document.getElementById('redeemCode');
+  const msg = document.getElementById('redeemMsg');
+  const code = (inp.value || '').trim();
+  if (!code) { showMsg(msg, 'กรุณากรอกรหัส', '#ea580c'); return; }
+  showMsg(msg, '⏳ กำลังตรวจรหัส...', '#6b7689');
+  try {
+    const r = await fetch(API + '/apps/unlock-all', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    }).then(r => r.json());
+    if (r.error) { showMsg(msg, '❌ ' + r.error, '#dc2626'); return; }
+    const list = r.unlocked || [];
+    list.forEach(a => { if (a.url) sessionStorage.setItem('unlocked_' + a.id, a.url); });
+    showMsg(msg, `✅ ปลดล็อกสำเร็จ ${list.length} แอป!`, '#15a394');
+    setTimeout(drawApps, 700);  // re-render ให้แอปที่ปลดแล้วแสดงผล
+  } catch (e) {
+    showMsg(msg, '❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง', '#dc2626');
+  }
 }
 
 function setAppFilter(f) { _appFilter = f; drawApps(); }
@@ -1084,6 +1144,7 @@ window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderPrivacy = renderPrivacy;
 window.openLockModal = openLockModal;
+window.redeemAll = redeemAll;
 window.closeLockModal = closeLockModal;
 window.submitLock = submitLock;
 window.setAppFilter = setAppFilter;
