@@ -284,6 +284,37 @@ async function apps(req, env, segs, method) {
     return ok({ apps: results });
   }
 
+  // POST /apps/unlock-all — ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
+  if (segs[1] === 'unlock-all' && method === 'POST') {
+    const b = await req.json();
+    const code = (b.code || '').trim();
+    if (!code) return err('กรุณาใส่รหัส');
+
+    // ── ตรวจ access_codes table (ระบบกลาง) ──
+    const { results: codeRows } = await env.DB
+      .prepare("SELECT * FROM access_codes WHERE code=? AND active=1").bind(code).all();
+
+    if (codeRows[0]) {
+      const row = codeRows[0];
+      if (row.expires_at && new Date(row.expires_at) < new Date()) return err('รหัสหมดอายุแล้ว', 403);
+      let appIds = [];
+      try { appIds = JSON.parse(row.app_ids || '[]'); } catch {}
+      const { results: all } = await env.DB
+        .prepare('SELECT id,url FROM apps WHERE locked=1 AND visible=1').all();
+      const matched = appIds.includes('all')
+        ? all
+        : all.filter(a => appIds.includes(a.id) || appIds.includes(String(a.id)));
+      if (!matched.length) return err('รหัสนี้ยังไม่มีแอปให้ปลด', 403);
+      return ok({ unlocked: matched.map(a => ({ id: a.id, url: a.url })), label: row.label });
+    }
+
+    // ── fallback: รหัสตรงกับ lock_code ของแอปไหนบ้าง ──
+    const { results: byCode } = await env.DB
+      .prepare('SELECT id,url FROM apps WHERE locked=1 AND visible=1 AND lock_code=?').bind(code).all();
+    if (!byCode.length) return err('รหัสไม่ถูกต้อง', 403);
+    return ok({ unlocked: byCode.map(a => ({ id: a.id, url: a.url })) });
+  }
+
   // POST /apps/:id/unlock — ตรวจรหัส (เช็ค access_codes ก่อน แล้ว fallback ไป per-app code)
   if (id && segs[2] === 'unlock' && method === 'POST') {
     const b = await req.json();
