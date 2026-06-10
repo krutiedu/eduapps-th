@@ -613,7 +613,7 @@ async function submitComment(articleId) {
 }
 
 // ── APPS PAGE ────────────────────────────────────────────
-let _allApps = [], _appFilter = 'all', _appSort = 'newest';
+let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
 
 async function renderApps() {
   const app = document.getElementById('app');
@@ -622,6 +622,7 @@ async function renderApps() {
   _allApps = data.apps || [];
   _appFilter = 'all';
   _appSort = 'newest';
+  _appQ = '';
   drawApps();
 }
 
