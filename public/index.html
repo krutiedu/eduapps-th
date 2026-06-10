@@ -311,7 +311,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin
     <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
   </ul>
   <div class="nav-right">
-    <button class="search-btn" onclick="go('/blog')">🔍 ค้นหา</button>
+    <button class="search-btn" onclick="goSearch()">🔍 ค้นหา</button>
   </div>
   <button class="hamburger" onclick="toggleNav()">☰</button>
 </nav>
@@ -401,6 +401,15 @@ function route() {
 }
 
 const go = hash => { location.hash = hash; };
+let _focusSearch = false;
+function goSearch() {
+  if (location.hash === '#/blog') {
+    document.getElementById('blogSearch')?.focus();
+  } else {
+    _focusSearch = true;
+    go('/blog');
+  }
+}
 window.addEventListener('hashchange', route);
 const toggleNav = () => document.getElementById('navLinks').classList.toggle('open');
 
@@ -519,6 +528,7 @@ async function renderBlog(q, cat, page) {
   </div>`;
   loadBlogCats();
   activateAds();
+  if (_focusSearch) { _focusSearch = false; document.getElementById('blogSearch')?.focus(); }
 }
 
 function loadBlogCats() {
