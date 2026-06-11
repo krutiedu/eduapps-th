@@ -10,26 +10,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ════════════════════════════════════════════════════════
-   KRU-TI ครูติ TH — "สมุดรางวัลของครู"
-   Display: Pridi (ฟอนต์มีหัว แบบหนังสือเรียน)
-   Body: Sarabun
-   Signature: ตราประทับดาวทอง ✦
+   KRU-TI ครูติ TH v2 — "กระดานดำ & ดาวทอง"
+   มงกุฎหมึกเข้ม (nav+บทความเด่น) → กระดาษอุ่น → ชั้นแอปน้ำเงิน
+   Display: Pridi | Body: Sarabun | ✦ ใช้เฉพาะ: โลโก้ / ตรา / หัวข้อ
 ════════════════════════════════════════════════════════ */
 :root{
-  --ink:#15223c; --ink-2:#1e3358; --ink-3:#2c4a7c;
-  --ink-soft:#41506b;
-  --gold:#f0a830; --gold-deep:#c47f0e; --gold-soft:rgba(240,168,48,.13);
+  --ink:#101c33; --ink-2:#18294a; --ink-3:#234070;
+  --ink-soft:#3d4c68;
+  --gold:#f3ac2e; --gold-bright:#ffc555; --gold-deep:#c47f0e; --gold-soft:rgba(243,172,46,.13);
+  --chalk:#f5efdf;
   --mint:#0fa294; --mint-soft:#e4f4f1;
   --paper:#faf7f1; --card:#ffffff;
   --line:#e8e1d3; --line-soft:#f1ecdf;
   --slate:#6d7588;
-  --shadow-sm:0 2px 10px rgba(21,34,60,.07);
-  --shadow-md:0 10px 30px rgba(21,34,60,.11);
-  --shadow-lg:0 18px 50px rgba(21,34,60,.16);
-  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:26px;
+  --shadow-sm:0 2px 10px rgba(16,28,51,.07);
+  --shadow-md:0 10px 30px rgba(16,28,51,.12);
+  --shadow-lg:0 22px 56px rgba(16,28,51,.18);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
 body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);
      display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased;}
 main#app{flex:1;}
@@ -38,64 +36,111 @@ img{max-width:100%;}
 h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 ::selection{background:var(--gold-soft);color:var(--ink);}
 
-/* ── PAGE-LOAD REVEAL (จังหวะเดียว ไม่หน่วง) ── */
-@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.rv{animation:rise .45s cubic-bezier(.22,.8,.3,1) both;}
-.rv2{animation:rise .45s .07s cubic-bezier(.22,.8,.3,1) both;}
-.rv3{animation:rise .45s .14s cubic-bezier(.22,.8,.3,1) both;}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.rv{animation:rise .5s cubic-bezier(.22,.8,.3,1) both;}
+.rv2{animation:rise .5s .08s cubic-bezier(.22,.8,.3,1) both;}
+.rv3{animation:rise .5s .16s cubic-bezier(.22,.8,.3,1) both;}
 
-/* ── TICKER ── */
-.ticker{background:var(--ink);color:#d6deeb;padding:8px 22px;
-        display:flex;align-items:center;gap:12px;font-size:.83rem;overflow:hidden;}
+/* ── โซนหัวเว็บ (หมึกเข้มทั้งแผง) ── */
+#topzone{background:var(--ink);position:relative;}
+#topzone::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:
+    radial-gradient(1.5px 1.5px at 12% 30%, rgba(243,172,46,.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 70%, rgba(255,255,255,.5) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 45% 20%, rgba(243,172,46,.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 62% 60%, rgba(255,255,255,.4) 50%, transparent 51%),
+    radial-gradient(2px 2px at 78% 35%, rgba(243,172,46,.7) 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 75%, rgba(255,255,255,.5) 50%, transparent 51%);}
+
+/* ticker */
+.ticker{color:#aebad0;padding:8px 22px;border-bottom:1px solid rgba(255,255,255,.07);
+        display:flex;align-items:center;gap:12px;font-size:.82rem;overflow:hidden;position:relative;z-index:2;}
 .ticker-badge{background:var(--gold);color:var(--ink);font-size:.68rem;font-weight:800;
-              padding:3px 11px;border-radius:5px;white-space:nowrap;flex-shrink:0;letter-spacing:.04em;}
+              padding:3px 11px;border-radius:5px;white-space:nowrap;flex-shrink:0;letter-spacing:.05em;}
 .ticker-inner{overflow:hidden;flex:1;}
 .ticker-text{white-space:nowrap;display:inline-block;will-change:transform;}
 
-/* ── NAV ── */
-#nav{background:rgba(250,247,241,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-     border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;
-     height:64px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;}
-.logo{font-family:'Pridi',serif;font-size:1.22rem;font-weight:700;color:var(--ink);cursor:pointer;
-      display:flex;align-items:center;gap:10px;line-height:1;}
-.logo::before{content:"✦";width:36px;height:36px;border-radius:11px;
-  background:linear-gradient(135deg,var(--ink) 20%,var(--ink-3));display:flex;align-items:center;justify-content:center;
-  color:var(--gold);font-size:1.05rem;box-shadow:0 3px 10px rgba(21,34,60,.3);}
-.logo span{color:var(--gold-deep);}
-.logo em{font-style:normal;font-family:'Sarabun';font-size:.72rem;font-weight:700;color:var(--slate);
-         align-self:flex-start;margin-top:2px;letter-spacing:.08em;}
-.nav-links{display:flex;gap:4px;list-style:none;}
-.nav-links a{padding:8px 15px;border-radius:9px;font-size:.94rem;font-weight:600;
-             color:var(--ink-soft);transition:color .15s,background .15s;}
-.nav-links a:hover{color:var(--ink);background:var(--line-soft);}
-.nav-links a.active{color:var(--ink);background:var(--gold-soft);}
+/* nav บนพื้นเข้ม */
+#nav{height:66px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;
+     position:relative;z-index:2;}
+.logo{font-family:'Pridi',serif;font-size:1.3rem;font-weight:700;color:#fff;cursor:pointer;
+      display:flex;align-items:center;gap:11px;line-height:1;}
+.logo::before{content:"✦";width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--gold) 10%,var(--gold-deep));display:flex;align-items:center;justify-content:center;
+  color:var(--ink);font-size:1.1rem;box-shadow:0 4px 14px rgba(243,172,46,.35);}
+.logo span{color:var(--gold-bright);}
+.logo em{font-style:normal;font-family:'Sarabun';font-size:.7rem;font-weight:700;color:#7587a5;
+         align-self:flex-start;margin-top:2px;letter-spacing:.1em;}
+.nav-links{display:flex;gap:2px;list-style:none;}
+.nav-links a{padding:9px 16px;border-radius:9px;font-size:.94rem;font-weight:600;
+             color:#aebad0;transition:color .15s,background .15s;}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.07);}
+.nav-links a{position:relative;}
+.nav-links a.active{color:var(--gold-bright);background:rgba(243,172,46,.1);}
+.nav-links a.active::after{content:"";position:absolute;left:16px;right:16px;bottom:4px;height:2.5px;
+  border-radius:2px;background:var(--gold);}
 .nav-right{display:flex;align-items:center;gap:8px;}
-.search-btn{background:var(--ink);border:none;padding:9px 17px;border-radius:10px;
-            font-family:'Sarabun';font-weight:700;font-size:.88rem;color:#fff;cursor:pointer;
-            display:inline-flex;align-items:center;gap:7px;transition:transform .15s,box-shadow .2s;}
-.search-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(21,34,60,.25);}
-.search-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
-.hamburger{display:none;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--ink);}
+.search-btn{background:var(--gold);border:none;padding:10px 18px;border-radius:10px;
+            font-family:'Sarabun';font-weight:700;font-size:.88rem;color:var(--ink);cursor:pointer;
+            display:inline-flex;align-items:center;gap:7px;transition:transform .15s,box-shadow .2s,background .15s;}
+.search-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(243,172,46,.4);background:var(--gold-bright);}
+.search-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.hamburger{display:none;background:none;border:none;font-size:1.45rem;cursor:pointer;color:#fff;}
 @media(max-width:640px){
   .hamburger{display:block;}
   .nav-links,.nav-right{display:none;}
-  .nav-links.open{display:flex;position:absolute;top:64px;left:0;right:0;background:var(--card);
-                  flex-direction:column;padding:12px 16px;border-bottom:1px solid var(--line);
+  .nav-links.open{display:flex;position:absolute;top:66px;left:0;right:0;background:var(--ink-2);
+                  flex-direction:column;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1);
                   box-shadow:var(--shadow-md);z-index:99;}
 }
+
+/* ── มงกุฎ: บทความเด่นบนกระดานดำ (เฉพาะหน้าแรก) ── */
+.crown{position:relative;z-index:1;padding:34px 0 52px;color:#fff;}
+.crown-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:40px;align-items:center;}
+.crown-feat{cursor:pointer;}
+.crown-meta{display:flex;gap:12px;align-items:center;margin-bottom:16px;font-size:.84rem;color:#8fa0bf;font-weight:600;}
+.crown-cat{background:rgba(243,172,46,.16);color:var(--gold-bright);border:1px solid rgba(243,172,46,.35);
+  padding:4px 14px;border-radius:100px;font-size:.76rem;font-weight:700;}
+.crown-feat h2{font-size:clamp(1.65rem,3.6vw,2.5rem);font-weight:700;line-height:1.4;
+  color:var(--chalk);margin-bottom:16px;transition:color .2s;}
+.crown-feat h2 mark{background:none;color:var(--gold-bright);}
+.crown-feat:hover h2{color:#fff;}
+.crown-feat .cx{font-size:1.02rem;color:#9fb0cd;line-height:1.9;max-width:56ch;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.crown-read{margin-top:22px;display:inline-flex;align-items:center;gap:9px;color:var(--gold-bright);
+  font-weight:800;font-size:.95rem;transition:gap .2s;}
+.crown-feat:hover .crown-read{gap:15px;}
+/* ตราดาว — ที่เดียวบนหน้า */
+.crown-feat{position:relative;}
+.stamp{position:absolute;top:-14px;right:6px;width:68px;height:68px;border-radius:50%;
+  border:2px dashed rgba(243,172,46,.65);transform:rotate(9deg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;z-index:3;pointer-events:none;}
+.stamp b{color:var(--gold);font-size:1.5rem;line-height:1;}
+.stamp small{font-size:.56rem;font-weight:800;color:var(--gold);letter-spacing:.12em;}
+/* มินิลิสต์ น่าอ่านต่อ (ในมงกุฎ) */
+.crown-side{display:flex;flex-direction:column;gap:10px;}
+.crown-side-label{font-size:.78rem;font-weight:800;color:#7587a5;letter-spacing:.16em;margin-bottom:2px;}
+.crown-item{display:flex;gap:14px;align-items:flex-start;padding:13px 16px;border-radius:13px;cursor:pointer;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);transition:background .15s,border-color .15s;}
+.crown-item:hover{background:rgba(255,255,255,.09);border-color:rgba(243,172,46,.4);}
+.crown-num{font-family:'Pridi',serif;font-size:1.3rem;font-weight:700;color:var(--gold);line-height:1.15;flex-shrink:0;width:22px;}
+.crown-item h3{font-family:'Sarabun';font-size:.94rem;font-weight:700;line-height:1.55;color:#dde4f0;}
+.crown-item:hover h3{color:#fff;}
+.crown-item .ci-cat{font-size:.74rem;color:#8fa0bf;font-weight:600;margin-top:3px;}
+/* รอยต่อมงกุฎ → กระดาษ */
+.crown-edge{height:30px;background:var(--paper);border-radius:28px 28px 0 0;margin-top:-30px;position:relative;z-index:2;}
 
 /* ── LAYOUT ── */
 .container{max-width:1120px;margin:0 auto;padding:0 22px;}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;
      font-family:'Sarabun',sans-serif;font-size:.94rem;font-weight:700;cursor:pointer;border:none;
      transition:transform .15s,box-shadow .2s,background .2s;}
-.btn-primary{background:var(--gold);color:var(--ink);box-shadow:0 4px 14px rgba(240,168,48,.36);}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(240,168,48,.46);}
+.btn-primary{background:var(--gold);color:var(--ink);box-shadow:0 4px 14px rgba(243,172,46,.36);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(243,172,46,.46);}
 .btn-outline{background:transparent;color:var(--ink);border:1.5px solid var(--line);}
 .btn-outline:hover{border-color:var(--ink);background:var(--card);}
 
-/* tags */
-.tag{display:inline-block;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;letter-spacing:.01em;}
+.tag{display:inline-block;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
 .tag-tech{background:#fdf2e2;color:var(--gold-deep);}
 .tag-edu{background:var(--mint-soft);color:var(--mint);}
 .tag-ai{background:#ebf0fa;color:#3a5a9b;}
@@ -105,78 +150,36 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .tag-thai{background:var(--mint-soft);color:var(--mint);}
 .tag-mgmt{background:#fdeef5;color:#b3457a;}
 
-/* ── SECTION HEADS — eyebrow + Pridi title ── */
-.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;gap:14px;}
-.sec-eyebrow{display:flex;align-items:center;gap:8px;font-size:.76rem;font-weight:800;
-  letter-spacing:.14em;color:var(--gold-deep);text-transform:uppercase;margin-bottom:5px;}
-.sec-eyebrow::before{content:"✦";font-size:.85rem;color:var(--gold);}
-.sec-eyebrow.mint{color:var(--mint);}
-.sec-eyebrow.mint::before{color:var(--mint);}
-.sec-title{font-family:'Pridi',serif;font-size:1.5rem;font-weight:700;color:var(--ink);line-height:1.25;}
-.sec-more{font-size:.9rem;color:var(--mint);cursor:pointer;font-weight:700;flex-shrink:0;
-          display:inline-flex;align-items:center;gap:5px;transition:gap .2s;padding-bottom:3px;}
-.sec-more:hover{gap:10px;}
-
-/* ── STAR STAMP (signature) ── */
-.stamp{position:absolute;top:-20px;right:24px;width:76px;height:76px;border-radius:50%;
-  border:2px dashed var(--gold);background:var(--card);transform:rotate(8deg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
-  box-shadow:var(--shadow-sm);z-index:5;pointer-events:none;}
-.stamp b{color:var(--gold);font-size:1.45rem;line-height:1;}
-.stamp small{font-size:.58rem;font-weight:800;color:var(--gold-deep);letter-spacing:.1em;}
-
-/* ── FEATURED (editorial, ใหญ่, Pridi เต็มตัว) ── */
-.feat-wrap{position:relative;margin-top:26px;margin-bottom:34px;}
-.feat-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-  overflow:hidden;cursor:pointer;display:grid;grid-template-columns:1.15fr .85fr;
-  transition:transform .22s,box-shadow .25s;}
-.feat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
-.feat-body{padding:38px 40px 36px;display:flex;flex-direction:column;justify-content:center;}
-.feat-meta{display:flex;gap:10px;align-items:center;margin-bottom:14px;font-size:.82rem;color:var(--slate);font-weight:600;}
-.feat-card h2{font-size:clamp(1.55rem,3.2vw,2.25rem);font-weight:700;color:var(--ink);
-  line-height:1.32;margin-bottom:14px;}
-.feat-card .feat-x{font-size:1.02rem;color:var(--ink-soft);line-height:1.85;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
-.feat-read{margin-top:22px;display:inline-flex;align-items:center;gap:8px;color:var(--gold-deep);
-  font-weight:800;font-size:.92rem;transition:gap .2s;}
-.feat-card:hover .feat-read{gap:13px;}
-.feat-img{background:linear-gradient(150deg,var(--ink) 10%,var(--ink-3));min-height:300px;
-  display:flex;align-items:center;justify-content:center;font-size:4.5rem;position:relative;overflow:hidden;}
-.feat-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
-.feat-img::after{content:"";position:absolute;inset:0;
-  background:radial-gradient(circle at 75% 20%, rgba(240,168,48,.18), transparent 55%);pointer-events:none;}
-
-/* ── SIDE LIST (รายการรอง — มีเลขทอง) ── */
-.side-list{display:flex;flex-direction:column;gap:0;background:var(--card);
-  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
-.side-item{display:flex;gap:16px;align-items:flex-start;padding:18px 22px;cursor:pointer;
-  border-bottom:1px solid var(--line-soft);transition:background .15s;}
-.side-item:last-child{border-bottom:none;}
-.side-item:hover{background:var(--line-soft);}
-.side-item:hover h3{color:var(--gold-deep);}
-.side-num{font-family:'Pridi',serif;font-size:1.5rem;font-weight:700;color:var(--gold);
-  line-height:1;flex-shrink:0;width:30px;text-align:center;margin-top:2px;}
-.side-item h3{font-size:1.02rem;font-weight:600;line-height:1.45;margin-bottom:4px;transition:color .15s;}
-.side-item .si-meta{font-size:.78rem;color:var(--slate);font-weight:600;display:flex;gap:8px;align-items:center;}
-
-/* hero 2-col layout */
-.hero-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:stretch;}
+/* ── SECTION HEADS — แท่งทองนำสายตา ── */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;gap:14px;}
+.sec-title{font-family:'Pridi',serif;font-size:1.55rem;font-weight:700;color:var(--ink);line-height:1.25;
+  position:relative;padding-left:18px;}
+.sec-title::before{content:"";position:absolute;left:0;top:8%;bottom:8%;width:5px;border-radius:3px;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));}
+.sec-title.mint::before{background:linear-gradient(180deg,var(--mint),#0a7d72);}
+.sec-sub{font-size:.88rem;color:var(--slate);margin-top:3px;padding-left:18px;}
+.sec-more{font-size:.9rem;color:var(--gold-deep);cursor:pointer;font-weight:800;flex-shrink:0;
+          display:inline-flex;align-items:center;gap:6px;transition:gap .2s;padding-bottom:4px;}
+.sec-more:hover{gap:11px;}
 
 /* ── ARTICLES GRID ── */
-.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;}
-.art-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
-  padding:21px 21px 18px;cursor:pointer;display:flex;flex-direction:column;
+.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.art-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:22px 22px 19px;cursor:pointer;display:flex;flex-direction:column;position:relative;overflow:hidden;
   transition:transform .18s,box-shadow .22s,border-color .2s;}
-.art-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);border-color:#ddd3bd;}
+.art-card::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-bright));transform:scaleX(0);transform-origin:left;transition:transform .25s;}
+.art-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md);border-color:#ded2b8;}
+.art-card:hover::after{transform:scaleX(1);}
 .art-meta{display:flex;gap:7px;align-items:center;margin-bottom:11px;font-size:.78rem;}
-.art-card h3{font-size:1.08rem;font-weight:600;line-height:1.45;margin-bottom:8px;}
-.art-card p{font-size:.87rem;color:var(--ink-soft);line-height:1.7;
+.art-card h3{font-size:1.1rem;font-weight:600;line-height:1.5;margin-bottom:8px;}
+.art-card p{font-size:.87rem;color:var(--ink-soft);line-height:1.75;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
-.art-date{font-size:.76rem;color:var(--slate);margin-top:13px;font-weight:600;}
+.art-date{font-size:.76rem;color:var(--slate);margin-top:14px;font-weight:600;}
 
 /* ── ARTICLE PAGE ── */
 .art-wrap{max-width:730px;margin:0 auto;padding:42px 22px;}
-.art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.38;margin-bottom:16px;}
+.art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.42;margin-bottom:16px;}
 .art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;
           padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
 .art-body h2{font-size:1.42rem;font-weight:600;margin:30px 0 11px;}
@@ -186,8 +189,8 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .art-body li{margin-bottom:6px;line-height:1.85;}
 .art-body code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#f1ede4;
   padding:1px 7px;border-radius:5px;font-size:.86em;color:var(--gold-deep);}
-.art-body pre{background:#f1ede4;border:1px solid var(--line);border-radius:11px;padding:15px;margin:15px 0;overflow-x:auto;}
-.art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--ink-soft);}
+.art-body pre{background:var(--ink);border-radius:12px;padding:16px 18px;margin:15px 0;overflow-x:auto;}
+.art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--chalk);}
 .art-body blockquote{border-left:3px solid var(--gold);padding:12px 19px;margin:15px 0;
   background:var(--gold-soft);border-radius:0 11px 11px 0;color:var(--ink-soft);}
 .art-body a{color:var(--mint);text-decoration:underline;}
@@ -215,28 +218,24 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .form-input:focus,.form-ta:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft);}
 .form-ta{min-height:100px;resize:vertical;}
 
-/* ── APP SHELF (กล่องน้ำเงิน — signature เดิม ขัดเงาใหม่) ── */
-.apps-box{background:linear-gradient(155deg,var(--ink) 15%,var(--ink-2) 70%,#23406e);
-  border-radius:var(--r-xl);padding:36px 34px 34px;margin-bottom:32px;position:relative;z-index:1;}
-.apps-box::before{content:"✦ ✦ ✦";position:absolute;top:20px;right:28px;color:rgba(240,168,48,.22);
-  font-size:.85rem;letter-spacing:.5em;pointer-events:none;}
+/* ── ชั้นแอปน้ำเงิน (สลับจังหวะกับกระดาษ) ── */
+.apps-box{background:linear-gradient(150deg,var(--ink) 20%,var(--ink-2) 75%,#1d3458);
+  border-radius:26px;padding:38px 36px 36px;margin-bottom:34px;position:relative;z-index:1;overflow:visible;}
 .apps-box .sec-title{color:#fff;}
-.apps-box .sec-eyebrow{color:var(--gold);}
-.apps-box .sec-eyebrow::before{color:var(--gold);}
-.apps-box .sec-more{color:var(--gold);}
+.apps-box .sec-sub{color:#8fa0bf;}
+.apps-box .sec-more{color:var(--gold-bright);}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
-.app-card{border:1px solid var(--line);border-radius:var(--r-md);padding:18px;background:var(--card);
+.app-card{border:1px solid var(--line);border-radius:16px;padding:19px;background:var(--card);
   transition:transform .2s,box-shadow .2s,background .2s;position:relative;}
 .app-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);z-index:50;}
-.apps-box .app-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(2px);}
-.apps-box .app-card:hover{background:rgba(255,255,255,.1);box-shadow:none;}
+.apps-box .app-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);}
+.apps-box .app-card:hover{background:rgba(255,255,255,.11);box-shadow:none;}
 .apps-box .app-card h4{color:#fff;}
 .apps-box .app-card p{color:rgba(255,255,255,.68);}
-.apps-box .app-icon{background:rgba(240,168,48,.2);}
+.apps-box .app-icon{background:rgba(243,172,46,.2);}
 
-/* hover preview */
 .app-preview{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.96);
-  width:280px;background:var(--card);border-radius:var(--r-md);box-shadow:0 16px 48px rgba(13,21,38,.34);
+  width:280px;background:var(--card);border-radius:15px;box-shadow:0 16px 48px rgba(10,17,32,.36);
   border:1px solid var(--line);overflow:hidden;z-index:200;
   opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease;pointer-events:none;}
 .app-card:hover .app-preview{opacity:1;visibility:visible;transform:translateX(-50%) scale(1);}
@@ -248,15 +247,15 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .app-preview-info{padding:12px 14px;}
 .app-preview-info p{font-size:.84rem;color:var(--ink-soft);line-height:1.55;margin-bottom:6px;}
 .app-preview-lock{display:inline-flex;align-items:center;gap:5px;background:var(--gold-soft);
-  color:var(--gold-deep);border:1px solid rgba(240,168,48,.32);padding:4px 12px;border-radius:100px;
+  color:var(--gold-deep);border:1px solid rgba(243,172,46,.32);padding:4px 12px;border-radius:100px;
   font-size:.76rem;font-weight:700;}
 @media(hover:none) and (pointer:coarse){.app-preview{display:none;}}
 
 .app-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-.app-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;
-  justify-content:center;font-size:1.4rem;flex-shrink:0;background:var(--gold-soft);}
+.app-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;
+  justify-content:center;font-size:1.45rem;flex-shrink:0;background:var(--gold-soft);}
 .icon-blue,.icon-green,.icon-purple,.icon-orange{background:var(--gold-soft);}
-.app-card h4{font-family:'Pridi',serif;font-size:1.07rem;font-weight:600;line-height:1.3;}
+.app-card h4{font-family:'Pridi',serif;font-size:1.08rem;font-weight:600;line-height:1.3;}
 .app-card .tag{margin-top:4px;}
 .app-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.6;margin:9px 0 14px;min-height:38px;}
 .app-btns{display:flex;gap:8px;}
@@ -274,31 +273,28 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
   white-space:pre-wrap;word-break:break-word;margin-bottom:8px;}
 .btn-copy{background:none;border:none;color:var(--mint);font-family:'Sarabun';
   font-size:.84rem;font-weight:700;cursor:pointer;}
-/* navy band overrides */
 .apps-box .btn-open:hover{background:#fff;color:var(--ink);}
 .apps-box .btn-pmt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18);}
 .apps-box .btn-pmt.active,.apps-box .btn-pmt:hover{background:rgba(255,255,255,.2);}
-.apps-box .pmt-box{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);}
+.apps-box .pmt-box{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.12);}
 .apps-box .pmt-box pre{color:rgba(255,255,255,.72);}
-.apps-box .btn-copy{color:var(--gold);}
+.apps-box .btn-copy{color:var(--gold-bright);}
 
-/* ── REDEEM TICKET (บัตรรหัส — ขอบเส้นประแบบคูปอง) ── */
+/* ── ตั๋วรหัส ── */
 .redeem-row{position:relative;display:flex;align-items:center;gap:10px;
-  background:linear-gradient(135deg,#fffdf8,#fdf7ea);border:2px dashed var(--gold);
-  border-radius:var(--r-md);padding:8px 10px 8px 16px;margin-bottom:24px;flex-wrap:wrap;}
-.redeem-row::before{content:"";position:absolute;left:-9px;top:50%;transform:translateY(-50%);
-  width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px dashed var(--gold);
-  border-left-color:transparent;border-bottom-color:transparent;rotate:135deg;}
-.redeem-row::after{content:"";position:absolute;right:-9px;top:50%;transform:translateY(-50%);
-  width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px dashed var(--gold);
-  border-left-color:transparent;border-bottom-color:transparent;rotate:-45deg;}
+  background:linear-gradient(135deg,#fffdf8,#fdf6e6);border:2px dashed var(--gold);
+  border-radius:15px;padding:9px 11px 9px 17px;margin-bottom:26px;flex-wrap:wrap;}
+.redeem-row::before,.redeem-row::after{content:"";position:absolute;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;border-radius:50%;background:var(--paper);}
+.redeem-row::before{left:-11px;box-shadow:inset -2px 0 0 var(--gold);}
+.redeem-row::after{right:-11px;box-shadow:inset 2px 0 0 var(--gold);}
 .redeem-row:focus-within{box-shadow:0 0 0 4px var(--gold-soft);}
-.redeem-ico{font-size:1.1rem;}
+.redeem-ico{font-size:1.15rem;}
 .redeem-row input{flex:1;min-width:160px;border:none;outline:none;background:none;
-  font-family:'Sarabun';font-size:.95rem;font-weight:600;color:var(--ink);padding:7px 0;letter-spacing:.03em;}
-.redeem-row input::placeholder{font-weight:400;letter-spacing:0;}
+  font-family:'Sarabun';font-size:.96rem;font-weight:600;color:var(--ink);padding:8px 0;letter-spacing:.04em;}
+.redeem-row input::placeholder{font-weight:400;letter-spacing:0;color:#a39a85;}
 .redeem-row button{background:var(--gold);color:var(--ink);border:none;border-radius:10px;
-  padding:10px 20px;font-family:'Sarabun';font-weight:700;font-size:.9rem;cursor:pointer;transition:background .2s,color .2s;}
+  padding:11px 22px;font-family:'Sarabun';font-weight:700;font-size:.9rem;cursor:pointer;transition:background .2s,color .2s;}
 .redeem-row button:hover{background:var(--gold-deep);color:#fff;}
 #redeemMsg{font-size:.86rem;font-weight:700;}
 #redeemMsg:empty{display:none;}
@@ -307,43 +303,45 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
   #redeemMsg{width:100%;padding-left:6px;}
 }
 
-/* ── AD SLOTS ── */
 .ad-slot{display:none;}
 
 /* ── FILTER PILLS ── */
 .cat-strip{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px;}
-.cat-pill{padding:7px 17px;border-radius:100px;border:1.5px solid var(--line);font-size:.88rem;
+.cat-pill{padding:8px 18px;border-radius:100px;border:1.5px solid var(--line);font-size:.88rem;
   font-weight:600;color:var(--ink-soft);cursor:pointer;background:var(--card);transition:.18s;}
 .cat-pill:hover{border-color:var(--gold);color:var(--ink);}
-.cat-pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.cat-pill.active{background:var(--ink);color:var(--gold-bright);border-color:var(--ink);}
 
 /* ── SEARCH ── */
 .search-row{display:flex;gap:11px;margin-bottom:18px;}
 .search-in{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:13px;
-  padding:12px 17px;font-family:'Sarabun',sans-serif;font-size:.95rem;
+  padding:13px 18px;font-family:'Sarabun',sans-serif;font-size:.95rem;
   color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
 .search-in:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft);}
 
-/* ── PAGE HEAD (หัวหน้า blog/apps) ── */
-.page-head{padding-top:34px;margin-bottom:22px;}
-.page-head h1{font-size:1.7rem;font-weight:700;}
+/* ── หัวหน้า blog/apps — ดาวลายน้ำใหญ่ (จุดเดียว) ── */
+.page-head{padding:38px 0 6px;margin-bottom:20px;position:relative;overflow:visible;}
+.page-head::after{content:"✦";position:absolute;right:-6px;top:-14px;font-size:7.5rem;line-height:1;
+  color:var(--gold);opacity:.1;pointer-events:none;}
+.page-head h1{font-size:clamp(1.7rem,3.2vw,2.2rem);font-weight:700;}
+.page-head .ph-sub{font-size:.95rem;color:var(--slate);margin-top:6px;}
 
 /* ── PAGINATION ── */
 .pagination{display:flex;gap:8px;justify-content:center;padding:30px 0;}
 .page-btn{padding:9px 16px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);
   font-family:'Sarabun';font-size:.88rem;font-weight:700;cursor:pointer;transition:.15s;}
-.page-btn:hover,.page-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.page-btn:hover,.page-btn.active{background:var(--ink);color:var(--gold-bright);border-color:var(--ink);}
 
 /* ── FOOTER ── */
-footer{background:var(--ink);color:rgba(255,255,255,.72);padding:38px 26px 30px;margin-top:46px;
+footer{background:var(--ink);color:rgba(255,255,255,.72);padding:38px 26px 30px;margin-top:48px;
   position:relative;overflow:hidden;}
-footer::before{content:"✦";position:absolute;right:-28px;bottom:-48px;font-size:11rem;
-  color:rgba(240,168,48,.06);pointer-events:none;line-height:1;}
+footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-size:10rem;
+  color:rgba(243,172,46,.08);pointer-events:none;line-height:1;}
 .footer-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;position:relative;}
 .footer-logo{font-family:'Pridi',serif;font-size:1.12rem;font-weight:700;color:#fff;}
 .footer-links{display:flex;gap:22px;font-size:.9rem;flex-wrap:wrap;}
 .footer-links a{transition:color .15s;}
-.footer-links a:hover{color:var(--gold);}
+.footer-links a:hover{color:var(--gold-bright);}
 
 /* ── LOADING & EMPTY ── */
 .loading{text-align:center;padding:64px;color:var(--slate);}
@@ -352,29 +350,28 @@ footer::before{content:"✦";position:absolute;right:-28px;bottom:-48px;font-siz
   border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── BACK BUTTON ── */
 .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--slate);font-size:.9rem;
   margin-bottom:18px;cursor:pointer;transition:.15s;font-weight:600;}
 .back-btn:hover{color:var(--ink);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:880px){
-  .feat-card{grid-template-columns:1fr;}
-  .feat-img{min-height:200px;order:-1;}
-  .feat-body{padding:26px 24px 28px;}
-  .hero-grid{grid-template-columns:1fr;}
+  .crown{padding:26px 0 46px;}
+  .crown-grid{grid-template-columns:1fr;gap:26px;}
+  .stamp{width:54px;height:54px;top:-30px;right:0;}
+  .stamp b{font-size:1.05rem;}
+  .stamp small{font-size:.5rem;}
 }
 @media(max-width:768px){
   .arts-grid{grid-template-columns:repeat(2,1fr);}
   .form-row{grid-template-columns:1fr;}
-  .apps-box{padding:26px 18px;}
-  .stamp{width:64px;height:64px;top:-16px;right:16px;}
-  .stamp b{font-size:1.2rem;}
+  .apps-box{padding:28px 18px;border-radius:20px;}
+  .page-head::after{font-size:5rem;}
 }
 @media(max-width:480px){
   .arts-grid{grid-template-columns:1fr;}
   .apps-grid{grid-template-columns:1fr;}
-  .sec-title{font-size:1.28rem;}
+  .sec-title{font-size:1.3rem;}
 }
 @media(hover:none) and (pointer:coarse){
   .btn-open,.btn-pmt{padding:12px 0;font-size:.9rem;}
@@ -387,29 +384,31 @@ footer::before{content:"✦";position:absolute;right:-28px;bottom:-48px;font-siz
   .sec-more{padding:6px 0;}
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
 </style>
 </head>
 <body>
 
-<!-- TICKER -->
-<div class="ticker" id="ticker">
-  <span class="ticker-badge">✦ ล่าสุด</span>
-  <div class="ticker-inner"><span class="ticker-text" id="tickerText">กำลังโหลด...</span></div>
-</div>
-
-<!-- NAV -->
-<nav id="nav">
-  <div class="logo" onclick="go('/')"><span id="logoTitle">Kru-ti ครูติ</span><em>TH</em></div>
-  <ul class="nav-links" id="navLinks">
-    <li><a href="#/" data-r="/">หน้าหลัก</a></li>
-    <li><a href="#/blog" data-r="/blog">บทความ</a></li>
-    <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
-  </ul>
-  <div class="nav-right">
-    <button class="search-btn" onclick="goSearch()">🔍 ค้นหา</button>
+<!-- โซนหัวเว็บ: ticker + nav + ที่ยึดมงกุฎ (หมึกเข้มทั้งแผง) -->
+<div id="topzone">
+  <div class="ticker" id="ticker">
+    <span class="ticker-badge">ล่าสุด</span>
+    <div class="ticker-inner"><span class="ticker-text" id="tickerText">กำลังโหลด...</span></div>
   </div>
-  <button class="hamburger" onclick="toggleNav()">☰</button>
-</nav>
+  <nav id="nav">
+    <div class="logo" onclick="go('/')"><span id="logoTitle">Kru-ti ครูติ</span><em>TH</em></div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#/" data-r="/">หน้าหลัก</a></li>
+      <li><a href="#/blog" data-r="/blog">บทความ</a></li>
+      <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="search-btn" onclick="goSearch()">🔍 ค้นหา</button>
+    </div>
+    <button class="hamburger" onclick="toggleNav()">☰</button>
+  </nav>
+  <div id="crownSlot"></div>
+</div>
 
 <main id="app"><div class="loading"><div class="spinner"></div><br>กำลังโหลด...</div></main>
 
@@ -469,15 +468,20 @@ footer::before{content:"✦";position:absolute;right:-28px;bottom:-48px;font-siz
 const API = '/api';
 let S = {}; // site settings
 
-// ── FETCH HELPERS (cache 30 วิ ลดยิง API ซ้ำ) ─────────────
+// ── FETCH HELPERS (cache 30 วิ + กันยิงซ้ำขณะ request แรกยังไม่กลับ) ──
 const _cache = new Map();
 function get(url, ttl = 30000) {
   const hit = _cache.get(url);
-  if (hit && Date.now() - hit.t < ttl) return Promise.resolve(hit.v);
-  return fetch(API + url).then(r => r.json()).then(v => {
+  if (hit) {
+    if (hit.p) return hit.p;                       // มี request ค้างอยู่ → ใช้ตัวเดิม
+    if (Date.now() - hit.t < ttl) return Promise.resolve(hit.v);
+  }
+  const p = fetch(API + url).then(r => r.json()).then(v => {
     _cache.set(url, { t: Date.now(), v });
     return v;
-  });
+  }).catch(e => { _cache.delete(url); throw e; }); // พลาด → ล้างทิ้ง ให้ลองใหม่ได้
+  _cache.set(url, { p });
+  return p;
 }
 const token = () => localStorage.getItem('_tok');
 
@@ -487,6 +491,8 @@ function route() {
   document.querySelectorAll('.nav-links a').forEach(a =>
     a.classList.toggle('active', a.dataset.r === h || (h==='/' && a.dataset.r==='/')));
   document.getElementById('navLinks').classList.remove('open');
+  const _cs = document.getElementById('crownSlot');
+  if (_cs && h !== '/' && h !== '') _cs.innerHTML = '';
   window.scrollTo(0,0);
   if (h === '/' || h === '')         renderHome();
   else if (h === '/blog')            renderBlog();
@@ -521,52 +527,48 @@ async function renderHome() {
   const arts = artData.articles || [];
   const appsArr = appData.apps || [];
   const [feat, ...rest] = arts;
-  const sideArts = rest.slice(0,4);
-  const gridArts = rest.slice(4,10);
+  const sideArts = rest.slice(0,3);
+  const gridArts = rest.slice(3,9);
 
-  app.innerHTML = `
-  <div style="padding-bottom:8px;">
-  <div class="container">
-    ${adSlot()}
-    <div class="cat-strip rv" id="catStrip" style="margin-top:22px;"></div>
-
-    ${feat ? `
-    <div class="feat-wrap rv">
-      <div class="stamp"><b>✦</b><small>บทความเด่น</small></div>
-      <div class="feat-card" onclick="go('/article/${feat.slug}')">
-        <div class="feat-body">
-          <div class="feat-meta"><span class="${catTag(feat.category)}">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
+  // ── มงกุฎกระดานดำ: บทความเด่น + น่าอ่านต่อ (ในโซนหมึก) ──
+  const crown = document.getElementById('crownSlot');
+  if (crown) crown.innerHTML = feat ? `
+  <div class="crown">
+    <div class="container" style="position:relative;">
+      <div class="crown-grid">
+        <div class="crown-feat rv" onclick="go('/article/${feat.slug}')">
+          <div class="stamp"><b>✦</b><small>เด่น</small></div>
+          <div class="crown-meta"><span class="crown-cat">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
           <h2>${feat.title}</h2>
-          <p class="feat-x">${feat.excerpt||''}</p>
-          <span class="feat-read">อ่านบทความ →</span>
+          <p class="cx">${feat.excerpt||''}</p>
+          <span class="crown-read">อ่านบทความ →</span>
         </div>
-        <div class="feat-img">${feat.image_url?`<img src="${feat.image_url}" onerror="this.remove()">`:'📰'}</div>
-      </div>
-    </div>` : ''}
-
-    ${sideArts.length ? `
-    <div class="hero-grid rv2" style="margin-bottom:34px;">
-      <div>
-        <div class="sec-head">
-          <div><div class="sec-eyebrow">Latest</div><div class="sec-title">บทความล่าสุด</div></div>
-          <span class="sec-more" onclick="go('/blog')">ดูทั้งหมด →</span>
-        </div>
-        ${gridArts.length ? `<div class="arts-grid" style="grid-template-columns:repeat(2,1fr);">${gridArts.slice(0,4).map(artCard).join('')}</div>` : ''}
-      </div>
-      <div>
-        <div class="sec-head">
-          <div><div class="sec-eyebrow">Popular</div><div class="sec-title">น่าอ่านต่อ</div></div>
-        </div>
-        <div class="side-list">
+        <div class="crown-side rv2">
+          <div class="crown-side-label">น่าอ่านต่อ</div>
           ${sideArts.map((a,i)=>`
-          <div class="side-item" onclick="go('/article/${a.slug}')">
-            <div class="side-num">${i+1}</div>
-            <div>
-              <h3>${a.title}</h3>
-              <div class="si-meta"><span class="${catTag(a.category)}">${a.category}</span><span>${fmt(a.created_at)}</span></div>
-            </div>
+          <div class="crown-item" onclick="go('/article/${a.slug}')">
+            <div class="crown-num">${i+1}</div>
+            <div><h3>${a.title}</h3><div class="ci-cat">${a.category} · ${fmt(a.created_at)}</div></div>
           </div>`).join('')}
         </div>
+      </div>
+    </div>
+  </div>
+  <div class="crown-edge"></div>` : '<div style="height:18px;"></div>';
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:8px;">
+    ${adSlot()}
+    <div class="cat-strip rv" id="catStrip" style="margin-top:26px;"></div>
+
+    ${gridArts.length ? `
+    <div class="rv2" style="margin-bottom:36px;">
+      <div class="sec-head">
+        <div><div class="sec-title">บทความล่าสุด</div><div class="sec-sub">อัปเดตเทคนิคการสอน ข่าวการศึกษา และเครื่องมือใหม่</div></div>
+        <span class="sec-more" onclick="go('/blog')">ดูทั้งหมด →</span>
+      </div>
+      <div class="arts-grid">
+        ${gridArts.map(artCard).join('')}
       </div>
     </div>` : ''}
 
@@ -575,16 +577,15 @@ async function renderHome() {
     ${appsArr.length ? `
     <div class="apps-box rv3">
       <div class="sec-head">
-        <div><div class="sec-eyebrow mint">Apps</div><div class="sec-title">แอปที่ใช้งานได้เลย — พร้อม Prompt</div></div>
+        <div><div class="sec-title mint">แอปที่ใช้งานได้เลย</div><div class="sec-sub">เปิดใช้ในห้องเรียนได้ทันที — พร้อม Prompt ให้นำไปต่อยอด</div></div>
         <span class="sec-more" onclick="go('/apps')">ดูทั้งหมด →</span>
       </div>
       <div class="apps-grid">
-        ${appsArr.slice(0,4).map(appCard).join('')}
+        ${appsArr.slice(0,3).map(appCard).join('')}
       </div>
     </div>` : ''}
 
     ${adSlot()}
-  </div>
   </div>`;
   loadCategories();
   activateAds();
@@ -609,8 +610,8 @@ async function renderBlog(q, cat, page) {
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
     <div class="page-head rv">
-      <div class="sec-eyebrow">Articles</div>
       <h1>บทความทั้งหมด</h1>
+      <div class="ph-sub">เทคนิคการสอน ข่าวการศึกษา และเครื่องมือสำหรับครู</div>
     </div>
     <div class="search-row rv">
       <input class="search-in" id="blogSearch" placeholder="🔍 ค้นหาบทความ..." value="${blogQ}"
@@ -785,16 +786,12 @@ function drawApps() {
     const locked = filtered.filter(a =>  a.locked);
     if (free.length > 0) content += `
       <div style="margin-bottom:30px;">
-        <h2 style="font-family:'Pridi';font-size:1.12rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
-          <span style="color:var(--mint);">✦</span> แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.78rem;font-family:'Sarabun';">${free.length}</span>
-        </h2>
+        <h2 class="sec-title mint" style="font-size:1.18rem;margin-bottom:14px;">แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${free.length}</span></h2>
         <div class="apps-grid">${free.map(appCard).join('')}</div>
       </div>`;
     if (locked.length > 0) content += `
       <div style="margin-bottom:30px;">
-        <h2 style="font-family:'Pridi';font-size:1.12rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
-          <span style="color:var(--gold);">✦</span> แอปพรีเมียม <span style="background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.78rem;font-family:'Sarabun';">${locked.length}</span>
-        </h2>
+        <h2 class="sec-title" style="font-size:1.18rem;margin-bottom:14px;">แอปพรีเมียม <span style="background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${locked.length}</span></h2>
         <div class="apps-grid">${locked.map(appCard).join('')}</div>
       </div>`;
   } else if (filtered.length > 0) {
@@ -818,8 +815,8 @@ function drawApps() {
   <div class="container" style="padding-bottom:32px;">
     <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
       <div>
-        <div class="sec-eyebrow mint">App Library</div>
         <h1>คลังแอปทั้งหมด</h1>
+        <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
       </div>
       ${sortHTML}
     </div>
@@ -868,7 +865,6 @@ function renderAbout() {
   const author = S.author_name || 'ผู้สร้าง';
   document.getElementById('app').innerHTML = `
   <div class="art-wrap rv">
-    <div class="sec-eyebrow">About</div>
     <h1 style="margin-bottom:24px;">เกี่ยวกับเรา</h1>
 
     <div class="art-body">
@@ -905,7 +901,6 @@ function renderPrivacy() {
   const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
   document.getElementById('app').innerHTML = `
   <div class="art-wrap rv">
-    <div class="sec-eyebrow">Privacy</div>
     <h1 style="margin-bottom:8px;">นโยบายความเป็นส่วนตัว</h1>
     <p style="color:var(--slate);font-size:.88rem;margin-bottom:28px;">อัปเดตล่าสุด: ${today}</p>
 
@@ -1183,7 +1178,7 @@ async function init() {
     document.getElementById('pageTitle').textContent = title;
     document.getElementById('metaDesc').content = S.site_desc || '';
     document.getElementById('logoTitle').textContent = title.replace(' TH','');
-    document.getElementById('footerLogo').textContent = '✦ ' + title;
+    document.getElementById('footerLogo').textContent = title;
     document.getElementById('footerText').textContent = '© 2568 ' + title;
 
     setMeta('og:title', title);
