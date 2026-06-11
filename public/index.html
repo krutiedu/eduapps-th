@@ -403,6 +403,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
       <li><a href="#/" data-r="/">หน้าหลัก</a></li>
       <li><a href="#/blog" data-r="/blog">บทความ</a></li>
       <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
+      <li><a href="#/buy" data-r="/buy">ซื้อรหัส</a></li>
     </ul>
     <div class="nav-right">
       <button class="search-btn" onclick="goSearch()">🔍 ค้นหา</button>
@@ -457,6 +458,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
     <div class="footer-links">
       <a href="#/blog">บทความ</a>
       <a href="#/apps">แอปทั้งหมด</a>
+      <a href="#/buy">วิธีซื้อรหัส</a>
       <a href="#/about">เกี่ยวกับเรา</a>
       <a href="#/privacy">นโยบายความเป็นส่วนตัว</a>
       <a href="/admin/" style="color:#2c4a7c;">⚙</a>
@@ -505,6 +507,7 @@ function route() {
   else if (h.startsWith('/article/'))renderArticle(h.slice(9));
   else if (h === '/apps')            renderApps();
   else if (h === '/about')           renderAbout();
+  else if (h === '/buy')             renderBuy();
   else if (h === '/privacy')         renderPrivacy();
   else                               document.getElementById('app').innerHTML = empty('ไม่พบหน้านี้','🌌');
 }
@@ -855,7 +858,10 @@ function drawApps() {
              onkeydown="if(event.key==='Enter')redeemAll()">
       <button onclick="redeemAll()">ปลดล็อก</button>
       <span id="redeemMsg"></span>
-    </div>` : '';
+    </div>
+    <p style="text-align:center;font-size:.88rem;color:var(--slate);margin:-14px 0 24px;">
+      ยังไม่มีรหัส? <a href="#/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
+    </p>` : '';
 
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
@@ -939,6 +945,58 @@ function renderAbout() {
       <a class="btn btn-outline" href="#/">← กลับหน้าหลัก</a>
     </div>
   </div>`;
+}
+
+// ── BUY / วิธีซื้อรหัส ─────────────────────────────────────
+const FB_PAGE = 'https://www.facebook.com/kruti.edu';
+function renderBuy() {
+  document.getElementById('app').innerHTML = `
+  <div class="art-wrap rv">
+    <div class="back-btn" onclick="go('/apps')">← กลับหน้าแอป</div>
+    <h1 style="margin-bottom:8px;">วิธีซื้อรหัสปลดล็อก</h1>
+    <p style="color:var(--slate);font-size:1rem;margin-bottom:6px;">ปลดล็อกแอปพรีเมียมทั้งชุด ใช้ได้ทุกอุปกรณ์ ไม่มีวันหมดอายุ</p>
+
+    <div style="background:linear-gradient(150deg,var(--ink) 20%,var(--ink-2) 80%);border-radius:22px;
+      padding:34px 30px;margin:26px 0;text-align:center;color:#fff;position:relative;overflow:hidden;">
+      <div style="font-size:2.4rem;margin-bottom:10px;">🎟️</div>
+      <h2 style="color:#fff;font-size:1.4rem;margin-bottom:10px;">ติดต่อซื้อรหัส & ดูโปรโมชั่น</h2>
+      <p style="color:#aebad0;font-size:.98rem;line-height:1.8;max-width:42ch;margin:0 auto 22px;">
+        สอบถามราคา โปรโมชั่น และชุดแอปที่เปิดขาย ได้ที่เพจ Facebook ครูติ
+        ทักแชทมาได้เลย ยินดีตอบทุกคำถามครับ
+      </p>
+      <a href="${FB_PAGE}" target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:10px;background:var(--gold);color:var(--ink);
+        font-family:'Sarabun';font-weight:700;font-size:1.05rem;text-decoration:none;
+        padding:14px 34px;border-radius:13px;box-shadow:0 6px 20px rgba(243,172,46,.4);">
+        💬 ทักเพจครูติ
+      </a>
+    </div>
+
+    <div class="art-body">
+      <h2>ขั้นตอนง่ายๆ</h2>
+      <ol>
+        <li><strong>ทักเพจครูติ</strong> — สอบถามแอปที่อยากได้ หรือดูโปรโมชั่นชุดแอป</li>
+        <li><strong>ตกลงราคา & โอนเงิน</strong> — แอดมินแจ้งรายละเอียดการชำระเงิน</li>
+        <li><strong>รับรหัสทางอีเมล</strong> — ส่งรหัสปลดล็อกให้ทางอีเมลที่แจ้งไว้</li>
+        <li><strong>กรอกรหัสที่หน้าแอป</strong> — ไปที่ <a href="#/apps">หน้าแอปทั้งหมด</a> กรอกรหัสในช่อง 🎟️ แล้วกดปลดล็อก ใช้งานได้ทันที</li>
+      </ol>
+
+      <h2>คำถามที่พบบ่อย</h2>
+      <p><strong>รหัสใช้ได้นานแค่ไหน?</strong><br>ใช้ได้ตลอด ไม่มีวันหมดอายุ และใช้ได้ทุกอุปกรณ์</p>
+      <p><strong>ปลดล็อกได้กี่แอป?</strong><br>ขึ้นอยู่กับชุดที่ซื้อ — รหัสบางชุดปลดล็อกหลายแอปพร้อมกัน สอบถามแอดมินได้เลย</p>
+      <p><strong>มีแอปฟรีไหม?</strong><br>มีครับ หลายแอปใช้ฟรี ดูได้ที่ <a href="#/apps">หน้าแอปทั้งหมด</a> รหัสมีไว้สำหรับแอปพรีเมียมเท่านั้น</p>
+    </div>
+
+    <div style="margin-top:30px;display:flex;gap:12px;flex-wrap:wrap;">
+      <a class="btn btn-primary" href="${FB_PAGE}" target="_blank" rel="noopener">💬 ทักเพจครูติ</a>
+      <a class="btn btn-outline" href="#/apps">ดูแอปทั้งหมด</a>
+    </div>
+  </div>`;
+  setPageMeta({
+    title: 'วิธีซื้อรหัสปลดล็อก',
+    desc: 'ปลดล็อกแอปพรีเมียมของครูติ — ติดต่อซื้อรหัสและดูโปรโมชั่นได้ที่เพจ Facebook ครูติ',
+    url: location.origin + '/#/buy',
+  });
 }
 
 // ── PRIVACY POLICY ────────────────────────────────────────
@@ -1317,6 +1375,7 @@ window.closeAppViewer = closeAppViewer;
 window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
+window.renderBuy = renderBuy;
 window.renderPrivacy = renderPrivacy;
 window.openLockModal = openLockModal;
 window.redeemAll = redeemAll;
