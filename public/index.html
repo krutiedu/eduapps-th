@@ -536,7 +536,7 @@ async function renderHome() {
   <div class="crown">
     <div class="container" style="position:relative;">
       <div class="crown-grid">
-        <div class="crown-feat rv" onclick="go('/article/${feat.slug}')">
+        <div class="crown-feat rv" onclick="go('/article/${feat.id}')">
           <div class="stamp"><b>✦</b><small>เด่น</small></div>
           <div class="crown-meta"><span class="crown-cat">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
           <h2>${feat.title}</h2>
@@ -546,7 +546,7 @@ async function renderHome() {
         <div class="crown-side rv2">
           <div class="crown-side-label">น่าอ่านต่อ</div>
           ${sideArts.map((a,i)=>`
-          <div class="crown-item" onclick="go('/article/${a.slug}')">
+          <div class="crown-item" onclick="go('/article/${a.id}')">
             <div class="crown-num">${i+1}</div>
             <div><h3>${a.title}</h3><div class="ci-cat">${a.category} · ${fmt(a.created_at)}</div></div>
           </div>`).join('')}
@@ -648,14 +648,15 @@ function loadBlogCats() {
 }
 
 // ── SINGLE ARTICLE ───────────────────────────────────────
-async function renderArticle(slug) {
+async function renderArticle(slugOrId) {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
-  const [art, cmtData] = await Promise.all([
-    get('/articles/' + slug),
-    get('/comments/' + encodeURIComponent(slug)).catch(() => ({ comments: [] }))
-  ]);
+  const art = await get('/articles/' + slugOrId);
   if (art.error) { app.innerHTML = empty('ไม่พบบทความ','📭'); return; }
+  // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
+  const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
+  // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
+  const shareUrl = `${location.origin}/#/article/${art.id}`;
 
   app.innerHTML = `
   <div class="art-wrap rv">
@@ -673,9 +674,9 @@ async function renderArticle(slug) {
     <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <strong style="font-size:.9rem;">แชร์:</strong>
       <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
-         href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}" target="_blank">📘 Facebook</a>
+         href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank">📘 Facebook</a>
       <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
-              onclick="navigator.clipboard.writeText(location.href);this.textContent='✓ คัดลอกแล้ว'">🔗 คัดลอกลิงก์</button>
+              onclick="navigator.clipboard.writeText('${shareUrl}');this.textContent='✓ คัดลอกแล้ว'">🔗 คัดลอกลิงก์</button>
     </div>
     <div class="comments-box" id="cmtBox">
       <h3>💬 ความคิดเห็น (${(cmtData.comments||[]).length})</h3>
@@ -967,7 +968,7 @@ function renderPrivacy() {
 
 // ── CARD TEMPLATES ───────────────────────────────────────
 function artCard(a) {
-  return `<div class="art-card" onclick="go('/article/${a.slug}')">
+  return `<div class="art-card" onclick="go('/article/${a.id}')">
     <div class="art-meta"><span class="${catTag(a.category)}">${a.category}</span></div>
     <h3>${a.title}</h3>
     <p>${a.excerpt||''}</p>
