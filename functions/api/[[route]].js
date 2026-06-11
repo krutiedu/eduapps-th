@@ -226,13 +226,15 @@ async function articles(req, env, segs, method) {
     return ok(results[0]);
   }
 
-  // GET /articles/:slug — public single
+  // GET /articles/:idOrSlug — public single (รับทั้ง id ตัวเลข และ slug)
   if (id && method === 'GET') {
+    const isNumericId = /^\d+$/.test(id);
+    const col = isNumericId ? 'id' : 'slug';
     const { results } = await env.DB
-      .prepare('SELECT * FROM articles WHERE slug=? AND published=1')
+      .prepare(`SELECT * FROM articles WHERE ${col}=? AND published=1`)
       .bind(id).all();
     if (!results[0]) return err('ไม่พบบทความ', 404);
-    await env.DB.prepare('UPDATE articles SET views=views+1 WHERE slug=?').bind(id).run();
+    await env.DB.prepare(`UPDATE articles SET views=views+1 WHERE ${col}=?`).bind(id).run();
     return okCache(results[0]);
   }
 
