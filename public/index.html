@@ -662,7 +662,7 @@ async function renderArticle(slugOrId) {
   // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
   const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
   // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
-  const shareUrl = `${location.origin}/#/article/${art.id}`;
+  const shareUrl = `${location.origin}/article/${art.id}`;  // URL จริง — crawler เห็น OG tags
 
   app.innerHTML = `
   <div class="art-wrap rv">
@@ -679,6 +679,8 @@ async function renderArticle(slugOrId) {
     <div style="margin-top:28px;">${adSlot()}</div>
     <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <strong style="font-size:.9rem;">แชร์:</strong>
+      <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+         href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}" target="_blank">💬 LINE</a>
       <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
          href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank">📘 Facebook</a>
       <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
@@ -707,7 +709,7 @@ async function renderArticle(slugOrId) {
 
   // ── SEO: meta + JSON-LD สำหรับบทความนี้ ──
   const siteTitle = S.site_title || 'Kru-ti ครูติ TH';
-  const artUrl = `${location.origin}/#/article/${art.id}`;
+  const artUrl = `${location.origin}/article/${art.id}`;
   setPageMeta({
     title: art.title,
     desc:  art.excerpt || art.title,
