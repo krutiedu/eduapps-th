@@ -3,221 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>จัดการเว็บ — EduApps TH</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+<meta name="description" id="metaDesc" content="">
+<title id="pageTitle">Kru-ti ครูติ TH</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2315223c'/><text x='16' y='13' text-anchor='middle' fill='%23f0a830' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;}
-
-/* LOGIN */
-.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f4f8;}
-.login-box{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:40px;width:100%;max-width:380px;}
-.login-logo{font-size:1.1rem;font-weight:800;color:#2563eb;margin-bottom:6px;}
-.login-sub{font-size:.88rem;color:#64748b;margin-bottom:28px;}
-.login-box h2{font-size:1.3rem;font-weight:800;margin-bottom:20px;}
-
-/* LAYOUT */
-.admin-layout{display:flex;min-height:100vh;}
-.sidebar{width:220px;background:#0f172a;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:50;transition:.25s;}
-.sidebar-logo{padding:20px 18px 14px;border-bottom:1px solid #1e293b;}
-.sidebar-logo-text{font-size:1rem;font-weight:800;color:#fff;}
-.sidebar-logo-sub{font-size:.75rem;color:#475569;margin-top:2px;}
-.sidebar-nav{padding:14px 0;}
-.sidebar-sec{font-size:.68rem;font-weight:700;color:#475569;padding:10px 18px 4px;
-             text-transform:uppercase;letter-spacing:.08em;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:.87rem;
-          font-weight:700;color:#94a3b8;cursor:pointer;transition:.15s;border-left:3px solid transparent;}
-.nav-item:hover,.nav-item.active{color:#fff;background:#1e293b;border-left-color:#2563eb;}
-.nav-item .ni{font-size:1rem;}
-.sidebar-footer{padding:14px 18px;border-top:1px solid #1e293b;}
-.content{margin-left:220px;padding:24px;min-height:100vh;}
-@media(max-width:640px){
-  .sidebar{transform:translateX(-220px);}
-  .sidebar.open{transform:translateX(0);}
-  .content{margin-left:0;}
-  .mobile-header{display:flex!important;}
-}
-.mobile-header{display:none;background:#0f172a;padding:12px 16px;align-items:center;gap:12px;position:sticky;top:0;z-index:40;}
-.mobile-header-logo{font-size:.95rem;font-weight:800;color:#fff;}
-
-/* COMPONENTS */
-.page-title{font-size:1.4rem;font-weight:800;margin-bottom:20px;}
-.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;}
-.card-title{font-size:.95rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
-.stat{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;}
-.stat-num{font-size:1.8rem;font-weight:800;color:#2563eb;}
-.stat-label{font-size:.8rem;color:#64748b;margin-top:2px;}
-
-/* FORMS */
-.form-group{margin-bottom:16px;}
-.form-label{display:block;font-size:.83rem;font-weight:700;color:#475569;margin-bottom:6px;}
-.form-input,.form-ta,.form-select{width:100%;background:#f8fafc;border:1px solid #e2e8f0;
-  border-radius:8px;padding:9px 12px;font-family:'Sarabun',sans-serif;font-size:.92rem;color:#1e293b;outline:none;transition:.15s;}
-.form-input:focus,.form-ta:focus,.form-select:focus{border-color:#93c5fd;background:#fff;}
-.form-ta{min-height:140px;resize:vertical;font-size:.9rem;}
-.form-select option{background:#fff;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media(max-width:600px){.form-row{grid-template-columns:1fr;}}
-/* Touch targets ≥44px บนอุปกรณ์สัมผัส */
-@media(hover:none) and (pointer:coarse){
-  .btn-sm{padding:10px 14px;font-size:.82rem;}
-  .btn{padding:11px 20px;}
-  .btn-ghost{padding:9px 12px;}
-  .nav-item{padding:13px 18px;}
-  .a-tab{padding:13px 18px;}
-  .editor-toolbar button{padding:9px 12px;}
-}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:8px;
-     font-family:'Sarabun',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:none;transition:.15s;}
-.btn-primary{background:#2563eb;color:#fff;}
-.btn-primary:hover{background:#1d4ed8;}
-.btn-success{background:#059669;color:#fff;}
-.btn-success:hover{background:#047857;}
-.btn-danger{background:#dc2626;color:#fff;}
-.btn-danger:hover{background:#b91c1c;}
-.btn-outline{background:#fff;color:#1e293b;border:1px solid #e2e8f0;}
-.btn-outline:hover{background:#f8fafc;}
-.btn-sm{padding:5px 12px;font-size:.8rem;}
-.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
-
-/* TABLE */
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:.87rem;}
-th{text-align:left;padding:9px 10px;color:#64748b;font-weight:700;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-td{padding:10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
-tr:hover td{background:#fafafa;}
-.badge{display:inline-block;padding:2px 9px;border-radius:100px;font-size:.72rem;font-weight:700;}
-.badge-green{background:#dcfce7;color:#166534;}
-.badge-gray{background:#f1f5f9;color:#64748b;}
-.badge-orange{background:#fff7ed;color:#9a3412;}
-
-/* WYSIWYG EDITOR */
-.editor-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px 10px;
-                background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px 8px 0 0;border-bottom:none;}
-.editor-toolbar button{background:#fff;border:1px solid #e2e8f0;border-radius:5px;
-  padding:5px 9px;cursor:pointer;font-size:.85rem;font-family:'Sarabun',sans-serif;
-  font-weight:700;transition:.15s;}
-.editor-toolbar button:hover{background:#eff6ff;border-color:#93c5fd;}
-.editor-body{min-height:280px;border:1px solid #e2e8f0;border-radius:0 0 8px 8px;
-             padding:14px;outline:none;font-size:.95rem;line-height:1.85;background:#fff;}
-.editor-body:focus{border-color:#93c5fd;}
-.editor-body h2{font-size:1.25rem;font-weight:800;margin:20px 0 8px;}
-.editor-body h3{font-size:1.05rem;font-weight:700;margin:16px 0 6px;}
-.editor-body p{margin-bottom:12px;}
-.editor-body img{border-radius:8px;max-width:100%;margin:8px 0;}
-.editor-body blockquote{border-left:3px solid #2563eb;padding:8px 14px;background:#eff6ff;margin:10px 0;border-radius:0 6px 6px 0;}
-.editor-body code{font-family:'Fira Code',monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.88em;color:#ea580c;}
-.editor-body pre{background:#f1f5f9;padding:12px;border-radius:6px;margin:10px 0;overflow-x:auto;}
-.editor-body ul,.editor-body ol{margin:0 0 12px 22px;}
-.editor-body li{margin-bottom:4px;}
-
-/* UPLOAD BUTTON */
-.upload-btn-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
-.upload-hint{font-size:.78rem;color:#94a3b8;}
-
-/* ALERT */
-.alert{padding:12px 16px;border-radius:8px;font-size:.88rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.alert-success{background:#dcfce7;border:1px solid #86efac;color:#166534;}
-.alert-danger{background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;}
-.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;}
-
-/* MODAL */
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
-          display:flex;align-items:center;justify-content:center;padding:16px;}
-.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;}
-.modal h3{font-size:1.1rem;font-weight:800;margin-bottom:18px;}
-.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;}
-
-/* TOAST */
-#toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;
-       padding:10px 18px;border-radius:8px;font-size:.88rem;font-weight:700;
-       z-index:999;opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none;}
-#toast.show{opacity:1;transform:translateY(0);}
-
-/* SETTINGS */
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-@media(max-width:600px){.settings-grid{grid-template-columns:1fr;}}
-
-/* EMPTY STATE */
-.empty-state{text-align:center;padding:48px;color:#94a3b8;}
-.empty-state .ei{font-size:2.5rem;margin-bottom:12px;}
-</style>
-</head>
-<body>
-
-<div id="toast"></div>
-<div id="modal"></div>
-
-<!-- MOBILE HEADER -->
-<div class="mobile-header" id="mobileHeader">
-  <button onclick="toggleSidebar()" style="background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;">☰</button>
-  <span class="mobile-header-logo">จัดการเว็บ</span>
-</div>
-
-<!-- SIDEBAR -->
-<div class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="sidebar-logo-text" id="sideTitle">✦ EduApps TH</div>
-    <div id="sideUser" style="font-size:.75rem;color:#94a3b8;margin-top:3px;padding:0 18px;"></div>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="sidebar-sec">หลัก</div>
-    <div class="nav-item" data-page="dash" onclick="nav('dash')"><span class="ni">📊</span> Dashboard</div>
-    <div class="sidebar-sec">เนื้อหา</div>
-    <div class="nav-item" data-page="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
-    <div class="nav-item" data-page="new-article" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
-    <div class="nav-item admin-only" data-page="apps" onclick="nav('apps')" style="display:none;"><span class="ni">🎮</span> จัดการแอป</div>
-    <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
-    <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
-    <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
-    <div class="nav-item admin-only" data-page="users" onclick="nav('users')" style="display:none;"><span class="ni">👥</span> จัดการผู้ใช้</div>
-    <div class="nav-item admin-only" data-page="settings" onclick="nav('settings')" style="display:none;"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
-    <div class="sidebar-sec">บัญชีของฉัน</div>
-    <div class="nav-item" data-page="profile" onclick="nav('profile')"><span class="ni">👤</span> โปรไฟล์</div>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="nav-item" onclick="doLogout()" style="border-left-color:transparent;">
-      <span class="ni">🚪</span> ออกจากระบบ
-    </div>
-    <a href="/" style="display:flex;align-items:center;gap:9px;padding:9px 0;font-size:.82rem;color:#475569;text-decoration:none;" target="_blank">
-      <span>🌐</span> ดูหน้าเว็บ
-    </a>
-  </div>
-</div>
-
-<!-- MAIN CONTENT -->
-<div class="content" id="content">
-  <div class="empty-state"><div class="ei">⏳</div><p>กำลังโหลด...</p></div>
-</div>
-
-<!-- LOGIN PAGE (hidden by default) -->
-<div class="login-page" id="loginPage" style="display:none;">
-  <div class="login-box">
-    <div class="login-logo">✦ EduApps TH</div>
-    <div class="login-sub">ระบบจัดการเว็บ</div>
-    <div id="loginAlert"></div>
-    <div class="form-group">
-      <label class="form-label">ชื่อผู้ใช้ <span style="color:#94a3b8;font-weight:400;">(เว้นว่าง = admin หลัก)</span></label>
-      <input type="text" class="form-input" id="usernameInput" placeholder="username"
-             onkeydown="if(event.key==='Enter')document.getElementById('pwdInput').focus()">
-    </div>
-    <div class="form-group">
-      <label class="form-label">รหัสผ่าน</label>
-      <input type="password" class="form-input" id="pwdInput" placeholder="กรอกรหัสผ่าน"
-             onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">
-      🔐 เข้าสู่ระบบ
-    </button>
-  </div>
-</div>
-
-<script>
-const PREVIEW_CSS = `
 /* ════════════════════════════════════════════════════════
    KRU-TI ครูติ TH v2 — "กระดานดำ & ดาวทอง"
    มงกุฎหมึกเข้ม (nav+บทความเด่น) → กระดาษอุ่น → ชั้นแอปน้ำเงิน
@@ -429,14 +220,14 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 
 /* ── ชั้นแอปน้ำเงิน (สลับจังหวะกับกระดาษ) ── */
 .apps-box{background:linear-gradient(150deg,var(--ink) 20%,var(--ink-2) 75%,#1d3458);
-  border-radius:26px;padding:38px 36px 36px;margin-bottom:34px;position:relative;z-index:1;overflow:visible;}
+  border-radius:26px;padding:38px 36px 36px;margin-bottom:34px;position:relative;z-index:100;overflow:visible;}
 .apps-box .sec-title{color:#fff;}
 .apps-box .sec-sub{color:#8fa0bf;}
 .apps-box .sec-more{color:var(--gold-bright);}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
 .app-card{border:1px solid var(--line);border-radius:16px;padding:19px;background:var(--card);
-  transition:transform .2s,box-shadow .2s,background .2s;position:relative;}
-.app-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);z-index:50;}
+  transition:top .18s,box-shadow .22s,background .2s,border-color .2s;position:relative;top:0;}
+.app-card:hover{top:-4px;box-shadow:var(--shadow-md);border-color:#ded2b8;}
 .apps-box .app-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);}
 .apps-box .app-card:hover{background:rgba(255,255,255,.11);box-shadow:none;}
 .apps-box .app-card h4{color:#fff;}
@@ -594,1514 +385,882 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
-`;
-
-'use strict';
-const API    = '/api';
-const tok    = () => localStorage.getItem('_admtok');
-const myRole = () => localStorage.getItem('_role') || 'super_admin';
-const myName = () => localStorage.getItem('_display_name') || 'Admin';
-const myUid  = () => localStorage.getItem('_uid') || '0';
-const hdr    = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok() });
-
-const api = {
-  get:    url       => fetch(API+url, { headers: hdr(), cache: 'no-store' }).then(r=>r.json()),
-  post:   (url,b)   => fetch(API+url, { method:'POST',   headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()),
-  put:    (url,b)   => fetch(API+url, { method:'PUT',    headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()),
-  delete: url       => fetch(API+url, { method:'DELETE', headers: hdr() }).then(r=>r.json()),
-};
-
-// ── AUTH ──────────────────────────────────────────────────
-async function doLogin() {
-  const username = document.getElementById('usernameInput').value.trim();
-  const pw       = document.getElementById('pwdInput').value;
-  const body     = username ? { username, password: pw } : { password: pw };
-  const res = await fetch(API+'/auth/login', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-  }).then(r=>r.json());
-  if (res.token) {
-    localStorage.setItem('_admtok', res.token);
-    localStorage.setItem('_role', res.role || 'super_admin');
-    localStorage.setItem('_display_name', res.display_name || 'Admin');
-    localStorage.setItem('_username', res.username || 'admin');
-    localStorage.setItem('_uid', res.user_id || '0');
-    showAdmin(); applyRole(); nav('dash');
-  } else {
-    document.getElementById('loginAlert').innerHTML =
-      `<div class="alert alert-danger">❌ ${res.error||'รหัสผ่านไม่ถูกต้อง'}</div>`;
-  }
-}
-
-async function doLogout() {
-  await fetch(API+'/auth/logout', { method:'POST', headers: hdr() });
-  ['_admtok','_role','_display_name','_username','_uid'].forEach(k=>localStorage.removeItem(k));
-  showLogin();
-}
-
-function applyRole() {
-  const isAdmin = myRole() === 'super_admin';
-  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
-  const sideUser = document.getElementById('sideUser');
-  if (sideUser) {
-    const badge = isAdmin
-      ? '<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">admin</span>'
-      : '<span style="background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">editor</span>';
-    sideUser.innerHTML = myName() + ' ' + badge;
-  }
-}
-
-function showLogin() {
-  document.getElementById('loginPage').style.display = 'flex';
-  document.getElementById('sidebar').style.display = 'none';
-  document.getElementById('content').style.display = 'none';
-  document.getElementById('mobileHeader').style.display = 'none';
-}
-
-function showAdmin() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('sidebar').style.display = 'block';
-  document.getElementById('content').style.display = 'block';
-  document.getElementById('mobileHeader').style.display = 'flex';
-}
-
-// ── NAVIGATION ────────────────────────────────────────────
-let currentPage = '';
-function nav(page) {
-  currentPage = page;
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page===page));
-  document.getElementById('sidebar').classList.remove('open');
-  const c = document.getElementById('content');
-  c.innerHTML = `<div class="empty-state"><div class="spinner2"></div></div>`;
-  if (page==='dash')         renderDash();
-  if (page==='articles')     renderArticles();
-  if (page==='new-article')  renderArticleEditor(null);
-  if (page==='apps')         renderApps();
-  if (page==='comments')     renderComments();
-  if (page==='codes')        renderCodes();
-  if (page==='users')        renderUsers();
-  if (page==='profile')      renderProfile();
-  if (page==='settings')     renderSettings();
-}
-
-const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
-
-// ══════════════════════════════════════════════════════════
-// DASHBOARD
-// ══════════════════════════════════════════════════════════
-async function renderDash() {
-  const [arts, appsData, cmts] = await Promise.all([
-    api.get('/articles/admin/list'),
-    api.get('/apps'),
-    api.get('/comments/admin/list'),
-  ]);
-  const artList  = arts.articles  || [];
-  const appList  = appsData.apps  || [];
-  const cmtList  = cmts.comments  || [];
-  const pub      = artList.filter(a=>a.published).length;
-  const draft    = artList.filter(a=>!a.published).length;
-  const pending  = cmtList.filter(c=>!c.approved).length;
-
-  document.getElementById('content').innerHTML = `
-  <div class="page-title">📊 Dashboard</div>
-  <div class="stat-row">
-    <div class="stat"><div class="stat-num">${artList.length}</div><div class="stat-label">📝 บทความทั้งหมด</div></div>
-    <div class="stat"><div class="stat-num" style="color:#059669">${pub}</div><div class="stat-label">✅ เผยแพร่แล้ว</div></div>
-    <div class="stat"><div class="stat-num" style="color:#ea580c">${draft}</div><div class="stat-label">📋 แบบร่าง</div></div>
-    <div class="stat"><div class="stat-num">${appList.length}</div><div class="stat-label">🎮 แอปทั้งหมด</div></div>
-    <div class="stat"><div class="stat-num" style="color:${pending?'#dc2626':'#059669'}">${pending}</div><div class="stat-label">💬 คอมเมนต์รอ</div></div>
-  </div>
-  ${pending > 0 ? `<div class="alert alert-info">💬 มีความคิดเห็น <strong>${pending} รายการ</strong> รอการอนุมัติ <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="nav('comments')">ดูเลย</button></div>` : ''}
-  <div class="card">
-    <div class="card-title">📝 ทางลัด</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="nav('new-article')">✏️ เขียนบทความใหม่</button>
-      <button class="btn btn-success" onclick="nav('apps')">🎮 เพิ่มแอป</button>
-      <button class="btn btn-outline" onclick="nav('comments')">💬 จัดการคอมเมนต์</button>
-      <button class="btn btn-outline" onclick="nav('settings')">⚙️ ตั้งค่า</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">📝 บทความล่าสุด</div>
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>วันที่</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${artList.slice(0,5).map(a=>`<tr>
-          <td><strong>${a.title.length>40?a.title.slice(0,40)+'…':a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td>${a.published?'<span class="badge badge-green">เผยแพร่</span>':'<span class="badge badge-orange">แบบร่าง</span>'}</td>
-          <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
-          <td><button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
-// ══════════════════════════════════════════════════════════
-// ARTICLES LIST
-// ══════════════════════════════════════════════════════════
-async function renderArticles() {
-  const data = await api.get('/articles/admin/list');
-  const arts = data.articles || [];
-  document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div class="page-title" style="margin:0;">📝 บทความทั้งหมด</div>
-    <button class="btn btn-primary" onclick="nav('new-article')">+ เขียนใหม่</button>
-  </div>
-  <div class="card">
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>ยอดวิว</th><th>วันที่</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${arts.length ? arts.map(a=>`<tr>
-          <td><strong>${a.title.length>45?a.title.slice(0,45)+'…':a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td>${a.published?'<span class="badge badge-green">✅ เผยแพร่</span>':'<span class="badge badge-orange">📋 แบบร่าง</span>'}</td>
-          <td style="color:#94a3b8">${a.views||0}</td>
-          <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบทความ</td></tr>`}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
-async function editArticle(id) {
-  currentPage = 'new-article';
-  document.getElementById('sidebar').classList.remove('open');
-  const full = await api.get('/articles/admin/' + id);
-  if (full.error) { toast('❌ '+full.error); return; }
-  renderArticleEditor(full);
-}
-
-async function delArticle(id, title) {
-  if (!confirm(`ลบบทความ "${title}" ?\n\nการลบนี้ไม่สามารถย้อนกลับได้`)) return;
-  await api.delete('/articles/'+id);
-  toast('🗑 ลบบทความแล้ว');
-  renderArticles();
-}
-
-// ══════════════════════════════════════════════════════════
-// ARTICLE EDITOR
-// ══════════════════════════════════════════════════════════
-let editingId = null;
-
-function renderArticleEditor(art) {
-  editingId = art?.id || null;
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page==='new-article'));
-
-  document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-    <button class="btn btn-outline btn-sm" onclick="nav('articles')">← กลับ</button>
-    <div class="page-title" style="margin:0;">${art ? '✏️ แก้ไขบทความ' : '✏️ เขียนบทความใหม่'}</div>
-  </div>
-  <div id="editorAlert"></div>
-
-  <div class="card">
-    <div class="form-group">
-      <label class="form-label">หัวข้อบทความ *</label>
-      <input type="text" class="form-input" id="artTitle" placeholder="หัวข้อที่น่าสนใจ..." value="${art?.title||''}">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">หมวดหมู่</label>
-        <select class="form-select" id="artCat">
-          ${(()=>{let c=[];try{c=JSON.parse(localStorage.getItem('_cats')||'[]')}catch{}if(!c.length)c=['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู','ทั่วไป'];return c})().map(c=>
-            `<option value="${c}" ${art?.category===c?'selected':''}>${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">สถานะ</label>
-        <select class="form-select" id="artPub">
-          <option value="0" ${!art?.published?'selected':''}>📋 บันทึกเป็นแบบร่าง</option>
-          <option value="1" ${art?.published?'selected':''}>✅ เผยแพร่ทันที</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">สรุปย่อ (แสดงในรายการบทความ)</label>
-      <textarea class="form-ta" id="artExcerpt" style="min-height:80px;" placeholder="สรุปสั้นๆ 1-2 ประโยค...">${art?.excerpt||''}</textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">รูปปกบทความ</label>
-      <div style="display:flex;gap:8px;align-items:flex-start;">
-        <input type="text" class="form-input" id="artImg" placeholder="https://... หรืออัปโหลดด้านล่าง" value="${art?.image_url||''}">
-        <label class="btn btn-outline btn-sm" style="cursor:pointer;white-space:nowrap;">
-          📷 อัปโหลดรูป
-          <input type="file" id="imgFile" accept="image/*" style="display:none" onchange="uploadImg()">
-        </label>
-      </div>
-      <div id="imgPreview" style="margin-top:8px;">${art?.image_url?`<img src="${art.image_url}" style="max-height:120px;border-radius:8px;">`:''}</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <label class="form-label">เนื้อหาบทความ *</label>
-    <div class="editor-toolbar">
-      <button onclick="fmt('bold')" title="ตัวหนา"><b>B</b></button>
-      <button onclick="fmt('italic')" title="ตัวเอียง"><i>I</i></button>
-      <button onclick="fmtH('h2')" title="หัวข้อใหญ่">H2</button>
-      <button onclick="fmtH('h3')" title="หัวข้อเล็ก">H3</button>
-      <button onclick="fmt('insertUnorderedList')" title="รายการ">• รายการ</button>
-      <button onclick="fmt('insertOrderedList')" title="รายการตัวเลข">1. รายการ</button>
-      <button onclick="fmtLink()" title="ลิงก์">🔗 ลิงก์</button>
-      <button onclick="insertImg()" title="แทรกรูป">📷 รูป</button>
-      <button onclick="insertDownload()" title="ปุ่มดาวน์โหลดไฟล์" style="color:#059669;">📥 ดาวน์โหลด</button>
-      <button onclick="fmtBlock()" title="ข้อความอ้างอิง">❝ Quote</button>
-      <button onclick="insertHTML()" title="วางโค้ด HTML (ตาราง/รูปแบบ) ให้แสดงผลจริง" style="color:#7c3aed;font-weight:700;">⧉ วาง HTML</button>
-      <button onclick="fmtCode()" title="แสดงข้อความเป็นโค้ด (ไม่แปลง HTML)">‹ โค้ด</button>
-      <button onclick="previewArticle()" title="ดูตัวอย่างบทความ (เหมือนตอนเผยแพร่จริง)" style="color:#2563eb;font-weight:700;">👁 ดูตัวอย่าง</button>
-      <button onclick="document.getElementById('editorBody').innerHTML=''" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
-    </div>
-    <div class="editor-body" id="editorBody" contenteditable="true">${art?.content||'<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'}</div>
-    <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
-  </div>
-
-  <div class="btn-group">
-    <button class="btn btn-success" onclick="saveArticle()">💾 บันทึกบทความ</button>
-    <button class="btn btn-outline" onclick="previewArticle()">👁 ดูตัวอย่าง</button>
-    <button class="btn btn-outline" onclick="nav('articles')">ยกเลิก</button>
-  </div>`;
-
-  // Focus editor
-  const ed = document.getElementById('editorBody');
-  ed.addEventListener('focus', () => { if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = ''; });
-}
-
-
-// ดูตัวอย่างบทความ — render ด้วย CSS ชุดเดียวกับเว็บจริง โดยไม่ต้องเผยแพร่
-// cache CSS ที่ fetch มาจาก index.html จริง
-let _pvCSSCache = null;
-
-async function previewArticle() {
-  const title   = (document.getElementById('artTitle')?.value || '').trim() || '(ยังไม่ได้ใส่หัวข้อ)';
-  const cat     = document.getElementById('artCat')?.value || '';
-  const pub     = document.getElementById('artPub')?.value === '1';
-  const body    = document.getElementById('editorBody')?.innerHTML || '';
-  const author  = myName();
-  const today   = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
-  const esc = s => String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-
-  const statusBadge = pub
-    ? '<span style="background:#dcfce7;color:#15803d;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">✅ จะเผยแพร่</span>'
-    : '<span style="background:#fef3e2;color:#c2660c;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">📋 แบบร่าง (ดูตัวอย่าง)</span>';
-
-  // ดึง CSS จาก index.html จริงตอน runtime — sync กับเว็บจริงเสมอ
-  if (!_pvCSSCache) {
-    try {
-      const resp = await fetch(location.origin + '/');
-      const txt  = await resp.text();
-      const m    = txt.match(/<style>([\s\S]*?)<\/style>/);
-      _pvCSSCache = m ? m[1] : PREVIEW_CSS;
-    } catch { _pvCSSCache = PREVIEW_CSS; }
-  }
-  const LIVE_CSS = _pvCSSCache;
-
-  const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ตัวอย่าง: ${esc(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-${LIVE_CSS}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
-h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
-a{color:var(--mint);}
-.pv-bar{background:#15223c;color:#fff;padding:10px 22px;font-family:'Sarabun';font-size:.85rem;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10;}
-.pv-bar b{color:#f0a830;}
-.pv-bar button{background:#f0a830;color:#15223c;border:none;padding:7px 16px;border-radius:8px;
-  font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;}
-.art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;
-  padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
-.cat-tag{background:#ebf0fa;color:#3a5a9b;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
-</style></head>
+</style>
+</head>
 <body>
-<div class="pv-bar">
-  <span>👁 โหมดดูตัวอย่าง — นี่คือหน้าตาบทความเมื่อเผยแพร่จริง</span>
-  <button onclick="window.close()">✕ ปิดหน้าต่าง</button>
-</div>
-<div class="art-wrap">
-  <h1>${esc(title)}</h1>
-  <div class="art-info">
-    <span class="cat-tag">${esc(cat)}</span>
-    <span>📅 ${today}</span>
-    <span>✍️ ${esc(author)}</span>
-    ${statusBadge}
+
+<!-- โซนหัวเว็บ: ticker + nav + ที่ยึดมงกุฎ (หมึกเข้มทั้งแผง) -->
+<div id="topzone">
+  <div class="ticker" id="ticker">
+    <span class="ticker-badge">ล่าสุด</span>
+    <div class="ticker-inner"><span class="ticker-text" id="tickerText">กำลังโหลด...</span></div>
   </div>
-  <div class="art-body">${body}</div>
-</div>
-</body></html>`;
-
-  const w = window.open('', '_blank', 'width=820,height=900,scrollbars=yes');
-  if (!w) { toast('❌ เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาต popup สำหรับเว็บนี้'); return; }
-  w.document.write(html);
-  w.document.close();
-}
-
-function fmt(cmd)  { document.execCommand(cmd, false, null); document.getElementById('editorBody').focus(); }
-function fmtH(tag) {
-  document.execCommand('formatBlock', false, tag);
-  document.getElementById('editorBody').focus();
-}
-function fmtBlock() { document.execCommand('formatBlock', false, 'blockquote'); document.getElementById('editorBody').focus(); }
-function fmtCode()  { document.execCommand('formatBlock', false, 'pre'); document.getElementById('editorBody').focus(); }
-
-// วาง HTML ดิบ (ตาราง/รูปแบบ) ให้แสดงผลจริง — ไม่ห่อ <pre>
-function insertHTML() {
-  document.getElementById('modal').innerHTML = `
-  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:640px;">
-      <h3>⧉ วางโค้ด HTML</h3>
-      <p style="font-size:.85rem;color:#64748b;margin-bottom:6px;">
-        วางโค้ด HTML ที่ได้มา (เช่น ตาราง <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">&lt;table&gt;</code> การ์ด กล่องสี ฯลฯ)
-        ระบบจะแทรกเข้าบทความให้แสดงผลเป็นของจริง ไม่ใช่ตัวอักษรโค้ด
-      </p>
-      <textarea class="form-input" id="htmlInput" rows="12" autofocus
-        style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.6;resize:vertical;"
-        placeholder="&lt;table&gt;\n  &lt;tr&gt;&lt;th&gt;หัวตาราง&lt;/th&gt;&lt;/tr&gt;\n  &lt;tr&gt;&lt;td&gt;ข้อมูล&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;"></textarea>
-      <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:.82rem;color:#64748b;">
-        <span>👁 ดูตัวอย่างก่อนแทรก:</span>
-      </div>
-      <div id="htmlPreview" style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;min-height:60px;
-        background:#faf7f1;font-size:.9rem;max-height:240px;overflow:auto;">
-        <span style="color:#94a3b8;">— ตัวอย่างจะแสดงที่นี่เมื่อพิมพ์ —</span>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="doInsertHTML()">⧉ แทรกลงบทความ</button>
-      </div>
-    </div>
-  </div>`;
-  const ta = document.getElementById('htmlInput');
-  const pv = document.getElementById('htmlPreview');
-  const update = () => {
-    const v = ta.value.trim();
-    pv.innerHTML = v
-      ? `<div class="art-body">${v}</div>`
-      : '<span style="color:#94a3b8;">— ตัวอย่างจะแสดงที่นี่เมื่อพิมพ์ —</span>';
-  };
-  ta.addEventListener('input', update);
-}
-
-function doInsertHTML() {
-  const html = document.getElementById('htmlInput').value.trim();
-  if (!html) { closeModal(); return; }
-  closeModal();
-  const ed = document.getElementById('editorBody');
-  ed.focus();
-  // ลบ placeholder เริ่มต้นถ้ายังอยู่
-  if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
-  // แทรกเป็น HTML จริง ณ ตำแหน่งเคอร์เซอร์ (หรือต่อท้ายถ้าไม่มี selection)
-  const sel = window.getSelection();
-  if (sel && sel.rangeCount && ed.contains(sel.anchorNode)) {
-    document.execCommand('insertHTML', false, html + '<p><br></p>');
-  } else {
-    ed.innerHTML += html + '<p><br></p>';
-  }
-  toast('✅ แทรก HTML แล้ว — กด 👁 ดูตัวอย่างเพื่อตรวจ');
-}
-function fmtLink()  {
-  const url = prompt('กรอก URL ลิงก์:');
-  if (url) { document.execCommand('createLink', false, url); document.getElementById('editorBody').focus(); }
-}
-function insertImg() {
-  document.getElementById('modal').innerHTML = `
-  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:480px;">
-      <h3>📷 แทรกรูปภาพ</h3>
-
-      <!-- แท็บ -->
-      <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid #e2e8f0;">
-        <button id="imgTabUpload" onclick="switchImgTab('upload')"
-          style="flex:1;padding:10px;border:none;background:none;font-family:'Sarabun';font-size:.93rem;
-                 font-weight:700;cursor:pointer;border-bottom:3px solid #2563eb;margin-bottom:-2px;color:#2563eb;">
-          📁 อัปโหลดจากเครื่อง
-        </button>
-        <button id="imgTabUrl" onclick="switchImgTab('url')"
-          style="flex:1;padding:10px;border:none;background:none;font-family:'Sarabun';font-size:.93rem;
-                 font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:#64748b;">
-          🔗 วาง URL รูปภาพ
-        </button>
-      </div>
-
-      <!-- แพนล์อัปโหลด -->
-      <div id="imgPanelUpload">
-        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-          border:2px dashed #cbd5e1;border-radius:12px;padding:30px;cursor:pointer;background:#f8fafc;
-          transition:border-color .15s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
-          <div style="font-size:2rem;">📁</div>
-          <div style="font-size:.9rem;color:#475569;font-weight:600;">คลิกหรือลากไฟล์รูปมาวางที่นี่</div>
-          <div style="font-size:.78rem;color:#94a3b8;">PNG, JPG, GIF, WebP — ไม่เกิน 5 MB</div>
-          <input type="file" id="imgFileInput" accept="image/*" style="display:none"
-            onchange="previewImgFile(this)">
-        </label>
-        <div id="imgUploadPreview" style="display:none;margin-top:12px;">
-          <img id="imgUploadThumb" style="max-width:100%;max-height:200px;border-radius:8px;display:block;margin:0 auto;">
-          <div id="imgUploadName" style="text-align:center;font-size:.82rem;color:#64748b;margin-top:6px;"></div>
-        </div>
-      </div>
-
-      <!-- แพนล์ URL -->
-      <div id="imgPanelUrl" style="display:none;">
-        <div class="form-group">
-          <label class="form-label">URL รูปภาพ</label>
-          <input type="url" class="form-input" id="imgUrlInput"
-            placeholder="https://example.com/image.jpg"
-            oninput="previewImgUrl(this.value)" autofocus>
-        </div>
-        <div id="imgUrlPreview" style="margin-top:10px;display:none;text-align:center;">
-          <img id="imgUrlThumb" style="max-width:100%;max-height:200px;border-radius:8px;display:inline-block;"
-            onerror="document.getElementById('imgUrlPreview').innerHTML='<div style=color:#dc2626;font-size:.85rem;>❌ โหลดรูปไม่ได้ — ตรวจสอบ URL อีกครั้ง</div>'">
-        </div>
-      </div>
-
-      <!-- ฟิลด์ Alt text (ร่วมกันทั้ง 2 แท็บ) -->
-      <div class="form-group" style="margin-top:16px;">
-        <label class="form-label" style="font-size:.85rem;">คำอธิบายรูป (Alt text — ช่วย SEO)</label>
-        <input type="text" class="form-input" id="imgAltInput" placeholder="เช่น แผนผังปฏิทินการย้ายครู 2569">
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="doInsertImg()">📷 แทรกรูป</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function switchImgTab(tab) {
-  const isUpload = tab === 'upload';
-  document.getElementById('imgPanelUpload').style.display = isUpload ? '' : 'none';
-  document.getElementById('imgPanelUrl').style.display    = isUpload ? 'none' : '';
-  const tu = document.getElementById('imgTabUpload');
-  const tl = document.getElementById('imgTabUrl');
-  tu.style.borderBottomColor = isUpload ? '#2563eb' : 'transparent';
-  tu.style.color = isUpload ? '#2563eb' : '#64748b';
-  tl.style.borderBottomColor = isUpload ? 'transparent' : '#2563eb';
-  tl.style.color = isUpload ? '#64748b' : '#2563eb';
-  if (!isUpload) setTimeout(() => document.getElementById('imgUrlInput')?.focus(), 50);
-}
-
-function previewImgFile(input) {
-  const f = input.files[0];
-  if (!f) return;
-  const pv = document.getElementById('imgUploadPreview');
-  const thumb = document.getElementById('imgUploadThumb');
-  const name = document.getElementById('imgUploadName');
-  thumb.src = URL.createObjectURL(f);
-  name.textContent = f.name + ' (' + (f.size / 1024).toFixed(0) + ' KB)';
-  pv.style.display = '';
-  // เปิด label เพื่อให้ช่อง input trigger ได้
-  input.closest('label').style.display = 'none';
-}
-
-function previewImgUrl(url) {
-  const pv = document.getElementById('imgUrlPreview');
-  const thumb = document.getElementById('imgUrlThumb');
-  if (url.startsWith('http')) {
-    thumb.src = url;
-    pv.style.display = '';
-  } else {
-    pv.style.display = 'none';
-  }
-}
-
-async function doInsertImg() {
-  const alt = (document.getElementById('imgAltInput')?.value || 'รูปภาพ').trim();
-  const urlInput = document.getElementById('imgUrlInput')?.value.trim();
-  const fileInput = document.getElementById('imgFileInput');
-  const panelUrl = document.getElementById('imgPanelUrl');
-  const isUrl = panelUrl && panelUrl.style.display !== 'none';
-
-  if (isUrl) {
-    // ── วาง URL ──
-    if (!urlInput) { toast('❌ กรุณาใส่ URL รูปภาพ'); return; }
-    closeModal();
-    const ed = document.getElementById('editorBody');
-    if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
-    document.execCommand('insertHTML', false,
-      `<img src="${urlInput}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
-    toast('✅ แทรกรูปจาก URL แล้ว');
-  } else {
-    // ── อัปโหลดจากเครื่อง ──
-    const f = fileInput?.files?.[0];
-    if (!f) { toast('❌ กรุณาเลือกไฟล์รูปก่อน'); return; }
-    closeModal();
-    toast('⏳ กำลังอัปโหลดรูป...');
-    try {
-      const url = await uploadToImgbb(f);
-      if (url) {
-        const ed = document.getElementById('editorBody');
-        if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
-        document.execCommand('insertHTML', false,
-          `<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
-        toast('✅ แทรกรูปแล้ว');
-      }
-    } catch(e) { toast('❌ ' + e.message); }
-  }
-}
-
-function insertDownload() {
-  const overlay = document.createElement('div');
-  overlay.style='position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML=`
-    <div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-      <h3 style="font-size:1rem;font-weight:800;margin-bottom:16px;">📥 แทรกปุ่มดาวน์โหลด</h3>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:.85rem;font-weight:700;display:block;margin-bottom:5px;">URL ไฟล์ *</label>
-        <input id="_dlUrl" type="text" placeholder="https://drive.google.com/uc?export=download&id=..."
-          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;outline:none;box-sizing:border-box;">
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:.85rem;font-weight:700;display:block;margin-bottom:5px;">ชื่อที่แสดงบนปุ่ม *</label>
-        <input id="_dlLabel" type="text" placeholder="เช่น: ใบงาน ป.1 เรื่องการบวกลบ (.pdf)"
-          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;outline:none;box-sizing:border-box;">
-      </div>
-      <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:.8rem;color:#166534;">
-        💡 Google Drive: Share → Anyone with link → Copy link แล้วแปลงเป็น download link ได้เลย
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button id="_dlCancel" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
-        <button id="_dlOk" style="flex:2;padding:10px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">📥 แทรกปุ่ม</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  document.getElementById('_dlUrl').focus();
-  const close = () => document.body.removeChild(overlay);
-  document.getElementById('_dlCancel').onclick = close;
-  document.getElementById('_dlOk').onclick = () => {
-    const url   = document.getElementById('_dlUrl').value.trim();
-    const label = document.getElementById('_dlLabel').value.trim();
-    if (!url || !label) { alert('กรุณาใส่ URL และชื่อปุ่มให้ครบ'); return; }
-    document.getElementById('editorBody').focus();
-    document.execCommand('insertHTML', false,
-      `<a href="${url}" target="_blank" rel="noopener" class="dl-btn">📥 ${label}</a><p><br></p>`
-    );
-    close(); toast('✅ แทรกปุ่มดาวน์โหลดแล้ว');
-  };
-  overlay.addEventListener('keydown', e => {
-    if (e.key==='Enter') document.getElementById('_dlOk').click();
-    if (e.key==='Escape') close();
-  });
-}
-
-// ── UPLOAD ตรงไปที่ imgbb (ไม่ผ่าน Cloudflare proxy — เสถียรกว่า) ─────────
-let _imgbbKey = null;  // cache key ใน session
-async function getImgbbKey() {
-  if (_imgbbKey) return _imgbbKey;
-  const s = await api.get('/settings');
-  _imgbbKey = s.imgbb_key || '';
-  return _imgbbKey;
-}
-async function uploadToImgbb(file) {
-  const key = await getImgbbKey();
-  if (!key) { alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ'); return null; }
-  const fd = new FormData(); fd.append('image', file);
-  const r = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd }).then(x=>x.json());
-  if (r.success && r.data?.url) return r.data.url;
-  throw new Error(r.error?.message || 'อัปโหลดไม่สำเร็จ');
-}
-
-async function uploadImg() {
-  const file = document.getElementById('imgFile').files[0];
-  if (!file) return;
-  toast('⏳ กำลังอัปโหลดรูป...');
-  try {
-    const url = await uploadToImgbb(file);
-    if (!url) return;
-    document.getElementById('artImg').value = url;
-    document.getElementById('imgPreview').innerHTML = `<img src="${url}" style="max-height:120px;border-radius:8px;">`;
-    toast('✅ อัปโหลดรูปสำเร็จ');
-  } catch(e) { toast('❌ ' + e.message); }
-}
-
-async function saveArticle() {
-  const title = document.getElementById('artTitle').value.trim();
-  if (!title) { alert('กรุณาใส่หัวข้อบทความ'); return; }
-  const body = {
-    title,
-    category: document.getElementById('artCat').value,
-    excerpt:  document.getElementById('artExcerpt').value.trim(),
-    content:  document.getElementById('editorBody').innerHTML,
-    image_url:document.getElementById('artImg').value.trim(),
-    published: parseInt(document.getElementById('artPub').value),
-  };
-  const res = editingId
-    ? await api.put('/articles/'+editingId, body)
-    : await api.post('/articles', body);
-  if (res.error) { toast('❌ '+res.error); return; }
-  toast(editingId ? '✅ แก้ไขบทความแล้ว' : '✅ เผยแพร่บทความแล้ว');
-  setTimeout(() => nav('articles'), 800);
-}
-
-// ══════════════════════════════════════════════════════════
-// APPS
-// ══════════════════════════════════════════════════════════
-async function renderApps() {
-  const data = await api.get('/apps/admin/list');
-  const appsArr = data.apps || [];
-  document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div class="page-title" style="margin:0;">🎮 จัดการแอป</div>
-    <button class="btn btn-primary" onclick="openAppModal(null)">+ เพิ่มแอปใหม่</button>
-  </div>
-  <div class="card">
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>แอป</th><th>หมวด</th><th>สถานะ</th><th>Prompt</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${appsArr.length ? appsArr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}">
-          <td>${a.icon} <strong>${a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td style="white-space:nowrap;">
-            ${!a.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
-            ${a.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':''}
-          </td>
-          <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีแอป</td></tr>`}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
-function openAppModal(id) {
-  api.get('/apps/admin/list').then(d => {
-    window._apps = d.apps || [];
-    const app = id ? window._apps.find(x=>x.id===id) : null;
-    document.getElementById('modal').innerHTML = `
-    <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <h3>${app ? '✏️ แก้ไขแอป' : '🎮 เพิ่มแอปใหม่'}</h3>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Emoji Icon</label><input type="text" class="form-input" id="aIcon" value="${app?.icon||'🎮'}"></div>
-          <div class="form-group"><label class="form-label">หมวดหมู่</label><input type="text" class="form-input" id="aCat" value="${app?.category||''}"></div>
-        </div>
-        <div class="form-group"><label class="form-label">ชื่อแอป *</label><input type="text" class="form-input" id="aTitle" value="${app?.title||''}"></div>
-        <div class="form-group"><label class="form-label">คำอธิบาย</label><textarea class="form-ta" id="aDesc" style="min-height:80px;">${app?.description||''}</textarea></div>
-        <div class="form-group"><label class="form-label">URL แอป</label><input type="text" class="form-input" id="aUrl" value="${app?.url||''}" placeholder="https://..."></div>
-        <div class="form-group">
-          <label class="form-label">🖼️ รูป Preview (แสดงตอน hover — แนะนำ screenshot ของแอป)</label>
-          <div style="display:flex;gap:8px;">
-            <input type="text" class="form-input" id="aPreview" value="${app?.preview_image||''}" placeholder="https://... หรืออัปโหลดด้านล่าง" style="flex:1;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="uploadPreviewImg()">📷 อัปโหลด</button>
-          </div>
-          ${app?.preview_image ? `<img class="preview-thumb" src="${app.preview_image}" style="margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;">` : ''}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Prompt (สำหรับแจกให้คนอื่นสร้างแอปเอง)</label>
-          <textarea class="form-ta" id="aPrompt" style="font-family:'Fira Code',monospace;font-size:.82rem;">${app?.prompt||''}</textarea>
-        </div>
-        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;">
-          <div style="font-weight:700;font-size:.9rem;margin-bottom:10px;color:#0f172a;">🔒 การเข้าถึงแอป</div>
-          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
-              <input type="checkbox" id="aVisible" ${app?.visible!==0?'checked':''} onchange="document.getElementById('visibleNote').style.display=this.checked?'none':'block'">
-              <span>แสดงบนเว็บ (visible)</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
-              <input type="checkbox" id="aLocked" ${app?.locked?'checked':''} onchange="document.getElementById('lockCodeWrap').style.display=this.checked?'block':'none'">
-              <span>ล็อกด้วยรหัส (lock)</span>
-            </label>
-          </div>
-          <div id="visibleNote" style="display:${app?.visible===0?'block':'none'};font-size:.83rem;color:#64748b;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:8px;">
-            🙈 แอปนี้ซ่อนอยู่ — คนเข้าเว็บไม่เห็น เห็นแค่ใน admin
-          </div>
-          <div id="lockCodeWrap" style="display:${app?.locked?'block':'none'};">
-            <label class="form-label">รหัสผ่านแอป</label>
-            <input type="text" class="form-input" id="aLockCode" value="${app?.lock_code||''}" placeholder="ตั้งรหัสที่ต้องการ เช่น VIP2025">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveApp(${app?.id||'null'})">💾 บันทึก</button>
-        </div>
-      </div>
-    </div>`;
-  });
-}
-
-async function saveApp(id) {
-  const title = document.getElementById('aTitle').value.trim();
-  if (!title) { alert('กรุณาใส่ชื่อแอป'); return; }
-  const locked = document.getElementById('aLocked').checked;
-  const body = {
-    icon: document.getElementById('aIcon').value || '🎮',
-    title,
-    category: document.getElementById('aCat').value.trim() || 'อื่นๆ',
-    description: document.getElementById('aDesc').value.trim(),
-    url: document.getElementById('aUrl').value.trim(),
-    preview_image: document.getElementById('aPreview').value.trim(),
-    prompt: document.getElementById('aPrompt').value,
-    visible: document.getElementById('aVisible').checked,
-    locked: locked,
-    lock_code: locked ? (document.getElementById('aLockCode').value.trim()) : '',
-  };
-  const res = id && id !== 'null'
-    ? await api.put('/apps/'+id, body)
-    : await api.post('/apps', body);
-  if (res.error) { toast('❌ '+res.error); return; }
-  closeModal(); toast('✅ บันทึกแอปแล้ว');
-  renderApps();
-}
-
-async function delApp(id, title) {
-  if (!confirm(`ลบแอป "${title}" ?`)) return;
-  await api.delete('/apps/'+id);
-  toast('🗑 ลบแอปแล้ว'); renderApps();
-}
-
-// ══════════════════════════════════════════════════════════
-// COMMENTS
-// ══════════════════════════════════════════════════════════
-async function renderComments() {
-  const data = await api.get('/comments/admin/list');
-  const cmts = data.comments || [];
-  const pending = cmts.filter(c=>!c.approved);
-  const approved = cmts.filter(c=>c.approved);
-  document.getElementById('content').innerHTML = `
-  <div class="page-title">💬 จัดการความคิดเห็น</div>
-  ${pending.length ? `<div class="alert alert-info">⏳ มี ${pending.length} รายการรอการอนุมัติ</div>` : '<div class="alert alert-success">✅ ไม่มีรายการรอการอนุมัติ</div>'}
-  <div class="card">
-    <div class="card-title">⏳ รออนุมัติ (${pending.length})</div>
-    ${pending.length ? pending.map(c=>`
-    <div style="border:1px solid #fbbf24;border-radius:10px;padding:14px;margin-bottom:10px;background:#fffbeb;">
-      <div style="font-size:.82rem;color:#64748b;margin-bottom:6px;">
-        👤 <strong>${c.name}</strong> · ${c.created_at?.slice(0,10)||''} · บทความ: ${c.article_title||''}
-      </div>
-      <div style="margin-bottom:10px;">${c.content}</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-success btn-sm" onclick="approveCmt(${c.id})">✅ อนุมัติ</button>
-        <button class="btn btn-danger btn-sm" onclick="delCmt(${c.id})">🗑 ลบ</button>
-      </div>
-    </div>`).join('') : '<p style="color:#94a3b8;font-size:.88rem;">ไม่มีรายการ</p>'}
-  </div>
-  <div class="card">
-    <div class="card-title">✅ ที่อนุมัติแล้ว (${approved.length})</div>
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>ชื่อ</th><th>ความคิดเห็น</th><th>บทความ</th><th>วันที่</th><th></th></tr></thead>
-      <tbody>
-        ${approved.map(c=>`<tr>
-          <td><strong>${c.name}</strong></td>
-          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.content}</td>
-          <td style="font-size:.8rem;color:#94a3b8;">${c.article_title||''}</td>
-          <td style="font-size:.8rem;color:#94a3b8;white-space:nowrap">${c.created_at?.slice(0,10)||''}</td>
-          <td><button class="btn btn-danger btn-sm" onclick="delCmt(${c.id})">🗑</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
-}
-
-async function approveCmt(id) {
-  await api.put('/comments/'+id+'/approve', {});
-  toast('✅ อนุมัติแล้ว'); renderComments();
-}
-async function delCmt(id) {
-  if (!confirm('ลบความคิดเห็นนี้?')) return;
-  await api.delete('/comments/'+id);
-  toast('🗑 ลบแล้ว'); renderComments();
-}
-
-// ══════════════════════════════════════════════════════════
-// SETTINGS
-// ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
-// CODES — รหัสปลดล็อก
-// ══════════════════════════════════════════════════════════
-async function renderCodes() {
-  const [codesData, appsData] = await Promise.all([
-    api.get('/codes'),
-    api.get('/apps/admin/list'),
-  ]);
-  const codeList = codesData.codes || [];
-  const allApps  = (appsData.apps || []).filter(a => a.locked);
-  window._allApps = appsData.apps || [];
-
-  function appNames(ids) {
-    if (!ids) return '-';
-    let arr = []; try { arr = JSON.parse(ids); } catch {}
-    if (arr.includes('all')) return '🌟 ทุกแอปที่ล็อก';
-    return arr.map(id => {
-      const a = (appsData.apps||[]).find(x=>x.id===parseInt(id)||x.id===id);
-      return a ? a.icon+' '+a.title : id;
-    }).join(', ') || '-';
-  }
-  function expLabel(exp) {
-    if (!exp) return '<span style="color:#059669;font-weight:700;">ไม่หมดอายุ</span>';
-    const d = new Date(exp), now = new Date();
-    if (d < now) return '<span style="color:#dc2626;font-weight:700;">หมดอายุแล้ว</span>';
-    return '<span style="color:#d97706;font-weight:700;">'+d.toLocaleDateString('th-TH')+'</span>';
-  }
-
-  document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div class="page-title" style="margin:0;">🔑 จัดการรหัสปลดล็อก</div>
-    <button class="btn btn-primary" onclick="openCodeModal(null)">+ สร้างรหัสใหม่</button>
-  </div>
-  ${allApps.length===0 ? `<div class="alert alert-info">⚠️ ยังไม่มีแอปที่เปิดระบบล็อกไว้ ไปที่ <a href="#" onclick="nav('apps')">จัดการแอป</a> แล้วเปิด 🔒 ก่อน</div>` : ''}
-  <div class="card">
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>รหัส</th><th>ชื่อแพ็กเกจ</th><th>ปลดล็อก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${codeList.length ? codeList.map(c=>`<tr style="${!c.active?'opacity:.5;':''}">
-          <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${c.code}</code></td>
-          <td><strong>${c.label}</strong></td>
-          <td style="font-size:.82rem;max-width:200px;">${appNames(c.app_ids)}</td>
-          <td>${expLabel(c.expires_at)}</td>
-          <td>${c.active
-            ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
-            : '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>'}</td>
-          <td style="white-space:nowrap;">
-            <button class="btn btn-outline btn-sm" title="สร้างอีเมลส่งรหัสให้ลูกค้า" onclick="openEmailModal(${c.id})">📧</button>
-            <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})">✏️</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${c.code}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีรหัสปลดล็อก — กด "+ สร้างรหัสใหม่" เพื่อเริ่ม</td></tr>`}
-      </tbody>
-    </table>
-    </div>
-  </div>
-  <div class="card" style="background:#f8fafc;">
-    <div class="card-title" style="font-size:.9rem;">💡 วิธีใช้งาน</div>
-    <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
-      <li>สร้างรหัส → กำหนดว่าปลดล็อกแอปไหนบ้าง → แชร์รหัสให้ผู้ที่จ่ายเงิน</li>
-      <li>รหัสเดียวสามารถปลดล็อกได้หลายแอปพร้อมกัน</li>
-      <li>ตั้ง "ปลดทุกแอป" สำหรับแพ็กเกจ VIP ที่เข้าถึงได้ทุกอย่าง</li>
-      <li>ตั้งวันหมดอายุสำหรับรหัสแบบรายเดือน/รายปี</li>
-      <li>ปิดรหัสได้ทันทีโดยไม่ต้องลบ</li>
+  <nav id="nav">
+    <div class="logo" onclick="go('/')"><span id="logoTitle">Kru-ti ครูติ</span><em>TH</em></div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#/" data-r="/">หน้าหลัก</a></li>
+      <li><a href="#/blog" data-r="/blog">บทความ</a></li>
+      <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
     </ul>
-  </div>`;
-  window._codesData = codesData;
-}
-
-function openCodeModal(id) {
-  api.get('/codes').then(d => {
-    const c = id ? (d.codes||[]).find(x=>x.id===id) : null;
-    let appIds = [];
-    try { appIds = JSON.parse(c?.app_ids || '[]'); } catch {}
-    const allApps = window._allApps || [];
-    const lockedApps = allApps.filter(a => a.locked);
-
-    document.getElementById('modal').innerHTML = `
-    <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-      <div class="modal" style="max-width:520px;">
-        <h3>${c ? '✏️ แก้ไขรหัส' : '🔑 สร้างรหัสใหม่'}</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">รหัส (ตัวพิมพ์ใหญ่/ตัวเลข)</label>
-            <input type="text" class="form-input" id="cCode" value="${c?.code||''}"
-              placeholder="เช่น VIP2025, PREMIUM1" style="font-weight:700;letter-spacing:1px;text-transform:uppercase;"
-              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
-          </div>
-          <div class="form-group">
-            <label class="form-label">ชื่อแพ็กเกจ</label>
-            <input type="text" class="form-input" id="cLabel" value="${c?.label||''}" placeholder="เช่น VIP รายเดือน">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">วันหมดอายุ (เว้นว่าง = ไม่หมดอายุ)</label>
-          <input type="date" class="form-input" id="cExpiry" value="${c?.expires_at?c.expires_at.split('T')[0]:''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">แอปที่ปลดล็อก</label>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
-              <input type="checkbox" id="cAll" ${appIds.includes('all')?'checked':''}
-                onchange="document.getElementById('cAppList').style.opacity=this.checked?.3:1;document.querySelectorAll('.cAppCb').forEach(cb=>cb.disabled=this.checked)">
-              🌟 ปลดทุกแอปที่ล็อก (VIP)
-            </label>
-            <div id="cAppList" style="opacity:${appIds.includes('all')?.3:1};display:flex;flex-direction:column;gap:6px;">
-              ${lockedApps.length
-                ? lockedApps.map(a=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
-                    <input type="checkbox" class="cAppCb" value="${a.id}"
-                      ${(appIds.includes(a.id)||appIds.includes(String(a.id)))?'checked':''}
-                      ${appIds.includes('all')?'disabled':''}>
-                    ${a.icon} ${a.title}
-                  </label>`).join('')
-                : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีแอปที่ล็อก</span>'
-              }
-            </div>
-          </div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;font-size:.92rem;">
-          <input type="checkbox" id="cActive" ${c ? (c.active?'checked':'') : 'checked'}>
-          <span>เปิดใช้งานรหัสนี้</span>
-        </label>
-        <div class="modal-footer">
-          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveCode(${c?.id||'null'})">💾 บันทึก</button>
-        </div>
-      </div>
-    </div>`;
-  });
-}
-
-async function saveCode(id) {
-  const code  = document.getElementById('cCode').value.trim();
-  const label = document.getElementById('cLabel').value.trim();
-  if (!code || !label) { alert('กรุณาใส่รหัสและชื่อแพ็กเกจ'); return; }
-  const allChecked = document.getElementById('cAll').checked;
-  let appIds = allChecked ? ['all'] : [];
-  if (!allChecked) {
-    document.querySelectorAll('.cAppCb:checked').forEach(cb => appIds.push(parseInt(cb.value)));
-  }
-  const body = {
-    code, label, app_ids: appIds,
-    expires_at: document.getElementById('cExpiry').value || null,
-    active: document.getElementById('cActive').checked,
-  };
-  const res = id && id !== 'null'
-    ? await api.put('/codes/'+id, body)
-    : await api.post('/codes', body);
-  if (res.error) { toast('❌ '+res.error); return; }
-  closeModal(); toast('✅ บันทึกรหัสแล้ว');
-  renderCodes();
-}
-
-async function delCode(id, code) {
-  if (!confirm(`ลบรหัส "${code}" ?`)) return;
-  await api.delete('/codes/'+id);
-  toast('🗑 ลบรหัสแล้ว'); renderCodes();
-}
-
-// ══════════════════════════════════════════════════════════
-// EMAIL — สร้างอีเมลส่งรหัสให้ลูกค้า (คัดลอกวางใน Gmail ได้เลย)
-// ══════════════════════════════════════════════════════════
-function openEmailModal(id) {
-  const c = (window._codesData?.codes || []).find(x => x.id === id);
-  if (!c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
-
-  // ดึงรายชื่อแอปที่รหัสนี้ปลดได้
-  let appIds = []; try { appIds = JSON.parse(c.app_ids || '[]'); } catch {}
-  const allApps = window._allApps || [];
-  let appList;
-  if (appIds.includes('all')) {
-    appList = allApps.filter(a => a.locked).map(a => (a.icon||'') + ' ' + a.title);
-  } else {
-    appList = appIds.map(aid => {
-      const a = allApps.find(x => x.id === parseInt(aid) || x.id === aid);
-      return a ? (a.icon||'') + ' ' + a.title : null;
-    }).filter(Boolean);
-  }
-
-  document.getElementById('modal').innerHTML = `
-  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:560px;">
-      <h3>📧 สร้างอีเมลส่งรหัส</h3>
-      <p style="font-size:.85rem;color:#64748b;margin-bottom:14px;">
-        กรอกชื่อลูกค้า → กดคัดลอก → วางในช่องเนื้อหา Gmail ได้เลย (ดีไซน์ติดมาทั้งหมด)
-      </p>
-      <div class="form-group">
-        <label class="form-label">ชื่อลูกค้า</label>
-        <input type="text" class="form-input" id="emName" placeholder="เช่น คุณครูสมหญิง" autofocus>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">รหัส</label>
-          <input type="text" class="form-input" id="emCode" value="${c.code}" readonly
-            style="background:#f8fafc;font-weight:700;letter-spacing:1px;">
-        </div>
-        <div class="form-group">
-          <label class="form-label">ชื่อแพ็กเกจ (แก้ได้)</label>
-          <input type="text" class="form-input" id="emPkg" value="${(c.label||'').replace(/"/g,'&quot;')}">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">รายชื่อแอปในชุด (บรรทัดละแอป — แก้ได้)</label>
-        <textarea class="form-input" id="emApps" rows="4" style="resize:vertical;font-size:.9rem;">${appList.join('\n')}</textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">หัวข้ออีเมล (กดคัดลอกแยก)</label>
-        <div style="display:flex;gap:8px;">
-          <input type="text" class="form-input" id="emSubject" value="✦ รหัสปลดล็อกแอปของคุณมาถึงแล้ว — Kru-ti ครูติ TH" style="flex:1;">
-          <button class="btn btn-outline" style="white-space:nowrap;" onclick="navigator.clipboard.writeText(document.getElementById('emSubject').value);this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)">📋</button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">ปิด</button>
-        <button class="btn btn-outline" onclick="previewEmail()">👁 ดูตัวอย่าง</button>
-        <button class="btn btn-primary" id="emCopyBtn" onclick="copyEmail()">📋 คัดลอกอีเมล (วางใน Gmail)</button>
-      </div>
+    <div class="nav-right">
+      <button class="search-btn" onclick="goSearch()">🔍 ค้นหา</button>
     </div>
-  </div>`;
-}
+    <button class="hamburger" onclick="toggleNav()">☰</button>
+  </nav>
+  <div id="crownSlot"></div>
+</div>
 
-function buildEmailHTML() {
-  const name = document.getElementById('emName').value.trim() || 'คุณครู';
-  const code = document.getElementById('emCode').value.trim();
-  const pkg  = document.getElementById('emPkg').value.trim() || 'แพ็กเกจของคุณ';
-  const apps = document.getElementById('emApps').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const siteUrl = location.origin + '/#/apps';
-  const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+<main id="app"><div class="loading"><div class="spinner"></div><br>กำลังโหลด...</div></main>
 
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f1;padding:28px 12px;"><tr><td align="center">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e8e1d3;">
-<tr><td style="background-color:#15223c;padding:30px 36px 26px;text-align:center;">
-  <div style="font-size:30px;line-height:1;color:#f0a830;margin-bottom:10px;">&#10022;</div>
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:21px;font-weight:bold;color:#ffffff;">Kru-ti ครูติ <span style="color:#f0a830;">TH</span></div>
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:12px;color:#9db0cc;margin-top:5px;">แอปการสอนและบทความ เพื่อครูไทย</div>
-</td></tr>
-<tr><td style="padding:34px 36px 10px;">
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:17px;font-weight:bold;color:#15223c;margin-bottom:14px;">เรียน ${esc(name)}</div>
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.9;color:#41506b;">
-    ขอบคุณที่สนับสนุน Kru-ti ครูติ TH ครับ &#127775;<br>
-    รหัสปลดล็อกสำหรับ <strong style="color:#15223c;">${esc(pkg)}</strong> ของคุณพร้อมใช้งานแล้ว
-  </div>
-</td></tr>
-<tr><td style="padding:22px 36px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="background-color:#fdf7ea;border:2px dashed #f0a830;border-radius:14px;padding:22px;text-align:center;">
-      <div style="font-family:Tahoma,Arial,sans-serif;font-size:11px;font-weight:bold;color:#c47f0e;letter-spacing:2px;margin-bottom:9px;">&#127903;&#65039; รหัสปลดล็อกของคุณ</div>
-      <div style="font-family:Courier New,Courier,monospace;font-size:26px;font-weight:bold;color:#15223c;letter-spacing:3px;">${esc(code)}</div>
-    </td>
-  </tr></table>
-</td></tr>
-<tr><td style="padding:6px 36px 8px;">
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;font-weight:bold;color:#15223c;margin-bottom:12px;">วิธีใช้รหัส (ใช้เวลาไม่ถึง 1 นาที)</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:1.8;color:#41506b;">
-    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">1.</td>
-        <td style="padding-bottom:8px;">เข้าเว็บ <a href="${siteUrl}" style="color:#0fa294;font-weight:bold;">kru-ti.com</a> แล้วไปที่หน้า <strong>แอปทั้งหมด</strong></td></tr>
-    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">2.</td>
-        <td style="padding-bottom:8px;">กรอกรหัสด้านบนในช่อง <strong>&#127903;&#65039; "มีรหัสปลดล็อก?"</strong> แล้วกดปุ่ม ปลดล็อก</td></tr>
-    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;">3.</td>
-        <td>แอปทั้งหมดในชุดจะเปิดใช้งานได้ทันที &#128640;</td></tr>
-  </table>
-</td></tr>
-<tr><td style="padding:22px 36px;" align="center">
-  <a href="${siteUrl}" style="display:inline-block;background-color:#f0a830;color:#15223c;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 38px;border-radius:11px;">&#128275; ไปปลดล็อกแอปเลย</a>
-</td></tr>
-${apps.length ? `<tr><td style="padding:4px 36px 8px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="background-color:#faf7f1;border-radius:12px;padding:18px 22px;">
-      <div style="font-family:Tahoma,Arial,sans-serif;font-size:12.5px;font-weight:bold;color:#6d7588;letter-spacing:1px;margin-bottom:10px;">&#10022; แอปที่รหัสนี้ปลดล็อกได้</div>
-      <div style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:2;color:#41506b;">${apps.map(a=>'&#9989; '+esc(a)).join('<br>')}</div>
-    </td>
-  </tr></table>
-</td></tr>` : ''}
-<tr><td style="padding:14px 36px 6px;">
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:12.5px;line-height:1.8;color:#6d7588;">
-    <strong style="color:#41506b;">หมายเหตุ:</strong> กรุณาเก็บรหัสนี้ไว้เป็นความลับ ไม่ส่งต่อให้ผู้อื่น
-    หากกรอกรหัสแล้วพบปัญหา ตอบกลับอีเมลฉบับนี้ได้เลย เรายินดีช่วยเหลือทันที
-  </div>
-</td></tr>
-<tr><td style="padding:20px 36px 30px;">
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.9;color:#41506b;">
-    ขอบคุณที่ร่วมเดินทางไปกับเรา<br>
-    <strong style="color:#15223c;">ครูติ</strong><br>
-    <span style="font-size:12.5px;color:#6d7588;">Kru-ti ครูติ TH — แอปการสอนและบทความ เพื่อครูไทย</span>
-  </div>
-</td></tr>
-<tr><td style="background-color:#15223c;padding:18px 36px;text-align:center;">
-  <div style="font-family:Tahoma,Arial,sans-serif;font-size:11.5px;color:#9db0cc;line-height:1.9;">
-    <a href="${location.origin}" style="color:#f0a830;text-decoration:none;font-weight:bold;">kru-ti.com</a><br>
-    &#169; 2569 Kru-ti ครูติ TH
-  </div>
-</td></tr>
-</table>
-</td></tr></table>`;
-}
-
-async function copyEmail() {
-  const btn = document.getElementById('emCopyBtn');
-  const html = buildEmailHTML();
-  const plain = 'รหัสปลดล็อกของคุณ: ' + document.getElementById('emCode').value
-    + '\nใช้งานที่ ' + location.origin + '/#/apps';
-  try {
-    // วิธีหลัก: ClipboardItem แบบ text/html → วางใน Gmail ติด format เต็ม
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        'text/html':  new Blob([html],  { type: 'text/html' }),
-        'text/plain': new Blob([plain], { type: 'text/plain' }),
-      })
-    ]);
-    btn.textContent = '✅ คัดลอกแล้ว — ไปวางใน Gmail ได้เลย';
-    setTimeout(() => btn.textContent = '📋 คัดลอกอีเมล (วางใน Gmail)', 2500);
-  } catch (e) {
-    // fallback: execCommand บน div ชั่วคราว (เบราว์เซอร์เก่า)
-    const tmp = document.createElement('div');
-    tmp.contentEditable = 'true';
-    tmp.style.cssText = 'position:fixed;left:-9999px;top:0;';
-    tmp.innerHTML = html;
-    document.body.appendChild(tmp);
-    const range = document.createRange();
-    range.selectNodeContents(tmp);
-    const sel = getSelection();
-    sel.removeAllRanges(); sel.addRange(range);
-    const ok = document.execCommand('copy');
-    sel.removeAllRanges(); tmp.remove();
-    if (ok) {
-      btn.textContent = '✅ คัดลอกแล้ว — ไปวางใน Gmail ได้เลย';
-      setTimeout(() => btn.textContent = '📋 คัดลอกอีเมล (วางใน Gmail)', 2500);
-    } else {
-      toast('❌ คัดลอกไม่สำเร็จ — ลองใช้ปุ่มดูตัวอย่างแล้วคัดลอกเอง');
-    }
-  }
-}
-
-function previewEmail() {
-  const w = window.open('', '_blank', 'width=640,height=800');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ตัวอย่างอีเมล</title></head><body style="margin:0;">'
-    + buildEmailHTML() + '</body></html>');
-  w.document.close();
-}
-
-
-async function uploadPreviewImg() {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = async () => {
-    const f = inp.files[0]; if (!f) return;
-    const btn = document.querySelector('[onclick="uploadPreviewImg()"]');
-    if (btn) btn.textContent = '⏳ กำลังอัปโหลด...';
-    try {
-      const url = await uploadToImgbb(f);
-      if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
-      document.getElementById('aPreview').value = url;
-      let img = document.querySelector('.preview-thumb');
-      if (!img) {
-        img = document.createElement('img'); img.className='preview-thumb';
-        img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;';
-        document.getElementById('aPreview').parentNode.appendChild(img);
-      }
-      img.src = url;
-      toast('✅ อัปโหลดรูป preview แล้ว');
-    } catch(e) { toast('❌ ' + e.message); }
-    if (btn) btn.textContent = '📷 อัปโหลด';
-  };
-  inp.click();
-}
-
-// ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
-// USERS — จัดการผู้ใช้ (super_admin only)
-// ══════════════════════════════════════════════════════════
-async function renderUsers() {
-  if (myRole() !== 'super_admin') { document.getElementById('content').innerHTML = `<div class="page-title">⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้</div>`; return; }
-  const d = await api.get('/users');
-  const list = d.users || [];
-  document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div class="page-title" style="margin:0;">👥 จัดการผู้ใช้</div>
-    <button class="btn btn-primary" onclick="openUserModal(null)">+ เพิ่ม Editor</button>
-  </div>
-  <div class="card">
-    <div class="table-wrap"><table>
-      <thead><tr><th>ชื่อแสดง</th><th>Username</th><th>Role</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${list.length ? list.map(u=>`<tr>
-          <td><strong>${u.display_name}</strong></td>
-          <td><code style="background:#f1f5f9;padding:2px 8px;border-radius:5px;">${u.username}</code></td>
-          <td>${u.role==='super_admin'
-            ?'<span class="badge" style="background:#fef3c7;color:#92400e;">👑 Super Admin</span>'
-            :'<span class="badge badge-blue">✏️ Editor</span>'}</td>
-          <td style="font-size:.82rem;color:#64748b;">${fmtD(u.created_at)}</td>
-          <td style="white-space:nowrap;">
-            <button class="btn btn-outline btn-sm" onclick="openUserModal(${u.id})">✏️</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delUser(${u.id},'${u.display_name}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มี Editor — กด "+ เพิ่ม Editor" ด้านบน</td></tr>`}
-      </tbody>
-    </table></div>
-  </div>
-  <div class="card" style="background:#f8fafc;">
-    <p style="font-size:.88rem;color:#475569;line-height:2;">
-      <strong>Editor</strong> สามารถเขียนและแก้ไขบทความ จัดการความคิดเห็น และแก้โปรไฟล์ตัวเองได้<br>
-      <strong>Super Admin</strong> มีสิทธิ์ทุกอย่าง รวมถึงจัดการแอป รหัสปลดล็อก ตั้งค่าเว็บ และผู้ใช้
-    </p>
-  </div>`;
-}
-
-function fmtD(dt) { if(!dt)return'-'; try{return new Date(dt).toLocaleDateString('th-TH')}catch{return dt;} }
-
-function openUserModal(id) {
-  api.get('/users').then(d => {
-    const u = id ? (d.users||[]).find(x=>x.id===id) : null;
-    document.getElementById('modal').innerHTML = `
-    <div class="modal-ov" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <h3>${u ? '✏️ แก้ไขผู้ใช้' : '👤 เพิ่ม Editor ใหม่'}</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Username *</label>
-            <input type="text" class="form-input" id="uUsername" value="${u?.username||''}" ${u?'readonly style="background:#f8fafc;"':''} placeholder="เช่น teacher1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Role</label>
-            <select class="form-select" id="uRole">
-              <option value="editor" ${(!u||u.role==='editor')?'selected':''}>✏️ Editor</option>
-              <option value="super_admin" ${u?.role==='super_admin'?'selected':''}>👑 Super Admin</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">ชื่อที่แสดง *</label>
-          <input type="text" class="form-input" id="uDisplayName" value="${u?.display_name||''}" placeholder="เช่น ครูสมชาย">
-        </div>
-        <div class="form-group">
-          <label class="form-label">${u?'รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)':'รหัสผ่าน *'}</label>
-          <input type="password" class="form-input" id="uPassword" placeholder="${u?'เว้นว่างเพื่อคงรหัสเดิม':'ตั้งรหัสผ่าน'}">
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveUser(${u?.id||'null'})">💾 บันทึก</button>
-        </div>
-      </div>
-    </div>`;
-  });
-}
-
-async function saveUser(id) {
-  const un   = document.getElementById('uUsername').value.trim();
-  const dn   = document.getElementById('uDisplayName').value.trim();
-  const pw   = document.getElementById('uPassword').value;
-  const role = document.getElementById('uRole').value;
-  if (!dn || (!id && (!un || !pw))) { alert('กรุณาใส่ข้อมูลให้ครบ'); return; }
-  const body = { username:un, display_name:dn, role };
-  if (pw) body.password = pw;
-  const r = id && id!=='null'
-    ? await api.put('/users/'+id, body)
-    : await api.post('/users', body);
-  if (r.error) { toast('❌ '+r.error); return; }
-  closeModal(); toast('✅ บันทึกแล้ว'); renderUsers();
-}
-
-async function delUser(id, name) {
-  if (!confirm(`ลบผู้ใช้ "${name}" ?`)) return;
-  const r = await api.delete('/users/'+id);
-  if (r.error) { toast('❌ '+r.error); return; }
-  toast('🗑 ลบแล้ว'); renderUsers();
-}
-
-// ══════════════════════════════════════════════════════════
-// PROFILE — โปรไฟล์ของตัวเอง (ทุก role)
-// ══════════════════════════════════════════════════════════
-async function renderProfile() {
-  const uid = myUid();
-  document.getElementById('content').innerHTML = `
-  <div class="page-title">👤 โปรไฟล์ของฉัน</div>
-  <div class="card">
-    <div class="card-title">ข้อมูลส่วนตัว</div>
-    <div class="form-group">
-      <label class="form-label">ชื่อที่แสดงบนเว็บ (ผู้เขียนบทความ)</label>
-      <input type="text" class="form-input" id="pDisplayName" value="${myName()}">
+<!-- LOCK MODAL -->
+<div id="lockModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(13,21,38,.72);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:2.2rem;margin-bottom:8px;">🔒</div>
+      <h3 style="font-size:1.1rem;font-weight:700;color:#15223c;" id="lockTitle">แอปนี้ต้องใช้รหัสผ่าน</h3>
+      <p style="font-size:.88rem;color:#6d7588;margin-top:6px;">กรอกรหัสที่ได้รับเพื่อใช้งานแอปนี้</p>
     </div>
-    <p style="font-size:.82rem;color:#64748b;margin-bottom:16px;">ชื่อนี้จะแสดงบนบทความที่คุณเขียน</p>
-    <div class="card-title">เปลี่ยนรหัสผ่าน</div>
-    <div class="settings-grid">
-      <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input type="password" class="form-input" id="pPwd" placeholder="เว้นว่าง = ไม่เปลี่ยน"></div>
-      <div class="form-group"><label class="form-label">ยืนยัน</label><input type="password" class="form-input" id="pPwd2" placeholder="ยืนยันรหัสผ่านใหม่"></div>
-    </div>
-    <button class="btn btn-success" onclick="saveProfile()">💾 บันทึกโปรไฟล์</button>
-  </div>`;
-}
-
-async function saveProfile() {
-  const dn   = document.getElementById('pDisplayName').value.trim();
-  const pwd  = document.getElementById('pPwd').value;
-  const pwd2 = document.getElementById('pPwd2').value;
-  if (!dn) { alert('กรุณาใส่ชื่อที่แสดง'); return; }
-  if (pwd && pwd !== pwd2) { toast('❌ รหัสผ่านไม่ตรงกัน'); return; }
-  const uid = myUid();
-  let r;
-  if (uid === '0') {
-    // Admin หลัก — บันทึกผ่าน settings
-    const body = { author_name: dn };
-    if (pwd) body.admin_password = pwd;
-    r = await api.put('/settings', body);
-  } else {
-    const body = { display_name: dn };
-    if (pwd) body.password = pwd;
-    r = await api.put('/users/'+uid, body);
-  }
-  if (r.ok || !r.error) {
-    localStorage.setItem('_display_name', dn);
-    applyRole();
-    toast('✅ บันทึกโปรไฟล์แล้ว');
-  } else { toast('❌ '+r.error); }
-}
-
-// ══════════════════════════════════════════════════════════
-async function renderSettings() {
-  const s = await api.get('/settings');
-  let cats = [];
-  try { cats = JSON.parse(s.article_categories || '[]'); } catch {}
-  if (!cats.length) cats = ['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู'];
-  document.getElementById('content').innerHTML = `
-  <div class="page-title">⚙️ ตั้งค่าเว็บ</div>
-  <div id="settingsAlert"></div>
-  <div class="card">
-    <div class="card-title">🌐 ข้อมูลเว็บไซต์</div>
-    <div class="settings-grid">
-      <div class="form-group"><label class="form-label">ชื่อเว็บ</label><input type="text" class="form-input" id="sTitle" value="${s.site_title||''}"></div>
-      <div class="form-group"><label class="form-label">ชื่อผู้เขียน</label><input type="text" class="form-input" id="sAuthor" value="${s.author_name||''}"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Tagline</label><input type="text" class="form-input" id="sTagline" value="${s.site_tagline||''}"></div>
-    <div class="form-group"><label class="form-label">คำอธิบายเว็บ (SEO)</label><textarea class="form-ta" id="sDesc" style="min-height:80px;">${s.site_desc||''}</textarea></div>
-  </div>
-  <div class="card">
-    <div class="card-title">📂 หมวดหมู่บทความ</div>
-    <div id="catList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      ${cats.map((c,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:5px 12px;border-radius:100px;font-size:.88rem;font-weight:700;">
-        ${c}<button onclick="removeCat(${i})" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.9rem;padding:0;line-height:1;">✕</button>
-      </span>`).join('')}
-    </div>
+    <input id="lockInput" type="password" placeholder="ใส่รหัสที่นี่..." autocomplete="off"
+      style="width:100%;padding:11px 14px;border:1.5px solid #e8e1d3;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"
+      onkeydown="if(event.key==='Enter')submitLock()">
+    <p id="lockErr" style="color:#dc2626;font-size:.85rem;margin-bottom:8px;display:none;">รหัสไม่ถูกต้อง กรุณาลองใหม่</p>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="newCatInput" class="form-input" placeholder="ชื่อหมวดหมู่ใหม่..." style="flex:1;" onkeydown="if(event.key==='Enter')addCat()">
-      <button class="btn btn-outline" onclick="addCat()">+ เพิ่ม</button>
-    </div>
-    <p style="font-size:.82rem;color:#94a3b8;margin-top:8px;">หมวดหมู่นี้จะแสดงใน filter บทความและ dropdown เขียนบทความ</p>
-  </div>
-  <div class="card">
-    <div class="card-title">🖼️ รูปภาพ — imgbb.com</div>
-    <div class="alert alert-info">สมัครฟรีที่ <a href="https://imgbb.com" target="_blank" style="font-weight:700;">imgbb.com</a> แล้วไปที่ Account → API → สร้าง API Key</div>
-    <div class="form-group"><label class="form-label">imgbb API Key</label><input type="text" class="form-input" id="sImgbb" value="${s.imgbb_key||''}" placeholder="วาง API Key ตรงนี้"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">📢 Google AdSense</div>
-    <div class="form-group"><label class="form-label">Publisher ID (ca-pub-...)</label><input type="text" class="form-input" id="sAdsense" value="${s.adsense_id||''}" placeholder="ca-pub-XXXXXXXXXXXXXXXX"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">🔐 เปลี่ยนรหัสผ่าน Admin</div>
-    <div class="settings-grid">
-      <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input type="password" class="form-input" id="sNewPwd" placeholder="เว้นว่างเพื่อคงเดิม"></div>
-      <div class="form-group"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input type="password" class="form-input" id="sNewPwd2" placeholder="ยืนยันอีกครั้ง"></div>
+      <button onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e8e1d3;border-radius:10px;background:#faf7f1;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button onclick="submitLock()" style="flex:2;padding:10px;background:#f0a830;color:#15223c;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
     </div>
   </div>
-  <div class="btn-group">
-    <button class="btn btn-success" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
-  </div>`;
-  window._cats = [...cats];
+</div>
+
+<!-- APP VIEWER -->
+<div id="appViewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,21,38,.9);align-items:center;justify-content:center;padding:12px;">
+  <div id="viewerBox" style="display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#15223c;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span id="viewerIcon" style="font-size:1.2rem;flex-shrink:0;"></span>
+        <span id="viewerTitle" style="color:#fff;font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#f0a830;color:#15223c;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
+        <button onclick="openInNewTab()" title="เปิดแท็บใหม่" style="background:#2c4a7c;color:#cdd8ea;border:none;padding:6px 10px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">↗</button>
+        <button onclick="closeAppViewer()" title="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
+      </div>
+    </div>
+    <iframe id="viewerFrame" style="flex:1;width:100%;border:none;background:#fff;" allow="fullscreen; autoplay; clipboard-write; gamepad" allowfullscreen></iframe>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo" id="footerLogo">✦ Kru-ti ครูติ TH</div>
+    <div class="footer-links">
+      <a href="#/blog">บทความ</a>
+      <a href="#/apps">แอปทั้งหมด</a>
+      <a href="#/about">เกี่ยวกับเรา</a>
+      <a href="#/privacy">นโยบายความเป็นส่วนตัว</a>
+      <a href="/admin/" style="color:#2c4a7c;">⚙</a>
+    </div>
+    <p id="footerText" style="font-size:.8rem;">© 2568 Kru-ti ครูติ TH</p>
+  </div>
+</footer>
+
+<script>
+'use strict';
+const API = '/api';
+let S = {}; // site settings
+
+// ── FETCH HELPERS (cache 30 วิ + กันยิงซ้ำขณะ request แรกยังไม่กลับ) ──
+const _cache = new Map();
+function get(url, ttl = 30000) {
+  const hit = _cache.get(url);
+  if (hit) {
+    if (hit.p) return hit.p;                       // มี request ค้างอยู่ → ใช้ตัวเดิม
+    if (Date.now() - hit.t < ttl) return Promise.resolve(hit.v);
+  }
+  const p = fetch(API + url).then(r => r.json()).then(v => {
+    _cache.set(url, { t: Date.now(), v });
+    return v;
+  }).catch(e => { _cache.delete(url); throw e; }); // พลาด → ล้างทิ้ง ให้ลองใหม่ได้
+  _cache.set(url, { p });
+  return p;
+}
+const token = () => localStorage.getItem('_tok');
+
+// ── ROUTER ───────────────────────────────────────────────
+function route() {
+  const h = location.hash.replace('#','') || '/';
+  document.querySelectorAll('.nav-links a').forEach(a =>
+    a.classList.toggle('active', a.dataset.r === h || (h==='/' && a.dataset.r==='/')));
+  document.getElementById('navLinks').classList.remove('open');
+  const _cs = document.getElementById('crownSlot');
+  if (_cs && h !== '/' && h !== '') _cs.innerHTML = '';
+  window.scrollTo(0,0);
+  if (h === '/' || h === '')         renderHome();
+  else if (h === '/blog')            renderBlog();
+  else if (h.startsWith('/article/'))renderArticle(h.slice(9));
+  else if (h === '/apps')            renderApps();
+  else if (h === '/about')           renderAbout();
+  else if (h === '/privacy')         renderPrivacy();
+  else                               document.getElementById('app').innerHTML = empty('ไม่พบหน้านี้','🌌');
 }
 
-function getCatList() { return window._cats || []; }
-function renderCatList() {
-  const cats = getCatList();
-  document.getElementById('catList').innerHTML = cats.map((c,i)=>
-    `<span style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:5px 12px;border-radius:100px;font-size:.88rem;font-weight:700;">
-      ${c}<button onclick="removeCat(${i})" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.9rem;padding:0;line-height:1;">✕</button>
-    </span>`
+const go = hash => { location.hash = hash; };
+let _focusSearch = false;
+function goSearch() {
+  const h = location.hash;
+  if (h === '#/apps') {
+    document.getElementById('appSearch')?.focus();
+  } else if (h === '#/blog') {
+    document.getElementById('blogSearch')?.focus();
+  } else {
+    _focusSearch = true;
+    go('/blog');
+  }
+}
+window.addEventListener('hashchange', route);
+const toggleNav = () => document.getElementById('navLinks').classList.toggle('open');
+
+// ── HOME ─────────────────────────────────────────────────
+async function renderHome() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const [artData, appData] = await Promise.all([get('/articles?page=1'), get('/apps')]);
+  const arts = artData.articles || [];
+  const appsArr = appData.apps || [];
+  const [feat, ...rest] = arts;
+  const sideArts = rest.slice(0,3);
+  const gridArts = rest.slice(3,9);
+
+  // ── มงกุฎกระดานดำ: บทความเด่น + น่าอ่านต่อ (ในโซนหมึก) ──
+  const crown = document.getElementById('crownSlot');
+  if (crown) crown.innerHTML = feat ? `
+  <div class="crown">
+    <div class="container" style="position:relative;">
+      <div class="crown-grid">
+        <div class="crown-feat rv" onclick="go('/article/${feat.id}')">
+          <div class="stamp"><b>✦</b><small>เด่น</small></div>
+          <div class="crown-meta"><span class="crown-cat">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
+          <h2>${feat.title}</h2>
+          <p class="cx">${feat.excerpt||''}</p>
+          <span class="crown-read">อ่านบทความ →</span>
+        </div>
+        <div class="crown-side rv2">
+          <div class="crown-side-label">น่าอ่านต่อ</div>
+          ${sideArts.map((a,i)=>`
+          <div class="crown-item" onclick="go('/article/${a.id}')">
+            <div class="crown-num">${i+1}</div>
+            <div><h3>${a.title}</h3><div class="ci-cat">${a.category} · ${fmt(a.created_at)}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="crown-edge"></div>` : '<div style="height:18px;"></div>';
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:8px;">
+    ${adSlot()}
+    <div class="cat-strip rv" id="catStrip" style="margin-top:26px;"></div>
+
+    ${gridArts.length ? `
+    <div class="rv2" style="margin-bottom:36px;">
+      <div class="sec-head">
+        <div><div class="sec-title">บทความล่าสุด</div><div class="sec-sub">อัปเดตเทคนิคการสอน ข่าวการศึกษา และเครื่องมือใหม่</div></div>
+        <span class="sec-more" onclick="go('/blog')">ดูทั้งหมด →</span>
+      </div>
+      <div class="arts-grid">
+        ${gridArts.map(artCard).join('')}
+      </div>
+    </div>` : ''}
+
+    ${adSlot()}
+
+    ${appsArr.length ? `
+    <div class="apps-box rv3">
+      <div class="sec-head">
+        <div><div class="sec-title mint">แอปที่ใช้งานได้เลย</div><div class="sec-sub">เปิดใช้ในห้องเรียนได้ทันที — พร้อม Prompt ให้นำไปต่อยอด</div></div>
+        <span class="sec-more" onclick="go('/apps')">ดูทั้งหมด →</span>
+      </div>
+      <div class="apps-grid">
+        ${appsArr.slice(0,3).map(appCard).join('')}
+      </div>
+    </div>` : ''}
+
+    ${adSlot()}
+  </div>`;
+  loadCategories();
+  activateAds();
+}
+
+// ── BLOG ─────────────────────────────────────────────────
+let blogQ = '', blogCat = 'ทั้งหมด', blogPage = 1;
+async function renderBlog(q, cat, page) {
+  if (q !== undefined) blogQ = q;
+  if (cat !== undefined) blogCat = cat;
+  if (page !== undefined) blogPage = page;
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+
+  const catParam = blogCat === 'ทั้งหมด' ? '' : blogCat;
+  const url = `/articles?q=${encodeURIComponent(blogQ)}&category=${encodeURIComponent(catParam)}&page=${blogPage}`;
+  const data = await get(url);
+  const arts = data.articles || [];
+  const total = data.total || 0;
+  const pages = Math.ceil(total / 9);
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv">
+      <h1>บทความทั้งหมด</h1>
+      <div class="ph-sub">เทคนิคการสอน ข่าวการศึกษา และเครื่องมือสำหรับครู</div>
+    </div>
+    <div class="search-row rv">
+      <input class="search-in" id="blogSearch" placeholder="🔍 ค้นหาบทความ..." value="${blogQ}"
+        onkeydown="if(event.key==='Enter')renderBlog(this.value,undefined,1)">
+      <button class="btn btn-primary" style="padding:9px 18px;" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
+    </div>
+    <div class="cat-strip rv2" id="blogCats"></div>
+    ${adSlot()}
+    ${arts.length
+      ? `<div class="arts-grid rv2">${arts.map(artCard).join('')}</div>`
+      : `<div class="empty">📭<br>ไม่พบบทความ</div>`}
+    ${pages > 1 ? `
+    <div class="pagination">
+      ${blogPage > 1 ? `<button class="page-btn" onclick="renderBlog(undefined,undefined,${blogPage-1})">← ก่อนหน้า</button>` : ''}
+      ${[...Array(Math.min(pages,5))].map((_,i)=>{
+        const p = i+1;
+        return `<button class="page-btn ${p===blogPage?'active':''}" onclick="renderBlog(undefined,undefined,${p})">${p}</button>`;
+      }).join('')}
+      ${blogPage < pages ? `<button class="page-btn" onclick="renderBlog(undefined,undefined,${blogPage+1})">ถัดไป →</button>` : ''}
+    </div>` : ''}
+  </div>`;
+  loadBlogCats();
+  activateAds();
+  if (_focusSearch) { _focusSearch = false; document.getElementById('blogSearch')?.focus(); }
+}
+
+function loadBlogCats() {
+  const el = document.getElementById('blogCats');
+  if (!el) return;
+  const cats = ['ทั้งหมด', ...getCats()];
+  el.innerHTML = cats.map(c =>
+    `<span class="cat-pill ${blogCat===c?'active':''}" onclick="renderBlog(undefined,'${c}',1)">${c}</span>`
   ).join('');
 }
-function addCat() {
-  const inp = document.getElementById('newCatInput');
-  const v = inp.value.trim();
-  if (!v || getCatList().includes(v)) return;
-  window._cats.push(v);
-  renderCatList();
-  inp.value = '';
-}
-function removeCat(i) {
-  window._cats.splice(i, 1);
-  renderCatList();
+
+// ── SINGLE ARTICLE ───────────────────────────────────────
+async function renderArticle(slugOrId) {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const art = await get('/articles/' + slugOrId);
+  if (art.error) { app.innerHTML = empty('ไม่พบบทความ','📭'); return; }
+  // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
+  const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
+  // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
+  const shareUrl = `${location.origin}/#/article/${art.id}`;
+
+  app.innerHTML = `
+  <div class="art-wrap rv">
+    <div class="back-btn" onclick="go('/blog')">← กลับรายการบทความ</div>
+    <h1>${art.title}</h1>
+    <div class="art-info">
+      <span class="${catTag(art.category)}">${art.category}</span>
+      <span>📅 ${fmt(art.created_at)}</span>
+      <span>✍️ ${art.author_name || S.author_name||'ผู้เขียน'}</span>
+      <span>👁 ${art.views||0} ครั้ง</span>
+    </div>
+    ${adSlot()}
+    <div class="art-body">${art.content||''}</div>
+    <div style="margin-top:28px;">${adSlot()}</div>
+    <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <strong style="font-size:.9rem;">แชร์:</strong>
+      <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+         href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank">📘 Facebook</a>
+      <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+              onclick="navigator.clipboard.writeText('${shareUrl}');this.textContent='✓ คัดลอกแล้ว'">🔗 คัดลอกลิงก์</button>
+    </div>
+    <div class="comments-box" id="cmtBox">
+      <h3>💬 ความคิดเห็น (${(cmtData.comments||[]).length})</h3>
+      ${(cmtData.comments||[]).map(c=>`
+      <div class="comment-item">
+        <div class="comment-meta">👤 ${esc(c.name)} · ${fmt(c.created_at)}</div>
+        <div class="comment-text">${esc(c.content)}</div>
+      </div>`).join('')}
+      <div class="comment-form">
+        <h4 style="font-size:.98rem;font-weight:600;margin-bottom:14px;">แสดงความคิดเห็น</h4>
+        <div class="form-row">
+          <input class="form-input" id="cmtName" placeholder="ชื่อของคุณ">
+        </div>
+        <textarea class="form-ta" id="cmtText" placeholder="เขียนความคิดเห็น..."></textarea>
+        <button class="btn btn-primary" style="margin-top:10px;"
+                onclick="submitComment(${art.id})">ส่งความคิดเห็น</button>
+        <p id="cmtMsg" style="font-size:.83rem;color:#059669;margin-top:8px;display:none;"></p>
+      </div>
+    </div>
+  </div>`;
+  activateAds();
 }
 
-async function saveSettings() {
-  const pwd  = document.getElementById('sNewPwd').value;
-  const pwd2 = document.getElementById('sNewPwd2').value;
-  if (pwd && pwd !== pwd2) { toast('❌ รหัสผ่านไม่ตรงกัน'); return; }
-  const body = {
-    site_title:  document.getElementById('sTitle').value,
-    author_name: document.getElementById('sAuthor').value,
-    site_tagline:document.getElementById('sTagline').value,
-    site_desc:   document.getElementById('sDesc').value,
-    imgbb_key:   document.getElementById('sImgbb').value,
-    adsense_id:  document.getElementById('sAdsense').value,
-    article_categories: JSON.stringify(getCatList()),
-  };
-  if (pwd) body.admin_password = pwd;
-  const res = await api.put('/settings', body);
-  if (res.ok) { _imgbbKey = null; toast('✅ บันทึกการตั้งค่าแล้ว'); }
-  else toast('❌ '+(res.error||'เกิดข้อผิดพลาด'));
+async function submitComment(articleId) {
+  const name = document.getElementById('cmtName').value.trim();
+  const content = document.getElementById('cmtText').value.trim();
+  const msg = document.getElementById('cmtMsg');
+  if (!name || !content) { showMsg(msg, 'กรุณากรอกชื่อและความคิดเห็น', '#ea580c'); return; }
+  const res = await fetch(API + '/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ article_id: articleId, name, content })
+  }).then(r => r.json());
+  if (res.ok) {
+    document.getElementById('cmtName').value = '';
+    document.getElementById('cmtText').value = '';
+    showMsg(msg, '✓ ส่งความคิดเห็นแล้ว รอการอนุมัติจากผู้ดูแล', '#059669');
+  }
+}
+
+// ── APPS PAGE ────────────────────────────────────────────
+let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
+
+async function renderApps() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const data = await get('/apps');
+  _allApps = data.apps || [];
+  _appFilter = 'all';
+  _appSort = 'newest';
+  _appQ = '';
+  drawApps();
+}
+
+function drawApps() {
+  const app = document.getElementById('app');
+  const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
+
+  // --- sort ---
+  const sorted = [..._allApps].sort((a, b) => {
+    if (_appSort === 'oldest') return (a.created_at||'') > (b.created_at||'') ? 1 : -1;
+    if (_appSort === 'name')   return (a.title||'').localeCompare(b.title||'', 'th');
+    return (a.created_at||'') < (b.created_at||'') ? 1 : -1; // newest
+  });
+
+  // --- filter ---
+  let filtered = sorted;
+  if (_appFilter === 'free')   filtered = sorted.filter(a => !a.locked);
+  else if (_appFilter === 'locked') filtered = sorted.filter(a => a.locked);
+  else if (_appFilter !== 'all')    filtered = sorted.filter(a => a.category === _appFilter);
+
+  // --- text search ---
+  if (_appQ.trim()) {
+    const q = _appQ.trim().toLowerCase();
+    filtered = filtered.filter(a =>
+      (a.title||'').toLowerCase().includes(q) ||
+      (a.description||'').toLowerCase().includes(q)
+    );
+  }
+
+  // --- filter pills ---
+  const pills = [
+    {k:'all',    label:'ทั้งหมด'},
+    {k:'free',   label:'🆓 ฟรี'},
+    {k:'locked', label:'🔒 พรีเมียม'},
+    ...cats.map(c => ({k:c, label:c})),
+  ];
+
+  const pillHTML = pills.map(p =>
+    `<span class="cat-pill${_appFilter===p.k?' active':''}"
+      onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">
+      ${p.label}</span>`
+  ).join('');
+
+  const sortHTML = `
+    <select onchange="setAppSort(this.value)"
+      style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
+             font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
+      <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
+      <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
+      <option value="name"   ${_appSort==='name'  ?'selected':''}>🔤 ชื่อ A-Z</option>
+    </select>`;
+
+  // --- content ---
+  let content = '';
+  if (_appFilter === 'all' && filtered.length > 0) {
+    const free   = filtered.filter(a => !a.locked);
+    const locked = filtered.filter(a =>  a.locked);
+    if (free.length > 0) content += `
+      <div style="margin-bottom:30px;">
+        <h2 class="sec-title mint" style="font-size:1.18rem;margin-bottom:14px;">แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${free.length}</span></h2>
+        <div class="apps-grid">${free.map(appCard).join('')}</div>
+      </div>`;
+    if (locked.length > 0) content += `
+      <div style="margin-bottom:30px;">
+        <h2 class="sec-title" style="font-size:1.18rem;margin-bottom:14px;">แอปพรีเมียม <span style="background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${locked.length}</span></h2>
+        <div class="apps-grid">${locked.map(appCard).join('')}</div>
+      </div>`;
+  } else if (filtered.length > 0) {
+    content = `<div class="apps-grid">${filtered.map(appCard).join('')}</div>`;
+  } else {
+    content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
+  }
+
+  // --- redeem ticket ---
+  const hasLocked = _allApps.some(a => a.locked);
+  const redeemHTML = hasLocked ? `
+    <div class="redeem-row rv2">
+      <span class="redeem-ico">🎟️</span>
+      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอปในชุด"
+             onkeydown="if(event.key==='Enter')redeemAll()">
+      <button onclick="redeemAll()">ปลดล็อก</button>
+      <span id="redeemMsg"></span>
+    </div>` : '';
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1>คลังแอปทั้งหมด</h1>
+        <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
+      </div>
+      ${sortHTML}
+    </div>
+    <div class="search-row rv" style="margin-bottom:14px;">
+      <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..." value="${_appQ}"
+        oninput="filterApps(this.value)">
+    </div>
+    <div class="cat-strip rv2" style="margin-bottom:20px;">${pillHTML}</div>
+    ${redeemHTML}
+    ${adSlot()}
+    ${content}
+    <div style="margin-top:24px;">${adSlot()}</div>
+  </div>`;
+  activateAds();
+}
+
+// ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
+async function redeemAll() {
+  const inp = document.getElementById('redeemCode');
+  const msg = document.getElementById('redeemMsg');
+  const code = (inp.value || '').trim();
+  if (!code) { showMsg(msg, 'กรุณากรอกรหัส', '#ea580c'); return; }
+  showMsg(msg, '⏳ กำลังตรวจรหัส...', '#6d7588');
+  try {
+    const r = await fetch(API + '/apps/unlock-all', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    }).then(r => r.json());
+    if (r.error) { showMsg(msg, '❌ ' + r.error, '#dc2626'); return; }
+    const list = r.unlocked || [];
+    list.forEach(a => { if (a.url) sessionStorage.setItem('unlocked_' + a.id, a.url); });
+    showMsg(msg, `✅ ปลดล็อกสำเร็จ ${list.length} แอป!`, '#0fa294');
+    setTimeout(drawApps, 700);
+  } catch (e) {
+    showMsg(msg, '❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง', '#dc2626');
+  }
+}
+
+function filterApps(q)   { _appQ      = q; drawApps(); }
+function setAppFilter(f) { _appFilter = f; drawApps(); }
+function setAppSort(s)   { _appSort   = s; drawApps(); }
+
+// ── ABOUT ─────────────────────────────────────────────────
+function renderAbout() {
+  const title = S.site_title || 'Kru-ti ครูติ TH';
+  const author = S.author_name || 'ผู้สร้าง';
+  document.getElementById('app').innerHTML = `
+  <div class="art-wrap rv">
+    <h1 style="margin-bottom:24px;">เกี่ยวกับเรา</h1>
+
+    <div class="art-body">
+      <h2>เราคือใคร?</h2>
+      <p><strong>${title}</strong> คือเว็บไซต์รวมสื่อการสอน Interactive สำหรับครูและนักเรียนไทย สร้างขึ้นด้วยความเชื่อว่าเทคโนโลยีสามารถทำให้การเรียนรู้สนุกและมีประสิทธิภาพมากขึ้น</p>
+
+      <h2>พันธกิจ</h2>
+      <p>เราต้องการสร้างและแบ่งปันแอปการศึกษาคุณภาพสูงที่ใช้งานได้ฟรี โดยไม่มีค่าใช้จ่ายสำหรับโรงเรียนและนักเรียนทุกคน พร้อมทั้งแบ่งปัน prompt สำหรับผู้ที่อยากสร้างแอปของตัวเอง</p>
+
+      <h2>สิ่งที่เราทำ</h2>
+      <ul>
+        <li>พัฒนาแอปการศึกษาแบบ Interactive ที่ใช้งานได้บนเว็บ</li>
+        <li>เขียนบทความเกี่ยวกับนวัตกรรมการสอน เทคโนโลยีการศึกษา และ AI</li>
+        <li>แบ่งปัน prompt สำหรับให้ครูและนักพัฒนานำไปสร้างแอปต่อ</li>
+      </ul>
+
+      <h2>ผู้สร้าง</h2>
+      <p><strong>${author}</strong> — ครูผู้สอนและนักพัฒนาอิสระด้านสื่อการสอนดิจิทัล มีความสนใจในการนำ AI และเทคโนโลยีมาใช้พัฒนาการเรียนรู้ในโรงเรียนไทย</p>
+
+      <h2>ติดต่อเรา</h2>
+      <p>หากมีข้อสงสัย ข้อเสนอแนะ หรืออยากร่วมมือ ยินดีรับฟังทุกความคิดเห็น</p>
+      <p>📧 <a href="mailto:kruti.edu@gmail.com" style="color:var(--mint);font-weight:700;">kruti.edu@gmail.com</a></p>
+    </div>
+
+    <div style="margin-top:32px;">
+      <a class="btn btn-outline" href="#/">← กลับหน้าหลัก</a>
+    </div>
+  </div>`;
+}
+
+// ── PRIVACY POLICY ────────────────────────────────────────
+function renderPrivacy() {
+  const title = S.site_title || 'Kru-ti ครูติ TH';
+  const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('app').innerHTML = `
+  <div class="art-wrap rv">
+    <h1 style="margin-bottom:8px;">นโยบายความเป็นส่วนตัว</h1>
+    <p style="color:var(--slate);font-size:.88rem;margin-bottom:28px;">อัปเดตล่าสุด: ${today}</p>
+
+    <div class="art-body">
+
+      <h2>บทนำ</h2>
+      <p>เว็บไซต์ <strong>${title}</strong> ("เรา" หรือ "เว็บไซต์") ให้ความสำคัญกับความเป็นส่วนตัวของผู้เยี่ยมชมทุกท่าน นโยบายนี้อธิบายว่าเราเก็บรวบรวม ใช้ และปกป้องข้อมูลของท่านอย่างไร</p>
+
+      <h2>ข้อมูลที่เราเก็บรวบรวม</h2>
+      <p>เว็บไซต์นี้ไม่ได้เก็บข้อมูลส่วนตัวโดยตรง ยกเว้นในกรณีต่อไปนี้:</p>
+      <ul>
+        <li><strong>ความคิดเห็น (Comments)</strong> — เมื่อท่านแสดงความคิดเห็น เราจะเก็บชื่อและข้อความที่ท่านกรอก</li>
+        <li><strong>ข้อมูลการใช้งาน</strong> — จำนวนครั้งที่แต่ละบทความถูกเปิดอ่าน (ไม่ระบุตัวตน)</li>
+      </ul>
+
+      <h2>การใช้ Cookies</h2>
+      <p>เว็บไซต์นี้ใช้ <strong>cookies</strong> (ไฟล์ข้อมูลขนาดเล็กในอุปกรณ์ของท่าน) เพื่อวัตถุประสงค์ต่อไปนี้:</p>
+      <ul>
+        <li>เพื่อการแสดงผลโฆษณา (ผ่าน Google AdSense)</li>
+        <li>เพื่อวิเคราะห์การใช้งานเว็บไซต์</li>
+      </ul>
+
+      <h2>Google AdSense และโฆษณา</h2>
+      <p>เว็บไซต์นี้ใช้ <strong>Google AdSense</strong> ซึ่งเป็นบริการโฆษณาของ Google LLC เพื่อแสดงโฆษณา</p>
+      <ul>
+        <li>Google AdSense ใช้ cookies เพื่อแสดงโฆษณาที่เกี่ยวข้องกับความสนใจของท่าน</li>
+        <li>Google อาจใช้ข้อมูลเกี่ยวกับการเยี่ยมชมเว็บไซต์นี้ (และเว็บไซต์อื่น) เพื่อแสดงโฆษณาที่ตรงความสนใจ</li>
+        <li>ท่านสามารถดูและปรับการตั้งค่าโฆษณาส่วนตัวได้ที่ <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google Ads Settings</a></li>
+        <li>สามารถอ่านนโยบายความเป็นส่วนตัวของ Google เพิ่มเติมได้ที่ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a></li>
+      </ul>
+
+      <h2>ผู้ให้บริการภายนอก (Third-Party Services)</h2>
+      <p>เว็บไซต์อาจเชื่อมต่อกับบริการภายนอก ซึ่งมีนโยบายความเป็นส่วนตัวของตนเอง:</p>
+      <ul>
+        <li><strong>Google AdSense</strong> — บริการโฆษณา</li>
+        <li><strong>Google Fonts</strong> — แบบอักษรที่ใช้แสดงผล</li>
+        <li><strong>imgbb</strong> — บริการฝากรูปภาพ</li>
+      </ul>
+
+      <h2>การปฏิเสธ Cookies</h2>
+      <p>ท่านสามารถปฏิเสธการใช้ cookies ได้โดย:</p>
+      <ul>
+        <li>ตั้งค่าเบราว์เซอร์ให้บล็อก cookies (แต่อาจกระทบการแสดงผลบางส่วน)</li>
+        <li>ใช้ Google Opt-out ที่ <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google Ads Settings</a></li>
+        <li>ติดตั้ง <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google Analytics Opt-out Browser Add-on</a></li>
+      </ul>
+
+      <h2>ลิงก์ไปยังเว็บไซต์อื่น</h2>
+      <p>เว็บไซต์อาจมีลิงก์ไปยังเว็บไซต์ภายนอก เราไม่รับผิดชอบต่อนโยบายความเป็นส่วนตัวของเว็บไซต์เหล่านั้น</p>
+
+      <h2>การเปลี่ยนแปลงนโยบาย</h2>
+      <p>เราอาจอัปเดตนโยบายนี้เป็นครั้งคราว โดยจะระบุวันที่อัปเดตไว้ที่ด้านบนของหน้า การใช้งานเว็บไซต์ต่อไปหลังการเปลี่ยนแปลงถือว่าท่านยอมรับนโยบายที่อัปเดต</p>
+
+      <h2>ติดต่อเรา</h2>
+      <p>หากมีคำถามเกี่ยวกับนโยบายความเป็นส่วนตัวนี้ กรุณาติดต่อผ่านหน้า <a href="#/about">เกี่ยวกับเรา</a></p>
+
+    </div>
+
+    <div style="margin-top:32px;">
+      <a class="btn btn-outline" href="#/">← กลับหน้าหลัก</a>
+    </div>
+  </div>`;
+}
+
+// ── CARD TEMPLATES ───────────────────────────────────────
+function artCard(a) {
+  return `<div class="art-card" onclick="go('/article/${a.id}')">
+    <div class="art-meta"><span class="${catTag(a.category)}">${a.category}</span></div>
+    <h3>${a.title}</h3>
+    <p>${a.excerpt||''}</p>
+    <div class="art-date">📅 ${fmt(a.created_at)}</div>
+  </div>`;
+}
+
+function appCard(a) {
+  const pid = `p_${a.id}`;
+  const raw = sessionStorage.getItem('unlocked_'+a.id);
+  const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
+  const isLocked = a.locked && !storedUrl;
+  const appUrl = storedUrl || a.url;
+  const previewImg = a.preview_image
+    ? `<img src="${esc(a.preview_image)}" alt="Preview" loading="lazy" onerror="this.parentNode.innerHTML='<div class=app-preview-ph>${a.icon||'🎮'}</div>'">`
+    : `<div class="app-preview-ph">${a.icon||'🎮'}</div>`;
+  const preview = `
+    <div class="app-preview">
+      ${previewImg}
+      <div class="app-preview-info">
+        <p>${esc(a.description||'')}</p>
+        ${isLocked ? '<span class="app-preview-lock">🔒 ต้องใช้รหัสปลดล็อก</span>' : ''}
+      </div>
+    </div>`;
+  return `<div class="app-card">
+    ${preview}
+    ${isLocked?'<div style="position:absolute;top:10px;right:10px;font-size:1.1rem;" title="แอปนี้ต้องใช้รหัสผ่าน">🔒</div>':''}
+    <div class="app-top">
+      <div class="app-icon icon-blue">${a.icon||'🎮'}</div>
+      <div><h4>${esc(a.title)}</h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
+    </div>
+    <p>${esc(a.description||'')}</p>
+    <div class="app-btns">
+      ${isLocked
+        ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
+        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
+      }
+      ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
+    </div>
+    ${a.prompt ? `<div class="pmt-box" id="${pid}">
+      <pre>${esc(a.prompt)}</pre>
+      <button class="btn-copy" onclick="doCopyPre('${pid}',this)">📋 คัดลอก Prompt</button>
+    </div>` : ''}
+  </div>`;
 }
 
 // ── UTILS ─────────────────────────────────────────────────
-function closeModal() { document.getElementById('modal').innerHTML = ''; }
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), 2500);
+// ตรวจตำแหน่งการ์ดก่อนแสดง preview — ถ้าด้านบนไม่มีที่พอ ให้เด้งลงล่าง
+document.addEventListener('mouseover', e => {
+  const card = e.target.closest('.app-card');
+  if (!card || !card.querySelector('.app-preview')) return;
+  const navH = document.getElementById('nav')?.offsetHeight || 64;
+  const spaceAbove = card.getBoundingClientRect().top - navH;
+  card.classList.toggle('preview-down', spaceAbove < 250);
+});
+
+function togglePmt(pid, bid) {
+  const box = document.getElementById(pid), btn = document.getElementById(bid);
+  const open = box?.classList.contains('open');
+  document.querySelectorAll('.pmt-box').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.btn-pmt').forEach(b=>b.classList.remove('active'));
+  if (!open && box) { box.classList.add('open'); btn?.classList.add('active'); }
+}
+
+function doCopy(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ คัดลอกแล้ว!';
+    setTimeout(() => btn.textContent = '📋 คัดลอก Prompt', 1800);
+  });
+}
+
+function doCopyPre(pid, btn) {
+  const pre = document.getElementById(pid)?.querySelector('pre');
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = '✓ คัดลอกแล้ว!';
+    setTimeout(() => btn.textContent = '📋 คัดลอก Prompt', 1800);
+  });
+}
+
+// ── APP PLAYER ───────────────────────────────────────────
+let _viewerUrl = '';
+function openAppViewer(url, title, icon) {
+  _viewerUrl = url;
+  document.getElementById('viewerFrame').src = url;
+  document.getElementById('viewerTitle').textContent = title || 'แอป';
+  document.getElementById('viewerIcon').textContent = icon || '🎮';
+  document.getElementById('appViewer').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeAppViewer() {
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  document.getElementById('appViewer').style.display = 'none';
+  document.getElementById('viewerFrame').src = 'about:blank';
+  document.body.style.overflow = '';
+}
+function openInNewTab() {
+  if (_viewerUrl) window.open(_viewerUrl, '_blank');
+}
+function fullscreenApp() {
+  const box = document.getElementById('viewerBox');
+  if (!document.fullscreenElement) {
+    const req = box.requestFullscreen || box.webkitRequestFullscreen || box.msRequestFullscreen;
+    if (req) req.call(box);
+    else {
+      const f = document.getElementById('viewerFrame');
+      (f.webkitEnterFullscreen || f.requestFullscreen)?.call(f);
+    }
+  } else {
+    document.exitFullscreen?.();
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.fullscreenElement
+      && document.getElementById('appViewer').style.display === 'flex') closeAppViewer();
+});
+
+function catTag(cat) {
+  const m = { 'เทคนิค':'tag tag-tech','วิชาการ':'tag tag-edu','AI & เครื่องมือ':'tag tag-ai','ข่าวการศึกษา':'tag tag-news' };
+  return m[cat] || 'tag tag-gen';
+}
+
+function fmt(d) {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
+  } catch { return d; }
+}
+
+function empty(msg, icon='📭') {
+  return `<div class="empty"><div style="font-size:2.5rem;margin-bottom:12px;">${icon}</div><p>${msg}</p></div>`;
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// AdSense — แสดงเมื่อตั้งค่า Publisher ID แล้วเท่านั้น
+function adSlot() {
+  if (S.adsense_id) {
+    return `<ins class="adsbygoogle" style="display:block;margin:20px 0;"
+      data-ad-client="${S.adsense_id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+  }
+  return '';
+}
+
+function activateAds() {
+  if (!S.adsense_id || !window.adsbygoogle) return;
+  document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => {
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+  });
+}
+
+function showMsg(el, text, color) {
+  el.textContent = text; el.style.color = color; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+// ── CATEGORIES (อ่านจาก settings) ────────────────────────
+function getCats() {
+  try { return JSON.parse(S.article_categories || '[]'); } catch { return ['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู']; }
+}
+function loadCategories() {
+  const el = document.getElementById('catStrip');
+  if (!el) return;
+  const cats = ['ทั้งหมด', ...getCats()];
+  el.innerHTML = cats.map(c =>
+    `<span class="cat-pill" onclick="go('/blog');setTimeout(()=>renderBlog(undefined,'${c}',1),50)">${c}</span>`
+  ).join('');
+}
+
+// ── LOCK MODAL ────────────────────────────────────────────
+let _lockAppId = null, _lockTitle = '', _lockIcon = '';
+function openLockModal(id, title, icon) {
+  _lockAppId = id; _lockTitle = title; _lockIcon = icon;
+  document.getElementById('lockTitle').textContent = title;
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockErr').style.display = 'none';
+  document.getElementById('lockModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('lockInput').focus(), 100);
+}
+function closeLockModal() { document.getElementById('lockModal').style.display = 'none'; }
+async function submitLock() {
+  const code = document.getElementById('lockInput').value.trim();
+  if (!code) return;
+  try {
+    const r = await fetch(API + '/apps/' + _lockAppId + '/unlock', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code})
+    });
+    const d = await r.json();
+    if (r.ok && d.url) {
+      sessionStorage.setItem('unlocked_' + _lockAppId, d.url);
+      closeLockModal();
+      openAppViewer(d.url, _lockTitle, _lockIcon);
+    } else {
+      document.getElementById('lockErr').style.display = 'block';
+      document.getElementById('lockInput').select();
+    }
+  } catch { document.getElementById('lockErr').style.display = 'block'; }
 }
 
 // ── INIT ──────────────────────────────────────────────────
 async function init() {
-  const t = tok();
-  if (t) {
-    const check = await fetch(API+'/auth/check', { headers: hdr() }).then(r=>r.json()).catch(()=>({authenticated:false}));
-    if (check.authenticated) {
-      // อัปเดต role/displayName จาก server
-      if (check.role) localStorage.setItem('_role', check.role);
-      if (check.display_name) localStorage.setItem('_display_name', check.display_name);
-      if (check.username) localStorage.setItem('_username', check.username);
-      showAdmin(); applyRole();
-      const s = await api.get('/settings').catch(()=>({}));
-      if (s.site_title) document.getElementById('sideTitle').textContent = '✦ '+s.site_title;
-      if (s.article_categories) localStorage.setItem('_cats', s.article_categories);
-      nav('dash');
-    } else {
-      localStorage.removeItem('_admtok');
-      showLogin();
+  try {
+    S = await get('/settings');
+    const title = S.site_title || 'Kru-ti ครูติ TH';
+    document.getElementById('pageTitle').textContent = title;
+    document.getElementById('metaDesc').content = S.site_desc || '';
+    document.getElementById('logoTitle').textContent = title.replace(' TH','');
+    document.getElementById('footerLogo').textContent = title;
+    document.getElementById('footerText').textContent = '© 2568 ' + title;
+
+    setMeta('og:title', title);
+    setMeta('og:description', S.site_desc || '');
+    setMeta('og:type', 'website');
+    setMeta('og:url', location.href);
+    setMeta('twitter:card', 'summary');
+
+    if (S.adsense_id) {
+      const sc = document.createElement('script');
+      sc.async = true;
+      sc.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${S.adsense_id}`;
+      sc.crossOrigin = 'anonymous';
+      document.head.appendChild(sc);
     }
-  } else {
-    showLogin();
-  }
+  } catch(e) { console.log('Settings load error', e); }
+
+  route();   // render เนื้อหาหลักทันที ไม่รอ ticker
+
+  // Ticker เติมทีหลัง (ใช้ cache จาก renderHome — ไม่ยิงซ้ำ)
+  get('/articles?page=1').then(artData => {
+    const titles = (artData.articles||[]).map(a=>a.title);
+    const el = document.getElementById('tickerText');
+    if (!el || !titles.length) return;
+    el.textContent = titles.join('   ✦   ');
+    startTicker(el);
+  }).catch(()=>{});
+}
+
+// ── TICKER: ความเร็วคงที่ px/วินาที ──
+let _tickerAnim = null;
+function startTicker(el) {
+  const run = () => {
+    if (_tickerAnim) _tickerAnim.cancel();
+    const inner = el.parentElement;
+    const containerW = inner.offsetWidth;
+    const textW = el.scrollWidth;
+    if (textW < 5) return;
+    const SPEED = 50;
+    const distance = containerW + textW;
+    const dur = (distance / SPEED) * 1000;
+    _tickerAnim = el.animate(
+      [{ transform: `translateX(${containerW}px)` },
+       { transform: `translateX(${-textW}px)` }],
+      { duration: dur, iterations: Infinity, easing: 'linear' }
+    );
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
+  else run();
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(run, 200); });
+}
+
+function setMeta(prop, content) {
+  const attr = prop.startsWith('og:') ? 'property' : 'name';
+  let el = document.querySelector(`meta[${attr}="${prop}"]`);
+  if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el); }
+  el.content = content;
 }
 
 document.addEventListener('DOMContentLoaded', init);
-window.editArticle = editArticle;
-window.delArticle = delArticle;
-window.openAppModal = openAppModal;
-window.saveApp = saveApp;
-window.delApp = delApp;
-window.addCat = addCat;
-window.removeCat = removeCat;
-window.openCodeModal = openCodeModal;
-window.openEmailModal = openEmailModal;
-window.buildEmailHTML = buildEmailHTML;
-window.copyEmail = copyEmail;
-window.previewEmail = previewEmail;
-window.previewArticle = previewArticle;
-window.insertHTML = insertHTML;
-window.doInsertHTML = doInsertHTML;
-window.insertImg = insertImg;
-window.switchImgTab = switchImgTab;
-window.previewImgFile = previewImgFile;
-window.previewImgUrl = previewImgUrl;
-window.doInsertImg = doInsertImg;
-window.saveCode = saveCode;
-window.delCode = delCode;
-window.uploadPreviewImg = uploadPreviewImg;
-window.insertDownload = insertDownload;
-window.openUserModal = openUserModal;
-window.saveUser = saveUser;
-window.delUser = delUser;
-window.saveProfile = saveProfile;
-window.delApp = delApp;
-window.approveCmt = approveCmt;
-window.delCmt = delCmt;
-window.nav = nav;
-window.closeModal = closeModal;
-window.toggleSidebar = toggleSidebar;
+window.togglePmt = togglePmt;
+window.doCopy = doCopy;
+window.doCopyPre = doCopyPre;
+window.openAppViewer = openAppViewer;
+window.closeAppViewer = closeAppViewer;
+window.openInNewTab = openInNewTab;
+window.fullscreenApp = fullscreenApp;
+window.renderAbout = renderAbout;
+window.renderPrivacy = renderPrivacy;
+window.openLockModal = openLockModal;
+window.redeemAll = redeemAll;
+window.closeLockModal = closeLockModal;
+window.submitLock = submitLock;
+window.filterApps = filterApps;
+window.setAppFilter = setAppFilter;
+window.setAppSort = setAppSort;
+window.go = go;
+window.goSearch = goSearch;
+window.toggleNav = toggleNav;
+window.renderBlog = renderBlog;
+window.submitComment = submitComment;
 </script>
 </body>
 </html>
