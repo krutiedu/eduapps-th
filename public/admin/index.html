@@ -509,12 +509,13 @@ function renderArticleEditor(art) {
       <button onclick="insertImg()" title="แทรกรูป">📷 รูป</button>
       <button onclick="insertDownload()" title="ปุ่มดาวน์โหลดไฟล์" style="color:#059669;">📥 ดาวน์โหลด</button>
       <button onclick="fmtBlock()" title="ข้อความอ้างอิง">❝ Quote</button>
-      <button onclick="fmtCode()" title="โค้ด">‹ โค้ด</button>
+      <button onclick="insertHTML()" title="วางโค้ด HTML (ตาราง/รูปแบบ) ให้แสดงผลจริง" style="color:#7c3aed;font-weight:700;">⧉ วาง HTML</button>
+      <button onclick="fmtCode()" title="แสดงข้อความเป็นโค้ด (ไม่แปลง HTML)">‹ โค้ด</button>
       <button onclick="previewArticle()" title="ดูตัวอย่างบทความ (เหมือนตอนเผยแพร่จริง)" style="color:#2563eb;font-weight:700;">👁 ดูตัวอย่าง</button>
       <button onclick="document.getElementById('editorBody').innerHTML=''" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
     </div>
     <div class="editor-body" id="editorBody" contenteditable="true">${art?.content||'<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'}</div>
-    <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ</p>
+    <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
   </div>
 
   <div class="btn-group">
@@ -593,27 +594,200 @@ function fmtH(tag) {
 }
 function fmtBlock() { document.execCommand('formatBlock', false, 'blockquote'); document.getElementById('editorBody').focus(); }
 function fmtCode()  { document.execCommand('formatBlock', false, 'pre'); document.getElementById('editorBody').focus(); }
+
+// วาง HTML ดิบ (ตาราง/รูปแบบ) ให้แสดงผลจริง — ไม่ห่อ <pre>
+function insertHTML() {
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:640px;">
+      <h3>⧉ วางโค้ด HTML</h3>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:6px;">
+        วางโค้ด HTML ที่ได้มา (เช่น ตาราง <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">&lt;table&gt;</code> การ์ด กล่องสี ฯลฯ)
+        ระบบจะแทรกเข้าบทความให้แสดงผลเป็นของจริง ไม่ใช่ตัวอักษรโค้ด
+      </p>
+      <textarea class="form-input" id="htmlInput" rows="12" autofocus
+        style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.6;resize:vertical;"
+        placeholder="&lt;table&gt;\n  &lt;tr&gt;&lt;th&gt;หัวตาราง&lt;/th&gt;&lt;/tr&gt;\n  &lt;tr&gt;&lt;td&gt;ข้อมูล&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;"></textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:.82rem;color:#64748b;">
+        <span>👁 ดูตัวอย่างก่อนแทรก:</span>
+      </div>
+      <div id="htmlPreview" style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;min-height:60px;
+        background:#faf7f1;font-size:.9rem;max-height:240px;overflow:auto;">
+        <span style="color:#94a3b8;">— ตัวอย่างจะแสดงที่นี่เมื่อพิมพ์ —</span>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="doInsertHTML()">⧉ แทรกลงบทความ</button>
+      </div>
+    </div>
+  </div>`;
+  const ta = document.getElementById('htmlInput');
+  const pv = document.getElementById('htmlPreview');
+  const update = () => {
+    const v = ta.value.trim();
+    pv.innerHTML = v
+      ? `<div class="art-body">${v}</div>`
+      : '<span style="color:#94a3b8;">— ตัวอย่างจะแสดงที่นี่เมื่อพิมพ์ —</span>';
+  };
+  ta.addEventListener('input', update);
+}
+
+function doInsertHTML() {
+  const html = document.getElementById('htmlInput').value.trim();
+  if (!html) { closeModal(); return; }
+  closeModal();
+  const ed = document.getElementById('editorBody');
+  ed.focus();
+  // ลบ placeholder เริ่มต้นถ้ายังอยู่
+  if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
+  // แทรกเป็น HTML จริง ณ ตำแหน่งเคอร์เซอร์ (หรือต่อท้ายถ้าไม่มี selection)
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && ed.contains(sel.anchorNode)) {
+    document.execCommand('insertHTML', false, html + '<p><br></p>');
+  } else {
+    ed.innerHTML += html + '<p><br></p>';
+  }
+  toast('✅ แทรก HTML แล้ว — กด 👁 ดูตัวอย่างเพื่อตรวจ');
+}
 function fmtLink()  {
   const url = prompt('กรอก URL ลิงก์:');
   if (url) { document.execCommand('createLink', false, url); document.getElementById('editorBody').focus(); }
 }
 function insertImg() {
-  // เปิด file picker อัปโหลดตรง
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = async () => {
-    const f = inp.files[0]; if (!f) return;
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:480px;">
+      <h3>📷 แทรกรูปภาพ</h3>
+
+      <!-- แท็บ -->
+      <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid #e2e8f0;">
+        <button id="imgTabUpload" onclick="switchImgTab('upload')"
+          style="flex:1;padding:10px;border:none;background:none;font-family:'Sarabun';font-size:.93rem;
+                 font-weight:700;cursor:pointer;border-bottom:3px solid #2563eb;margin-bottom:-2px;color:#2563eb;">
+          📁 อัปโหลดจากเครื่อง
+        </button>
+        <button id="imgTabUrl" onclick="switchImgTab('url')"
+          style="flex:1;padding:10px;border:none;background:none;font-family:'Sarabun';font-size:.93rem;
+                 font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:#64748b;">
+          🔗 วาง URL รูปภาพ
+        </button>
+      </div>
+
+      <!-- แพนล์อัปโหลด -->
+      <div id="imgPanelUpload">
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+          border:2px dashed #cbd5e1;border-radius:12px;padding:30px;cursor:pointer;background:#f8fafc;
+          transition:border-color .15s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
+          <div style="font-size:2rem;">📁</div>
+          <div style="font-size:.9rem;color:#475569;font-weight:600;">คลิกหรือลากไฟล์รูปมาวางที่นี่</div>
+          <div style="font-size:.78rem;color:#94a3b8;">PNG, JPG, GIF, WebP — ไม่เกิน 5 MB</div>
+          <input type="file" id="imgFileInput" accept="image/*" style="display:none"
+            onchange="previewImgFile(this)">
+        </label>
+        <div id="imgUploadPreview" style="display:none;margin-top:12px;">
+          <img id="imgUploadThumb" style="max-width:100%;max-height:200px;border-radius:8px;display:block;margin:0 auto;">
+          <div id="imgUploadName" style="text-align:center;font-size:.82rem;color:#64748b;margin-top:6px;"></div>
+        </div>
+      </div>
+
+      <!-- แพนล์ URL -->
+      <div id="imgPanelUrl" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">URL รูปภาพ</label>
+          <input type="url" class="form-input" id="imgUrlInput"
+            placeholder="https://example.com/image.jpg"
+            oninput="previewImgUrl(this.value)" autofocus>
+        </div>
+        <div id="imgUrlPreview" style="margin-top:10px;display:none;text-align:center;">
+          <img id="imgUrlThumb" style="max-width:100%;max-height:200px;border-radius:8px;display:inline-block;"
+            onerror="document.getElementById('imgUrlPreview').innerHTML='<div style=color:#dc2626;font-size:.85rem;>❌ โหลดรูปไม่ได้ — ตรวจสอบ URL อีกครั้ง</div>'">
+        </div>
+      </div>
+
+      <!-- ฟิลด์ Alt text (ร่วมกันทั้ง 2 แท็บ) -->
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label" style="font-size:.85rem;">คำอธิบายรูป (Alt text — ช่วย SEO)</label>
+        <input type="text" class="form-input" id="imgAltInput" placeholder="เช่น แผนผังปฏิทินการย้ายครู 2569">
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="doInsertImg()">📷 แทรกรูป</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function switchImgTab(tab) {
+  const isUpload = tab === 'upload';
+  document.getElementById('imgPanelUpload').style.display = isUpload ? '' : 'none';
+  document.getElementById('imgPanelUrl').style.display    = isUpload ? 'none' : '';
+  const tu = document.getElementById('imgTabUpload');
+  const tl = document.getElementById('imgTabUrl');
+  tu.style.borderBottomColor = isUpload ? '#2563eb' : 'transparent';
+  tu.style.color = isUpload ? '#2563eb' : '#64748b';
+  tl.style.borderBottomColor = isUpload ? 'transparent' : '#2563eb';
+  tl.style.color = isUpload ? '#64748b' : '#2563eb';
+  if (!isUpload) setTimeout(() => document.getElementById('imgUrlInput')?.focus(), 50);
+}
+
+function previewImgFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const pv = document.getElementById('imgUploadPreview');
+  const thumb = document.getElementById('imgUploadThumb');
+  const name = document.getElementById('imgUploadName');
+  thumb.src = URL.createObjectURL(f);
+  name.textContent = f.name + ' (' + (f.size / 1024).toFixed(0) + ' KB)';
+  pv.style.display = '';
+  // เปิด label เพื่อให้ช่อง input trigger ได้
+  input.closest('label').style.display = 'none';
+}
+
+function previewImgUrl(url) {
+  const pv = document.getElementById('imgUrlPreview');
+  const thumb = document.getElementById('imgUrlThumb');
+  if (url.startsWith('http')) {
+    thumb.src = url;
+    pv.style.display = '';
+  } else {
+    pv.style.display = 'none';
+  }
+}
+
+async function doInsertImg() {
+  const alt = (document.getElementById('imgAltInput')?.value || 'รูปภาพ').trim();
+  const urlInput = document.getElementById('imgUrlInput')?.value.trim();
+  const fileInput = document.getElementById('imgFileInput');
+  const panelUrl = document.getElementById('imgPanelUrl');
+  const isUrl = panelUrl && panelUrl.style.display !== 'none';
+
+  if (isUrl) {
+    // ── วาง URL ──
+    if (!urlInput) { toast('❌ กรุณาใส่ URL รูปภาพ'); return; }
+    closeModal();
+    const ed = document.getElementById('editorBody');
+    if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
+    document.execCommand('insertHTML', false,
+      `<img src="${urlInput}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
+    toast('✅ แทรกรูปจาก URL แล้ว');
+  } else {
+    // ── อัปโหลดจากเครื่อง ──
+    const f = fileInput?.files?.[0];
+    if (!f) { toast('❌ กรุณาเลือกไฟล์รูปก่อน'); return; }
+    closeModal();
     toast('⏳ กำลังอัปโหลดรูป...');
     try {
       const url = await uploadToImgbb(f);
       if (url) {
-        document.execCommand('insertHTML', false, `<img src="${url}" alt="รูปภาพ" style="max-width:100%;">`);
+        const ed = document.getElementById('editorBody');
+        if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
+        document.execCommand('insertHTML', false,
+          `<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
         toast('✅ แทรกรูปแล้ว');
       }
-    } catch(e) { toast('❌ '+e.message); }
-  };
-  // ถ้าอยากใส่ URL แทน — Shift+Click
-  inp.click();
+    } catch(e) { toast('❌ ' + e.message); }
+  }
 }
 
 function insertDownload() {
@@ -1547,6 +1721,13 @@ window.buildEmailHTML = buildEmailHTML;
 window.copyEmail = copyEmail;
 window.previewEmail = previewEmail;
 window.previewArticle = previewArticle;
+window.insertHTML = insertHTML;
+window.doInsertHTML = doInsertHTML;
+window.insertImg = insertImg;
+window.switchImgTab = switchImgTab;
+window.previewImgFile = previewImgFile;
+window.previewImgUrl = previewImgUrl;
+window.doInsertImg = doInsertImg;
 window.saveCode = saveCode;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
