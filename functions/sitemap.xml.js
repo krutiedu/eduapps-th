@@ -25,7 +25,7 @@ export async function onRequest({ env }) {
 
     articleUrls = results.map(a => ({
       url:      `${BASE}/article/${a.id}`,
-      lastmod:  (a.updated_at || a.created_at || today).split('T')[0],
+      lastmod:  (a.updated_at || a.created_at || today).substring(0, 10),
       priority: '0.8',
       freq:     'monthly',
     }));
