@@ -4,75 +4,301 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" id="metaDesc" content="">
-<title id="pageTitle">EduApps TH</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<title id="pageTitle">Kru-ti ครูติ TH</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2315223c'/><text x='16' y='13' text-anchor='middle' fill='%23f0a830' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ════════════════════════════════════════════════════════
+   KRU-TI ครูติ TH — "สมุดรางวัลของครู"
+   Display: Pridi (ฟอนต์มีหัว แบบหนังสือเรียน)
+   Body: Sarabun
+   Signature: ตราประทับดาวทอง ✦
+════════════════════════════════════════════════════════ */
 :root{
-  --ink:#16243d; --ink-soft:#3a4a63;
-  --gold:#f0a830; --gold-deep:#d4881a;
-  --mint:#15a394; --mint-soft:#e7f6f3;
-  --paper:#fbfaf7; --card:#ffffff;
-  --line:#ece7dd; --slate:#6b7689;
+  --ink:#15223c; --ink-2:#1e3358; --ink-3:#2c4a7c;
+  --ink-soft:#41506b;
+  --gold:#f0a830; --gold-deep:#c47f0e; --gold-soft:rgba(240,168,48,.13);
+  --mint:#0fa294; --mint-soft:#e4f4f1;
+  --paper:#faf7f1; --card:#ffffff;
+  --line:#e8e1d3; --line-soft:#f1ecdf;
+  --slate:#6d7588;
+  --shadow-sm:0 2px 10px rgba(21,34,60,.07);
+  --shadow-md:0 10px 30px rgba(21,34,60,.11);
+  --shadow-lg:0 18px 50px rgba(21,34,60,.16);
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:26px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased;}
+html{scroll-behavior:smooth;}
+body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);
+     display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased;}
 main#app{flex:1;}
 a{text-decoration:none;color:inherit;}
 img{max-width:100%;}
-h1,h2,h3,h4{font-family:'Kanit',sans-serif;font-weight:600;line-height:1.3;}
+h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
+::selection{background:var(--gold-soft);color:var(--ink);}
 
-/* NAV */
-#nav{background:rgba(251,250,247,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;
-     height:66px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;}
-.logo{font-family:'Kanit';font-size:1.2rem;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:10px;}
-.logo::before{content:"✦";width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--ink),#24426e);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:1rem;box-shadow:0 2px 8px rgba(22,36,61,.25);}
+/* ── PAGE-LOAD REVEAL (จังหวะเดียว ไม่หน่วง) ── */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rv{animation:rise .45s cubic-bezier(.22,.8,.3,1) both;}
+.rv2{animation:rise .45s .07s cubic-bezier(.22,.8,.3,1) both;}
+.rv3{animation:rise .45s .14s cubic-bezier(.22,.8,.3,1) both;}
+
+/* ── TICKER ── */
+.ticker{background:var(--ink);color:#d6deeb;padding:8px 22px;
+        display:flex;align-items:center;gap:12px;font-size:.83rem;overflow:hidden;}
+.ticker-badge{background:var(--gold);color:var(--ink);font-size:.68rem;font-weight:800;
+              padding:3px 11px;border-radius:5px;white-space:nowrap;flex-shrink:0;letter-spacing:.04em;}
+.ticker-inner{overflow:hidden;flex:1;}
+.ticker-text{white-space:nowrap;display:inline-block;will-change:transform;}
+
+/* ── NAV ── */
+#nav{background:rgba(250,247,241,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+     border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;
+     height:64px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Pridi',serif;font-size:1.22rem;font-weight:700;color:var(--ink);cursor:pointer;
+      display:flex;align-items:center;gap:10px;line-height:1;}
+.logo::before{content:"✦";width:36px;height:36px;border-radius:11px;
+  background:linear-gradient(135deg,var(--ink) 20%,var(--ink-3));display:flex;align-items:center;justify-content:center;
+  color:var(--gold);font-size:1.05rem;box-shadow:0 3px 10px rgba(21,34,60,.3);}
 .logo span{color:var(--gold-deep);}
-.nav-links{display:flex;gap:6px;list-style:none;}
-.nav-links a{padding:7px 14px;border-radius:8px;font-size:.95rem;font-weight:600;
-             color:var(--ink-soft);transition:.15s;}
-.nav-links a:hover{color:var(--ink);}
-.nav-links a.active{color:var(--ink);background:rgba(240,168,48,.12);}
+.logo em{font-style:normal;font-family:'Sarabun';font-size:.72rem;font-weight:700;color:var(--slate);
+         align-self:flex-start;margin-top:2px;letter-spacing:.08em;}
+.nav-links{display:flex;gap:4px;list-style:none;}
+.nav-links a{padding:8px 15px;border-radius:9px;font-size:.94rem;font-weight:600;
+             color:var(--ink-soft);transition:color .15s,background .15s;}
+.nav-links a:hover{color:var(--ink);background:var(--line-soft);}
+.nav-links a.active{color:var(--ink);background:var(--gold-soft);}
 .nav-right{display:flex;align-items:center;gap:8px;}
-.search-btn{background:var(--ink);border:none;padding:9px 16px;border-radius:9px;
-            font-family:'Kanit';font-weight:500;font-size:.9rem;color:#fff;cursor:pointer;transition:transform .15s,box-shadow .2s;}
-.search-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(22,36,61,.22);}
+.search-btn{background:var(--ink);border:none;padding:9px 17px;border-radius:10px;
+            font-family:'Sarabun';font-weight:700;font-size:.88rem;color:#fff;cursor:pointer;
+            display:inline-flex;align-items:center;gap:7px;transition:transform .15s,box-shadow .2s;}
+.search-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(21,34,60,.25);}
+.search-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 .hamburger{display:none;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--ink);}
 @media(max-width:640px){
   .hamburger{display:block;}
   .nav-links,.nav-right{display:none;}
-  .nav-links.open{display:flex;position:absolute;top:66px;left:0;right:0;background:var(--card);
-                  flex-direction:column;padding:12px 16px;border-bottom:1px solid var(--line);z-index:99;}
+  .nav-links.open{display:flex;position:absolute;top:64px;left:0;right:0;background:var(--card);
+                  flex-direction:column;padding:12px 16px;border-bottom:1px solid var(--line);
+                  box-shadow:var(--shadow-md);z-index:99;}
 }
 
-/* LAYOUT */
-.container{max-width:1100px;margin:0 auto;padding:0 24px;}
-.divider{height:1px;background:var(--line);}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:11px;
-     font-family:'Kanit',sans-serif;font-size:.95rem;font-weight:500;cursor:pointer;border:none;transition:transform .15s,box-shadow .2s,background .2s;}
-.btn-primary{background:var(--gold);color:var(--ink);box-shadow:0 4px 14px rgba(240,168,48,.38);}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(240,168,48,.48);}
+/* ── LAYOUT ── */
+.container{max-width:1120px;margin:0 auto;padding:0 22px;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;
+     font-family:'Sarabun',sans-serif;font-size:.94rem;font-weight:700;cursor:pointer;border:none;
+     transition:transform .15s,box-shadow .2s,background .2s;}
+.btn-primary{background:var(--gold);color:var(--ink);box-shadow:0 4px 14px rgba(240,168,48,.36);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(240,168,48,.46);}
 .btn-outline{background:transparent;color:var(--ink);border:1.5px solid var(--line);}
 .btn-outline:hover{border-color:var(--ink);background:var(--card);}
-.tag{display:inline-block;padding:3px 11px;border-radius:100px;font-size:.74rem;font-weight:700;}
-.tag-tech{background:#fff3e6;color:var(--gold-deep);}
-.tag-edu{background:var(--mint-soft);color:var(--mint);}
-.tag-ai{background:#eef2fb;color:#3a5a9b;}
-.tag-news{background:#fdf0f5;color:#b3457a;}
-.tag-gen{background:#f3f1ec;color:var(--slate);}
-.tag-math{background:#eef2fb;color:#3a5a9b;}
-.tag-thai{background:var(--mint-soft);color:var(--mint);}
-.tag-mgmt{background:#fdf0f5;color:#b3457a;}
 
-/* REDEEM CODE (เรียบ คล้ายช่องค้นหา) */
-.redeem-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);
-            border-radius:12px;padding:6px 8px 6px 14px;margin-bottom:22px;flex-wrap:wrap;}
-.redeem-row:focus-within{border-color:var(--gold);box-shadow:0 0 0 4px rgba(240,168,48,.12);}
-.redeem-ico{opacity:.6;font-size:1rem;}
+/* tags */
+.tag{display:inline-block;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;letter-spacing:.01em;}
+.tag-tech{background:#fdf2e2;color:var(--gold-deep);}
+.tag-edu{background:var(--mint-soft);color:var(--mint);}
+.tag-ai{background:#ebf0fa;color:#3a5a9b;}
+.tag-news{background:#fdeef5;color:#b3457a;}
+.tag-gen{background:#f1ede4;color:var(--slate);}
+.tag-math{background:#ebf0fa;color:#3a5a9b;}
+.tag-thai{background:var(--mint-soft);color:var(--mint);}
+.tag-mgmt{background:#fdeef5;color:#b3457a;}
+
+/* ── SECTION HEADS — eyebrow + Pridi title ── */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;gap:14px;}
+.sec-eyebrow{display:flex;align-items:center;gap:8px;font-size:.76rem;font-weight:800;
+  letter-spacing:.14em;color:var(--gold-deep);text-transform:uppercase;margin-bottom:5px;}
+.sec-eyebrow::before{content:"✦";font-size:.85rem;color:var(--gold);}
+.sec-eyebrow.mint{color:var(--mint);}
+.sec-eyebrow.mint::before{color:var(--mint);}
+.sec-title{font-family:'Pridi',serif;font-size:1.5rem;font-weight:700;color:var(--ink);line-height:1.25;}
+.sec-more{font-size:.9rem;color:var(--mint);cursor:pointer;font-weight:700;flex-shrink:0;
+          display:inline-flex;align-items:center;gap:5px;transition:gap .2s;padding-bottom:3px;}
+.sec-more:hover{gap:10px;}
+
+/* ── STAR STAMP (signature) ── */
+.stamp{position:absolute;top:-20px;right:24px;width:76px;height:76px;border-radius:50%;
+  border:2px dashed var(--gold);background:var(--card);transform:rotate(8deg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  box-shadow:var(--shadow-sm);z-index:5;pointer-events:none;}
+.stamp b{color:var(--gold);font-size:1.45rem;line-height:1;}
+.stamp small{font-size:.58rem;font-weight:800;color:var(--gold-deep);letter-spacing:.1em;}
+
+/* ── FEATURED (editorial, ใหญ่, Pridi เต็มตัว) ── */
+.feat-wrap{position:relative;margin-top:26px;margin-bottom:34px;}
+.feat-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
+  overflow:hidden;cursor:pointer;display:grid;grid-template-columns:1.15fr .85fr;
+  transition:transform .22s,box-shadow .25s;}
+.feat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+.feat-body{padding:38px 40px 36px;display:flex;flex-direction:column;justify-content:center;}
+.feat-meta{display:flex;gap:10px;align-items:center;margin-bottom:14px;font-size:.82rem;color:var(--slate);font-weight:600;}
+.feat-card h2{font-size:clamp(1.55rem,3.2vw,2.25rem);font-weight:700;color:var(--ink);
+  line-height:1.32;margin-bottom:14px;}
+.feat-card .feat-x{font-size:1.02rem;color:var(--ink-soft);line-height:1.85;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.feat-read{margin-top:22px;display:inline-flex;align-items:center;gap:8px;color:var(--gold-deep);
+  font-weight:800;font-size:.92rem;transition:gap .2s;}
+.feat-card:hover .feat-read{gap:13px;}
+.feat-img{background:linear-gradient(150deg,var(--ink) 10%,var(--ink-3));min-height:300px;
+  display:flex;align-items:center;justify-content:center;font-size:4.5rem;position:relative;overflow:hidden;}
+.feat-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+.feat-img::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 75% 20%, rgba(240,168,48,.18), transparent 55%);pointer-events:none;}
+
+/* ── SIDE LIST (รายการรอง — มีเลขทอง) ── */
+.side-list{display:flex;flex-direction:column;gap:0;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
+.side-item{display:flex;gap:16px;align-items:flex-start;padding:18px 22px;cursor:pointer;
+  border-bottom:1px solid var(--line-soft);transition:background .15s;}
+.side-item:last-child{border-bottom:none;}
+.side-item:hover{background:var(--line-soft);}
+.side-item:hover h3{color:var(--gold-deep);}
+.side-num{font-family:'Pridi',serif;font-size:1.5rem;font-weight:700;color:var(--gold);
+  line-height:1;flex-shrink:0;width:30px;text-align:center;margin-top:2px;}
+.side-item h3{font-size:1.02rem;font-weight:600;line-height:1.45;margin-bottom:4px;transition:color .15s;}
+.side-item .si-meta{font-size:.78rem;color:var(--slate);font-weight:600;display:flex;gap:8px;align-items:center;}
+
+/* hero 2-col layout */
+.hero-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:stretch;}
+
+/* ── ARTICLES GRID ── */
+.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;}
+.art-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:21px 21px 18px;cursor:pointer;display:flex;flex-direction:column;
+  transition:transform .18s,box-shadow .22s,border-color .2s;}
+.art-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);border-color:#ddd3bd;}
+.art-meta{display:flex;gap:7px;align-items:center;margin-bottom:11px;font-size:.78rem;}
+.art-card h3{font-size:1.08rem;font-weight:600;line-height:1.45;margin-bottom:8px;}
+.art-card p{font-size:.87rem;color:var(--ink-soft);line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
+.art-date{font-size:.76rem;color:var(--slate);margin-top:13px;font-weight:600;}
+
+/* ── ARTICLE PAGE ── */
+.art-wrap{max-width:730px;margin:0 auto;padding:42px 22px;}
+.art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.38;margin-bottom:16px;}
+.art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;
+          padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
+.art-body h2{font-size:1.42rem;font-weight:600;margin:30px 0 11px;}
+.art-body h3{font-size:1.14rem;font-weight:600;margin:22px 0 8px;}
+.art-body p{margin-bottom:14px;line-height:1.95;font-size:1.04rem;}
+.art-body ul,.art-body ol{margin:0 0 14px 22px;}
+.art-body li{margin-bottom:6px;line-height:1.85;}
+.art-body code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#f1ede4;
+  padding:1px 7px;border-radius:5px;font-size:.86em;color:var(--gold-deep);}
+.art-body pre{background:#f1ede4;border:1px solid var(--line);border-radius:11px;padding:15px;margin:15px 0;overflow-x:auto;}
+.art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--ink-soft);}
+.art-body blockquote{border-left:3px solid var(--gold);padding:12px 19px;margin:15px 0;
+  background:var(--gold-soft);border-radius:0 11px 11px 0;color:var(--ink-soft);}
+.art-body a{color:var(--mint);text-decoration:underline;}
+.art-body a.dl-btn,.dl-btn{display:inline-flex;align-items:center;gap:8px;background:var(--mint);
+  color:#fff!important;text-decoration:none!important;padding:12px 23px;border-radius:12px;
+  font-family:'Sarabun';font-weight:700;font-size:.95rem;margin:8px 0;transition:.18s;}
+.dl-btn:hover{background:#0c8276;transform:translateY(-1px);box-shadow:0 5px 16px rgba(15,162,148,.32);}
+.art-body img{border-radius:11px;margin:13px 0;width:100%;}
+.art-body table{width:100%;border-collapse:collapse;margin:15px 0;font-size:.92rem;}
+.art-body th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--line);font-weight:700;color:var(--ink-soft);}
+.art-body td{padding:10px 12px;border-bottom:1px solid var(--line);}
+.art-body strong{color:var(--ink);}
+
+/* ── COMMENTS ── */
+.comments-box{margin-top:42px;padding-top:30px;border-top:1px solid var(--line);}
+.comments-box h3{font-size:1.22rem;font-weight:600;margin-bottom:18px;}
+.comment-item{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 18px;margin-bottom:11px;}
+.comment-meta{font-size:.82rem;color:var(--mint);margin-bottom:6px;font-weight:700;}
+.comment-text{font-size:.93rem;line-height:1.75;}
+.comment-form{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:20px;margin-top:18px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-input,.form-ta{width:100%;background:var(--paper);border:1.5px solid var(--line);border-radius:11px;
+  padding:11px 14px;font-family:'Sarabun',sans-serif;font-size:.93rem;color:var(--ink);outline:none;
+  transition:border-color .2s,box-shadow .2s;}
+.form-input:focus,.form-ta:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft);}
+.form-ta{min-height:100px;resize:vertical;}
+
+/* ── APP SHELF (กล่องน้ำเงิน — signature เดิม ขัดเงาใหม่) ── */
+.apps-box{background:linear-gradient(155deg,var(--ink) 15%,var(--ink-2) 70%,#23406e);
+  border-radius:var(--r-xl);padding:36px 34px 34px;margin-bottom:32px;position:relative;z-index:1;}
+.apps-box::before{content:"✦ ✦ ✦";position:absolute;top:20px;right:28px;color:rgba(240,168,48,.22);
+  font-size:.85rem;letter-spacing:.5em;pointer-events:none;}
+.apps-box .sec-title{color:#fff;}
+.apps-box .sec-eyebrow{color:var(--gold);}
+.apps-box .sec-eyebrow::before{color:var(--gold);}
+.apps-box .sec-more{color:var(--gold);}
+.apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
+.app-card{border:1px solid var(--line);border-radius:var(--r-md);padding:18px;background:var(--card);
+  transition:transform .2s,box-shadow .2s,background .2s;position:relative;}
+.app-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);z-index:50;}
+.apps-box .app-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(2px);}
+.apps-box .app-card:hover{background:rgba(255,255,255,.1);box-shadow:none;}
+.apps-box .app-card h4{color:#fff;}
+.apps-box .app-card p{color:rgba(255,255,255,.68);}
+.apps-box .app-icon{background:rgba(240,168,48,.2);}
+
+/* hover preview */
+.app-preview{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.96);
+  width:280px;background:var(--card);border-radius:var(--r-md);box-shadow:0 16px 48px rgba(13,21,38,.34);
+  border:1px solid var(--line);overflow:hidden;z-index:200;
+  opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease;pointer-events:none;}
+.app-card:hover .app-preview{opacity:1;visibility:visible;transform:translateX(-50%) scale(1);}
+.app-card.preview-down .app-preview{bottom:auto;top:calc(100% + 10px);transform:translateX(-50%) scale(.96);}
+.app-card.preview-down:hover .app-preview{transform:translateX(-50%) scale(1);}
+.app-preview img{width:100%;height:160px;object-fit:cover;display:block;}
+.app-preview-ph{width:100%;height:160px;background:linear-gradient(135deg,var(--ink),var(--ink-3));
+  display:flex;align-items:center;justify-content:center;font-size:3.5rem;}
+.app-preview-info{padding:12px 14px;}
+.app-preview-info p{font-size:.84rem;color:var(--ink-soft);line-height:1.55;margin-bottom:6px;}
+.app-preview-lock{display:inline-flex;align-items:center;gap:5px;background:var(--gold-soft);
+  color:var(--gold-deep);border:1px solid rgba(240,168,48,.32);padding:4px 12px;border-radius:100px;
+  font-size:.76rem;font-weight:700;}
+@media(hover:none) and (pointer:coarse){.app-preview{display:none;}}
+
+.app-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.app-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;
+  justify-content:center;font-size:1.4rem;flex-shrink:0;background:var(--gold-soft);}
+.icon-blue,.icon-green,.icon-purple,.icon-orange{background:var(--gold-soft);}
+.app-card h4{font-family:'Pridi',serif;font-size:1.07rem;font-weight:600;line-height:1.3;}
+.app-card .tag{margin-top:4px;}
+.app-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.6;margin:9px 0 14px;min-height:38px;}
+.app-btns{display:flex;gap:8px;}
+.btn-open{flex:1;background:var(--gold);color:var(--ink);font-family:'Sarabun';
+  font-size:.88rem;font-weight:700;padding:10px 0;border-radius:10px;border:none;cursor:pointer;transition:background .2s,color .2s;}
+.btn-open:hover{background:var(--gold-deep);color:#fff;}
+.btn-pmt{flex:1;background:var(--mint-soft);color:var(--mint);font-family:'Sarabun';
+  font-size:.88rem;font-weight:700;padding:10px 0;border-radius:10px;
+  border:1px solid rgba(15,162,148,.25);cursor:pointer;transition:.15s;}
+.btn-pmt.active,.btn-pmt:hover{background:#d2efe9;}
+.pmt-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;
+  padding:12px;margin-top:9px;display:none;}
+.pmt-box.open{display:block;}
+.pmt-box pre{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.76rem;color:var(--slate);
+  white-space:pre-wrap;word-break:break-word;margin-bottom:8px;}
+.btn-copy{background:none;border:none;color:var(--mint);font-family:'Sarabun';
+  font-size:.84rem;font-weight:700;cursor:pointer;}
+/* navy band overrides */
+.apps-box .btn-open:hover{background:#fff;color:var(--ink);}
+.apps-box .btn-pmt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18);}
+.apps-box .btn-pmt.active,.apps-box .btn-pmt:hover{background:rgba(255,255,255,.2);}
+.apps-box .pmt-box{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);}
+.apps-box .pmt-box pre{color:rgba(255,255,255,.72);}
+.apps-box .btn-copy{color:var(--gold);}
+
+/* ── REDEEM TICKET (บัตรรหัส — ขอบเส้นประแบบคูปอง) ── */
+.redeem-row{position:relative;display:flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,#fffdf8,#fdf7ea);border:2px dashed var(--gold);
+  border-radius:var(--r-md);padding:8px 10px 8px 16px;margin-bottom:24px;flex-wrap:wrap;}
+.redeem-row::before{content:"";position:absolute;left:-9px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px dashed var(--gold);
+  border-left-color:transparent;border-bottom-color:transparent;rotate:135deg;}
+.redeem-row::after{content:"";position:absolute;right:-9px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;border-radius:50%;background:var(--paper);border:2px dashed var(--gold);
+  border-left-color:transparent;border-bottom-color:transparent;rotate:-45deg;}
+.redeem-row:focus-within{box-shadow:0 0 0 4px var(--gold-soft);}
+.redeem-ico{font-size:1.1rem;}
 .redeem-row input{flex:1;min-width:160px;border:none;outline:none;background:none;
-                  font-family:'Sarabun';font-size:.95rem;color:var(--ink);padding:6px 0;}
-.redeem-row button{background:var(--gold);color:var(--ink);border:none;border-radius:9px;
-                   padding:9px 18px;font-family:'Kanit';font-weight:500;font-size:.9rem;cursor:pointer;transition:background .2s;}
+  font-family:'Sarabun';font-size:.95rem;font-weight:600;color:var(--ink);padding:7px 0;letter-spacing:.03em;}
+.redeem-row input::placeholder{font-weight:400;letter-spacing:0;}
+.redeem-row button{background:var(--gold);color:var(--ink);border:none;border-radius:10px;
+  padding:10px 20px;font-family:'Sarabun';font-weight:700;font-size:.9rem;cursor:pointer;transition:background .2s,color .2s;}
 .redeem-row button:hover{background:var(--gold-deep);color:#fff;}
 #redeemMsg{font-size:.86rem;font-weight:700;}
 #redeemMsg:empty{display:none;}
@@ -81,212 +307,81 @@ h1,h2,h3,h4{font-family:'Kanit',sans-serif;font-weight:600;line-height:1.3;}
   #redeemMsg{width:100%;padding-left:6px;}
 }
 
-/* AD SLOTS (ซ่อนเมื่อไม่มี AdSense — adSlot() คืนค่าว่าง) */
+/* ── AD SLOTS ── */
 .ad-slot{display:none;}
 
-/* TICKER */
-.ticker{background:var(--ink);color:#dfe6f0;padding:9px 24px;
-        display:flex;align-items:center;gap:12px;font-size:.84rem;overflow:hidden;}
-.ticker-badge{background:var(--gold);color:var(--ink);font-size:.7rem;font-weight:800;
-              padding:3px 10px;border-radius:5px;white-space:nowrap;flex-shrink:0;}
-.ticker-inner{overflow:hidden;flex:1;}
-.ticker-text{white-space:nowrap;display:inline-block;will-change:transform;}
-
-/* CATEGORY FILTER (chips) */
+/* ── FILTER PILLS ── */
 .cat-strip{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px;}
-.cat-pill{padding:7px 16px;border-radius:100px;border:1.5px solid var(--line);font-size:.9rem;
-          font-weight:600;color:var(--ink-soft);cursor:pointer;background:var(--card);transition:.18s;}
+.cat-pill{padding:7px 17px;border-radius:100px;border:1.5px solid var(--line);font-size:.88rem;
+  font-weight:600;color:var(--ink-soft);cursor:pointer;background:var(--card);transition:.18s;}
 .cat-pill:hover{border-color:var(--gold);color:var(--ink);}
 .cat-pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-/* SEC HEADER — signature gold star */
-.sec-head{display:flex;align-items:center;justify-content:space-between;
-          margin-bottom:18px;}
-.sec-title{font-family:'Kanit';font-size:1.4rem;font-weight:600;color:var(--ink);
-           display:flex;align-items:center;gap:11px;}
-.sec-bar{width:auto;height:auto;background:none;border-radius:0;font-size:1.15rem;line-height:1;}
-.sec-bar::before{content:"✦";color:var(--gold);}
-.sec-bar-green::before{color:var(--mint);}
-.sec-more{font-size:.92rem;color:var(--mint);cursor:pointer;font-weight:700;
-          display:inline-flex;align-items:center;gap:5px;transition:gap .2s;}
-.sec-more:hover{gap:9px;}
+/* ── SEARCH ── */
+.search-row{display:flex;gap:11px;margin-bottom:18px;}
+.search-in{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:13px;
+  padding:12px 17px;font-family:'Sarabun',sans-serif;font-size:.95rem;
+  color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
+.search-in:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft);}
 
-/* HERO FEATURED */
-.hero-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:18px;}
-.feat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .25s;}
-.feat-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(22,36,61,.13);}
-.feat-img{height:260px;background:linear-gradient(135deg,#eef2f8,#e0e8f2);
-          display:flex;align-items:center;justify-content:center;font-size:4rem;
-          position:relative;}
-.feat-badge{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);color:var(--gold-deep);
-            font-size:.76rem;font-weight:700;padding:5px 13px;border-radius:100px;}
-.feat-body{padding:22px 24px 26px;}
-.feat-card h2{font-family:'Kanit';font-size:1.45rem;font-weight:600;line-height:1.3;margin-bottom:10px;}
-.feat-card p{font-size:1rem;color:var(--ink-soft);line-height:1.7;}
-.feat-meta{display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:.82rem;color:var(--mint);font-weight:700;}
-.side-cards{display:flex;flex-direction:column;gap:14px;}
-.side-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px 19px;cursor:pointer;transition:transform .18s,border-color .2s;}
-.side-card:hover{transform:translateX(3px);border-color:var(--gold);}
-.side-card h3{font-family:'Kanit';font-size:1.04rem;font-weight:600;line-height:1.35;margin-bottom:5px;}
-.side-card p{font-size:.85rem;color:var(--ink-soft);}
-.side-meta{display:flex;gap:7px;align-items:center;margin-bottom:6px;font-size:.78rem;color:var(--mint);font-weight:700;}
+/* ── PAGE HEAD (หัวหน้า blog/apps) ── */
+.page-head{padding-top:34px;margin-bottom:22px;}
+.page-head h1{font-size:1.7rem;font-weight:700;}
 
-/* ARTICLES GRID */
-.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-.art-card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:18px 19px;cursor:pointer;transition:transform .18s,box-shadow .22s;}
-.art-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(22,36,61,.1);}
-.art-meta{display:flex;gap:7px;align-items:center;margin-bottom:9px;font-size:.78rem;}
-.art-card h3{font-family:'Kanit';font-size:1.05rem;font-weight:600;line-height:1.4;margin-bottom:7px;}
-.art-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.6;}
-.art-date{font-size:.76rem;color:var(--slate);margin-top:10px;}
-
-/* ARTICLE PAGE */
-.art-wrap{max-width:720px;margin:0 auto;padding:40px 24px;}
-.art-wrap h1{font-family:'Kanit';font-size:2rem;font-weight:700;line-height:1.3;margin-bottom:14px;}
-.art-info{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:26px;
-          padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
-.art-body h2{font-family:'Kanit';font-size:1.4rem;font-weight:600;margin:28px 0 10px;}
-.art-body h3{font-family:'Kanit';font-size:1.12rem;font-weight:600;margin:20px 0 7px;}
-.art-body p{margin-bottom:13px;line-height:1.9;font-size:1.04rem;}
-.art-body ul,.art-body ol{margin:0 0 13px 22px;}
-.art-body li{margin-bottom:6px;line-height:1.8;}
-.art-body code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#f3f1ec;padding:1px 6px;border-radius:4px;font-size:.86em;color:var(--gold-deep);}
-.art-body pre{background:#f3f1ec;border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0;overflow-x:auto;}
-.art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--ink-soft);}
-.art-body blockquote{border-left:3px solid var(--gold);padding:11px 18px;margin:14px 0;background:rgba(240,168,48,.08);border-radius:0 10px 10px 0;color:var(--ink-soft);}
-.art-body a{color:var(--mint);text-decoration:underline;}
-.art-body a.dl-btn,.dl-btn{display:inline-flex;align-items:center;gap:8px;background:var(--mint);color:#fff!important;text-decoration:none!important;padding:12px 22px;border-radius:11px;font-family:'Kanit';font-weight:500;font-size:.96rem;margin:8px 0;transition:.18s;}
-.dl-btn:hover{background:#0e8576;transform:translateY(-1px);box-shadow:0 5px 16px rgba(21,163,148,.32);}
-.art-body img{border-radius:10px;margin:12px 0;width:100%;}
-.art-body table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.92rem;}
-.art-body th{text-align:left;padding:9px 11px;border-bottom:2px solid var(--line);font-weight:700;color:var(--ink-soft);}
-.art-body td{padding:9px 11px;border-bottom:1px solid var(--line);}
-.art-body strong{color:var(--ink);}
-
-/* COMMENTS */
-.comments-box{margin-top:40px;padding-top:30px;border-top:1px solid var(--line);}
-.comments-box h3{font-family:'Kanit';font-size:1.2rem;font-weight:600;margin-bottom:18px;}
-.comment-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:11px;}
-.comment-meta{font-size:.82rem;color:var(--mint);margin-bottom:6px;font-weight:700;}
-.comment-text{font-size:.92rem;line-height:1.7;}
-.comment-form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:18px;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-.form-input,.form-ta{width:100%;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;
-                      padding:10px 13px;font-family:'Sarabun',sans-serif;font-size:.92rem;color:var(--ink);outline:none;transition:border-color .2s;}
-.form-input:focus,.form-ta:focus{border-color:var(--gold);}
-.form-ta{min-height:100px;resize:vertical;}
-
-/* APPS — homepage navy band (signature) */
-.apps-box{background:linear-gradient(160deg,#16243d,#1f3656);border-radius:24px;padding:34px 32px;margin-bottom:28px;position:relative;z-index:1;}
-.apps-box .sec-head{position:relative;z-index:1;border:none;}
-.apps-box .sec-title{color:#fff;}
-.apps-box .sec-more{color:var(--gold);}
-.apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:15px;}
-.app-card{border:1px solid var(--line);border-radius:14px;padding:17px;background:var(--card);transition:transform .2s,box-shadow .2s,background .2s;position:relative;}
-.app-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(22,36,61,.1);z-index:50;}
-/* app cards inside navy band → translucent white */
-.apps-box .app-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);}
-.apps-box .app-card:hover{background:rgba(255,255,255,.1);box-shadow:none;}
-.apps-box .app-card h4{color:#fff;}
-.apps-box .app-card p{color:rgba(255,255,255,.66);}
-.apps-box .app-icon{background:rgba(240,168,48,.18);}
-/* Hover Preview */
-.app-preview{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.96);
-  width:280px;background:var(--card);border-radius:14px;box-shadow:0 14px 44px rgba(15,23,42,.32);
-  border:1px solid var(--line);overflow:hidden;z-index:200;
-  opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease;pointer-events:none;}
-.app-card:hover .app-preview{opacity:1;visibility:visible;transform:translateX(-50%) scale(1);}
-/* การ์ดแถวบน → preview เด้งลงล่างแทน (กันโดน nav บัง) */
-.app-card.preview-down .app-preview{bottom:auto;top:calc(100% + 10px);transform:translateX(-50%) scale(.96);}
-.app-card.preview-down:hover .app-preview{transform:translateX(-50%) scale(1);}
-.app-preview img{width:100%;height:160px;object-fit:cover;display:block;}
-.app-preview-ph{width:100%;height:160px;background:linear-gradient(135deg,var(--ink),#2d4a72);
-  display:flex;align-items:center;justify-content:center;font-size:3.5rem;}
-.app-preview-info{padding:11px 13px;}
-.app-preview-info p{font-size:.84rem;color:var(--ink-soft);line-height:1.5;margin-bottom:6px;}
-.app-preview-lock{display:inline-flex;align-items:center;gap:5px;background:rgba(240,168,48,.12);
-  color:var(--gold-deep);border:1px solid rgba(240,168,48,.3);padding:4px 11px;border-radius:100px;font-size:.76rem;font-weight:700;}
-@media(hover:none) and (pointer:coarse){.app-preview{display:none;}}
-.app-top{display:flex;align-items:center;gap:11px;margin-bottom:10px;}
-.app-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;
-          justify-content:center;font-size:1.35rem;flex-shrink:0;background:rgba(240,168,48,.14);}
-.icon-blue,.icon-green,.icon-purple,.icon-orange{background:rgba(240,168,48,.14);}
-.app-card h4{font-family:'Kanit';font-size:1.06rem;font-weight:600;}
-.app-card .tag{margin-top:3px;}
-.app-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.55;margin:8px 0 14px;min-height:36px;}
-.app-btns{display:flex;gap:8px;}
-.btn-open{flex:1;background:var(--gold);color:var(--ink);font-family:'Kanit',sans-serif;
-          font-size:.88rem;font-weight:500;padding:10px 0;border-radius:9px;border:none;cursor:pointer;transition:background .2s;}
-.btn-open:hover{background:var(--gold-deep);color:#fff;}
-.btn-pmt{flex:1;background:var(--mint-soft);color:var(--mint);font-family:'Kanit',sans-serif;
-         font-size:.88rem;font-weight:500;padding:10px 0;border-radius:9px;
-         border:1px solid rgba(21,163,148,.25);cursor:pointer;transition:.15s;}
-.btn-pmt.active,.btn-pmt:hover{background:#d4efeb;}
-.pmt-box{background:var(--paper);border:1px solid var(--line);border-radius:9px;
-         padding:11px;margin-top:9px;display:none;}
-.pmt-box.open{display:block;}
-.pmt-box pre{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.76rem;color:var(--slate);
-             white-space:pre-wrap;word-break:break-word;margin-bottom:8px;}
-.btn-copy{background:none;border:none;color:var(--mint);font-family:'Kanit',sans-serif;
-          font-size:.84rem;font-weight:500;cursor:pointer;}
-
-/* homepage navy band overrides */
-.apps-box .btn-open:hover{background:#fff;color:var(--ink);}
-.apps-box .btn-pmt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18);}
-.apps-box .btn-pmt.active,.apps-box .btn-pmt:hover{background:rgba(255,255,255,.2);}
-.apps-box .pmt-box{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.12);}
-.apps-box .pmt-box pre{color:rgba(255,255,255,.7);}
-.apps-box .btn-copy{color:var(--gold);}
-
-/* PAGINATION */
-.pagination{display:flex;gap:8px;justify-content:center;padding:28px 0;}
-.page-btn{padding:9px 16px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);
-          font-family:'Kanit',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;transition:.15s;}
+/* ── PAGINATION ── */
+.pagination{display:flex;gap:8px;justify-content:center;padding:30px 0;}
+.page-btn{padding:9px 16px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);
+  font-family:'Sarabun';font-size:.88rem;font-weight:700;cursor:pointer;transition:.15s;}
 .page-btn:hover,.page-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-/* FOOTER */
-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin-top:40px;}
-.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
-.footer-logo{font-family:'Kanit';font-size:1.1rem;font-weight:700;color:#fff;}
-.footer-links{display:flex;gap:22px;font-size:.9rem;}
+/* ── FOOTER ── */
+footer{background:var(--ink);color:rgba(255,255,255,.72);padding:38px 26px 30px;margin-top:46px;
+  position:relative;overflow:hidden;}
+footer::before{content:"✦";position:absolute;right:-28px;bottom:-48px;font-size:11rem;
+  color:rgba(240,168,48,.06);pointer-events:none;line-height:1;}
+.footer-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;position:relative;}
+.footer-logo{font-family:'Pridi',serif;font-size:1.12rem;font-weight:700;color:#fff;}
+.footer-links{display:flex;gap:22px;font-size:.9rem;flex-wrap:wrap;}
+.footer-links a{transition:color .15s;}
 .footer-links a:hover{color:var(--gold);}
 
-/* LOADING & EMPTY */
-.loading{text-align:center;padding:60px;color:var(--slate);}
-.empty{text-align:center;padding:60px;color:var(--slate);}
+/* ── LOADING & EMPTY ── */
+.loading{text-align:center;padding:64px;color:var(--slate);}
+.empty{text-align:center;padding:64px;color:var(--slate);}
 .spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--line);
-         border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px;}
+  border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* BACK BUTTON */
+/* ── BACK BUTTON ── */
 .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--slate);font-size:.9rem;
-          margin-bottom:18px;cursor:pointer;transition:.15s;}
+  margin-bottom:18px;cursor:pointer;transition:.15s;font-weight:600;}
 .back-btn:hover{color:var(--ink);}
 
-/* SEARCH */
-.search-row{display:flex;gap:11px;margin-bottom:18px;}
-.search-in{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:12px;
-           padding:12px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;
-           color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
-.search-in:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(240,168,48,.12);}
-
-@media(max-width:768px){
+/* ── RESPONSIVE ── */
+@media(max-width:880px){
+  .feat-card{grid-template-columns:1fr;}
+  .feat-img{min-height:200px;order:-1;}
+  .feat-body{padding:26px 24px 28px;}
   .hero-grid{grid-template-columns:1fr;}
+}
+@media(max-width:768px){
   .arts-grid{grid-template-columns:repeat(2,1fr);}
   .form-row{grid-template-columns:1fr;}
-  .apps-box{padding:24px 18px;}
+  .apps-box{padding:26px 18px;}
+  .stamp{width:64px;height:64px;top:-16px;right:16px;}
+  .stamp b{font-size:1.2rem;}
 }
 @media(max-width:480px){
   .arts-grid{grid-template-columns:1fr;}
   .apps-grid{grid-template-columns:1fr;}
-  .sec-title{font-size:1.2rem;}
+  .sec-title{font-size:1.28rem;}
 }
 @media(hover:none) and (pointer:coarse){
   .btn-open,.btn-pmt{padding:12px 0;font-size:.9rem;}
   .btn-copy{padding:9px 4px;}
   .btn{padding:13px 24px;}
   .nav-links a{padding:11px 16px;}
-  .cat-pill,.filter-btn{padding:9px 17px;}
+  .cat-pill{padding:9px 17px;}
   .page-btn{padding:11px 17px;}
   .back-btn{padding:8px 0;}
   .sec-more{padding:6px 0;}
@@ -298,13 +393,13 @@ footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin
 
 <!-- TICKER -->
 <div class="ticker" id="ticker">
-  <span class="ticker-badge">ล่าสุด</span>
+  <span class="ticker-badge">✦ ล่าสุด</span>
   <div class="ticker-inner"><span class="ticker-text" id="tickerText">กำลังโหลด...</span></div>
 </div>
 
 <!-- NAV -->
 <nav id="nav">
-  <div class="logo" onclick="go('/')"><span id="logoTitle">EduApps</span> TH</div>
+  <div class="logo" onclick="go('/')"><span id="logoTitle">Kru-ti ครูติ</span><em>TH</em></div>
   <ul class="nav-links" id="navLinks">
     <li><a href="#/" data-r="/">หน้าหลัก</a></li>
     <li><a href="#/blog" data-r="/blog">บทความ</a></li>
@@ -319,34 +414,36 @@ footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin
 <main id="app"><div class="loading"><div class="spinner"></div><br>กำลังโหลด...</div></main>
 
 <!-- LOCK MODAL -->
-<div id="lockModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.7);align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+<div id="lockModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(13,21,38,.72);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
     <div style="text-align:center;margin-bottom:16px;">
       <div style="font-size:2.2rem;margin-bottom:8px;">🔒</div>
-      <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;" id="lockTitle">แอปนี้ต้องใช้รหัสผ่าน</h3>
-      <p style="font-size:.88rem;color:#64748b;margin-top:6px;">กรอกรหัสที่ได้รับเพื่อใช้งานแอปนี้</p>
+      <h3 style="font-size:1.1rem;font-weight:700;color:#15223c;" id="lockTitle">แอปนี้ต้องใช้รหัสผ่าน</h3>
+      <p style="font-size:.88rem;color:#6d7588;margin-top:6px;">กรอกรหัสที่ได้รับเพื่อใช้งานแอปนี้</p>
     </div>
     <input id="lockInput" type="password" placeholder="ใส่รหัสที่นี่..." autocomplete="off"
-      style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"
+      style="width:100%;padding:11px 14px;border:1.5px solid #e8e1d3;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"
       onkeydown="if(event.key==='Enter')submitLock()">
     <p id="lockErr" style="color:#dc2626;font-size:.85rem;margin-bottom:8px;display:none;">รหัสไม่ถูกต้อง กรุณาลองใหม่</p>
     <div style="display:flex;gap:8px;">
-      <button onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
-      <button onclick="submitLock()" style="flex:2;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
+      <button onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e8e1d3;border-radius:10px;background:#faf7f1;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button onclick="submitLock()" style="flex:2;padding:10px;background:#f0a830;color:#15223c;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
     </div>
   </div>
 </div>
-<div id="appViewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.88);align-items:center;justify-content:center;padding:12px;">
-  <div id="viewerBox" style="display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#0f172a;flex-shrink:0;">
+
+<!-- APP VIEWER -->
+<div id="appViewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,21,38,.9);align-items:center;justify-content:center;padding:12px;">
+  <div id="viewerBox" style="display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#15223c;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
         <span id="viewerIcon" style="font-size:1.2rem;flex-shrink:0;"></span>
         <span id="viewerTitle" style="color:#fff;font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#2563eb;color:#fff;border:none;padding:6px 11px;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
-        <button onclick="openInNewTab()" title="เปิดแท็บใหม่" style="background:#1e293b;color:#94a3b8;border:none;padding:6px 10px;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">↗</button>
-        <button onclick="closeAppViewer()" title="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
+        <button onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#f0a830;color:#15223c;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
+        <button onclick="openInNewTab()" title="เปิดแท็บใหม่" style="background:#2c4a7c;color:#cdd8ea;border:none;padding:6px 10px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">↗</button>
+        <button onclick="closeAppViewer()" title="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
       </div>
     </div>
     <iframe id="viewerFrame" style="flex:1;width:100%;border:none;background:#fff;" allow="fullscreen; autoplay; clipboard-write; gamepad" allowfullscreen></iframe>
@@ -355,15 +452,15 @@ footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin
 
 <footer>
   <div class="footer-inner">
-    <div class="footer-logo" id="footerLogo">✦ EduApps TH</div>
+    <div class="footer-logo" id="footerLogo">✦ Kru-ti ครูติ TH</div>
     <div class="footer-links">
       <a href="#/blog">บทความ</a>
       <a href="#/apps">แอปทั้งหมด</a>
       <a href="#/about">เกี่ยวกับเรา</a>
       <a href="#/privacy">นโยบายความเป็นส่วนตัว</a>
-      <a href="/admin/" style="color:#334155;">⚙</a>
+      <a href="/admin/" style="color:#2c4a7c;">⚙</a>
     </div>
-    <p id="footerText" style="font-size:.8rem;">© 2568 EduApps TH</p>
+    <p id="footerText" style="font-size:.8rem;">© 2568 Kru-ti ครูติ TH</p>
   </div>
 </footer>
 
@@ -372,7 +469,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.7);padding:36px 28px;margin
 const API = '/api';
 let S = {}; // site settings
 
-// ── FETCH HELPERS (มี cache 30 วิ ลดการยิง API ซ้ำ) ──────
+// ── FETCH HELPERS (cache 30 วิ ลดยิง API ซ้ำ) ─────────────
 const _cache = new Map();
 function get(url, ttl = 30000) {
   const hit = _cache.get(url);
@@ -401,7 +498,7 @@ function route() {
 }
 
 const go = hash => { location.hash = hash; };
-let _focusSearch = false, _focusAppsSearch = false;
+let _focusSearch = false;
 function goSearch() {
   const h = location.hash;
   if (h === '#/apps') {
@@ -424,36 +521,50 @@ async function renderHome() {
   const arts = artData.articles || [];
   const appsArr = appData.apps || [];
   const [feat, ...rest] = arts;
-  const sideArts = rest.slice(0,3);
-  const gridArts = rest.slice(3,9);
+  const sideArts = rest.slice(0,4);
+  const gridArts = rest.slice(4,10);
 
   app.innerHTML = `
   <div style="padding-bottom:8px;">
   <div class="container">
     ${adSlot()}
-    <div class="cat-strip" id="catStrip"></div>
+    <div class="cat-strip rv" id="catStrip" style="margin-top:22px;"></div>
+
     ${feat ? `
-    <div style="margin-bottom:24px;">
-      <div class="sec-head">
-        <div class="sec-title"><div class="sec-bar"></div>บทความเด่น</div>
-      </div>
-      <div class="hero-grid">
-        <div class="feat-card" onclick="go('/article/${feat.slug}')">
-          <div class="feat-img">${feat.image_url?`<img src="${feat.image_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='📰'">`:'📰'}
-            <div class="feat-badge">⭐ บทความแนะนำ</div>
-          </div>
-          <div class="feat-body">
-            <div class="feat-meta"><span class="${catTag(feat.category)}">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
-            <h2>${feat.title}</h2>
-            <p>${feat.excerpt||''}</p>
-          </div>
+    <div class="feat-wrap rv">
+      <div class="stamp"><b>✦</b><small>บทความเด่น</small></div>
+      <div class="feat-card" onclick="go('/article/${feat.slug}')">
+        <div class="feat-body">
+          <div class="feat-meta"><span class="${catTag(feat.category)}">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
+          <h2>${feat.title}</h2>
+          <p class="feat-x">${feat.excerpt||''}</p>
+          <span class="feat-read">อ่านบทความ →</span>
         </div>
-        <div class="side-cards">
-          ${sideArts.map(a=>`
-          <div class="side-card" onclick="go('/article/${a.slug}')">
-            <div class="side-meta"><span class="${catTag(a.category)}">${a.category}</span><span>${fmt(a.created_at)}</span></div>
-            <h3>${a.title}</h3>
-            <p>${a.excerpt||''}</p>
+        <div class="feat-img">${feat.image_url?`<img src="${feat.image_url}" onerror="this.remove()">`:'📰'}</div>
+      </div>
+    </div>` : ''}
+
+    ${sideArts.length ? `
+    <div class="hero-grid rv2" style="margin-bottom:34px;">
+      <div>
+        <div class="sec-head">
+          <div><div class="sec-eyebrow">Latest</div><div class="sec-title">บทความล่าสุด</div></div>
+          <span class="sec-more" onclick="go('/blog')">ดูทั้งหมด →</span>
+        </div>
+        ${gridArts.length ? `<div class="arts-grid" style="grid-template-columns:repeat(2,1fr);">${gridArts.slice(0,4).map(artCard).join('')}</div>` : ''}
+      </div>
+      <div>
+        <div class="sec-head">
+          <div><div class="sec-eyebrow">Popular</div><div class="sec-title">น่าอ่านต่อ</div></div>
+        </div>
+        <div class="side-list">
+          ${sideArts.map((a,i)=>`
+          <div class="side-item" onclick="go('/article/${a.slug}')">
+            <div class="side-num">${i+1}</div>
+            <div>
+              <h3>${a.title}</h3>
+              <div class="si-meta"><span class="${catTag(a.category)}">${a.category}</span><span>${fmt(a.created_at)}</span></div>
+            </div>
           </div>`).join('')}
         </div>
       </div>
@@ -461,21 +572,10 @@ async function renderHome() {
 
     ${adSlot()}
 
-    ${gridArts.length ? `
-    <div style="margin-bottom:28px;">
-      <div class="sec-head">
-        <div class="sec-title"><div class="sec-bar"></div>บทความล่าสุด</div>
-        <span class="sec-more" onclick="go('/blog')">ดูทั้งหมด →</span>
-      </div>
-      <div class="arts-grid">
-        ${gridArts.map(artCard).join('')}
-      </div>
-    </div>` : ''}
-
     ${appsArr.length ? `
-    <div class="apps-box">
+    <div class="apps-box rv3">
       <div class="sec-head">
-        <div class="sec-title"><div class="sec-bar sec-bar-green"></div>🎮 แอปที่ใช้งานได้เลย — พร้อม Prompt</div>
+        <div><div class="sec-eyebrow mint">Apps</div><div class="sec-title">แอปที่ใช้งานได้เลย — พร้อม Prompt</div></div>
         <span class="sec-more" onclick="go('/apps')">ดูทั้งหมด →</span>
       </div>
       <div class="apps-grid">
@@ -507,17 +607,20 @@ async function renderBlog(q, cat, page) {
   const pages = Math.ceil(total / 9);
 
   app.innerHTML = `
-  <div class="container" style="padding-top:32px;padding-bottom:32px;">
-    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:20px;">📝 บทความทั้งหมด</h1>
-    <div class="search-row">
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv">
+      <div class="sec-eyebrow">Articles</div>
+      <h1>บทความทั้งหมด</h1>
+    </div>
+    <div class="search-row rv">
       <input class="search-in" id="blogSearch" placeholder="🔍 ค้นหาบทความ..." value="${blogQ}"
         onkeydown="if(event.key==='Enter')renderBlog(this.value,undefined,1)">
-      <button class="btn btn-primary" style="padding:9px 16px;" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
+      <button class="btn btn-primary" style="padding:9px 18px;" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
     </div>
-    <div class="cat-strip" id="blogCats"></div>
+    <div class="cat-strip rv2" id="blogCats"></div>
     ${adSlot()}
     ${arts.length
-      ? `<div class="arts-grid">${arts.map(artCard).join('')}</div>`
+      ? `<div class="arts-grid rv2">${arts.map(artCard).join('')}</div>`
       : `<div class="empty">📭<br>ไม่พบบทความ</div>`}
     ${pages > 1 ? `
     <div class="pagination">
@@ -554,7 +657,7 @@ async function renderArticle(slug) {
   if (art.error) { app.innerHTML = empty('ไม่พบบทความ','📭'); return; }
 
   app.innerHTML = `
-  <div class="art-wrap">
+  <div class="art-wrap rv">
     <div class="back-btn" onclick="go('/blog')">← กลับรายการบทความ</div>
     <h1>${art.title}</h1>
     <div class="art-info">
@@ -566,7 +669,7 @@ async function renderArticle(slug) {
     ${adSlot()}
     <div class="art-body">${art.content||''}</div>
     <div style="margin-top:28px;">${adSlot()}</div>
-    <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;">
+    <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <strong style="font-size:.9rem;">แชร์:</strong>
       <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
          href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}" target="_blank">📘 Facebook</a>
@@ -581,7 +684,7 @@ async function renderArticle(slug) {
         <div class="comment-text">${esc(c.content)}</div>
       </div>`).join('')}
       <div class="comment-form">
-        <h4 style="font-size:.95rem;font-weight:700;margin-bottom:14px;">แสดงความคิดเห็น</h4>
+        <h4 style="font-size:.98rem;font-weight:600;margin-bottom:14px;">แสดงความคิดเห็น</h4>
         <div class="form-row">
           <input class="form-input" id="cmtName" placeholder="ชื่อของคุณ">
         </div>
@@ -663,7 +766,7 @@ function drawApps() {
   const pillHTML = pills.map(p =>
     `<span class="cat-pill${_appFilter===p.k?' active':''}"
       onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">
-      ${p.label}${_appFilter===p.k&&_allApps.length?'':''}</span>`
+      ${p.label}</span>`
   ).join('');
 
   const sortHTML = `
@@ -678,20 +781,19 @@ function drawApps() {
   // --- content ---
   let content = '';
   if (_appFilter === 'all' && filtered.length > 0) {
-    // แยก 2 หมวดเมื่อไม่ได้กรอง
     const free   = filtered.filter(a => !a.locked);
     const locked = filtered.filter(a =>  a.locked);
     if (free.length > 0) content += `
-      <div style="margin-bottom:28px;">
-        <h2 style="font-family:'Kanit';font-size:1.1rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
-          <span style="color:var(--mint);">✦</span> แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.78rem;">${free.length}</span>
+      <div style="margin-bottom:30px;">
+        <h2 style="font-family:'Pridi';font-size:1.12rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
+          <span style="color:var(--mint);">✦</span> แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.78rem;font-family:'Sarabun';">${free.length}</span>
         </h2>
         <div class="apps-grid">${free.map(appCard).join('')}</div>
       </div>`;
     if (locked.length > 0) content += `
-      <div style="margin-bottom:28px;">
-        <h2 style="font-family:'Kanit';font-size:1.1rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
-          <span style="color:var(--gold);">✦</span> แอปพรีเมียม <span style="background:rgba(240,168,48,.15);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.78rem;">${locked.length}</span>
+      <div style="margin-bottom:30px;">
+        <h2 style="font-family:'Pridi';font-size:1.12rem;font-weight:600;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:9px;">
+          <span style="color:var(--gold);">✦</span> แอปพรีเมียม <span style="background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.78rem;font-family:'Sarabun';">${locked.length}</span>
         </h2>
         <div class="apps-grid">${locked.map(appCard).join('')}</div>
       </div>`;
@@ -701,35 +803,37 @@ function drawApps() {
     content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
   }
 
-  // --- redeem input (เรียบ คล้ายช่องค้นหา แสดงเมื่อมีแอปล็อก) ---
+  // --- redeem ticket ---
   const hasLocked = _allApps.some(a => a.locked);
   const redeemHTML = hasLocked ? `
-    <div class="redeem-row">
-      <span class="redeem-ico">🔑</span>
-      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอป"
+    <div class="redeem-row rv2">
+      <span class="redeem-ico">🎟️</span>
+      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอปในชุด"
              onkeydown="if(event.key==='Enter')redeemAll()">
       <button onclick="redeemAll()">ปลดล็อก</button>
       <span id="redeemMsg"></span>
     </div>` : '';
 
   app.innerHTML = `
-  <div class="container" style="padding-top:28px;padding-bottom:32px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-      <h1 style="font-size:1.5rem;font-weight:800;">🎮 แอปทั้งหมด</h1>
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="sec-eyebrow mint">App Library</div>
+        <h1>คลังแอปทั้งหมด</h1>
+      </div>
       ${sortHTML}
     </div>
-    <div class="search-row" style="margin-bottom:14px;">
+    <div class="search-row rv" style="margin-bottom:14px;">
       <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..." value="${_appQ}"
         oninput="filterApps(this.value)">
     </div>
-    <div class="cat-strip" style="margin-bottom:20px;">${pillHTML}</div>
+    <div class="cat-strip rv2" style="margin-bottom:20px;">${pillHTML}</div>
     ${redeemHTML}
     ${adSlot()}
     ${content}
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
   activateAds();
-  if (_focusAppsSearch) { _focusAppsSearch = false; document.getElementById('appSearch')?.focus(); }
 }
 
 // ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
@@ -738,7 +842,7 @@ async function redeemAll() {
   const msg = document.getElementById('redeemMsg');
   const code = (inp.value || '').trim();
   if (!code) { showMsg(msg, 'กรุณากรอกรหัส', '#ea580c'); return; }
-  showMsg(msg, '⏳ กำลังตรวจรหัส...', '#6b7689');
+  showMsg(msg, '⏳ กำลังตรวจรหัส...', '#6d7588');
   try {
     const r = await fetch(API + '/apps/unlock-all', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -747,25 +851,25 @@ async function redeemAll() {
     if (r.error) { showMsg(msg, '❌ ' + r.error, '#dc2626'); return; }
     const list = r.unlocked || [];
     list.forEach(a => { if (a.url) sessionStorage.setItem('unlocked_' + a.id, a.url); });
-    showMsg(msg, `✅ ปลดล็อกสำเร็จ ${list.length} แอป!`, '#15a394');
-    setTimeout(drawApps, 700);  // re-render ให้แอปที่ปลดแล้วแสดงผล
+    showMsg(msg, `✅ ปลดล็อกสำเร็จ ${list.length} แอป!`, '#0fa294');
+    setTimeout(drawApps, 700);
   } catch (e) {
     showMsg(msg, '❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง', '#dc2626');
   }
 }
 
-function filterApps(q)   { _appQ     = q; drawApps(); }
+function filterApps(q)   { _appQ      = q; drawApps(); }
 function setAppFilter(f) { _appFilter = f; drawApps(); }
 function setAppSort(s)   { _appSort   = s; drawApps(); }
 
 // ── ABOUT ─────────────────────────────────────────────────
 function renderAbout() {
-  const title = S.site_title || 'EduApps TH';
+  const title = S.site_title || 'Kru-ti ครูติ TH';
   const author = S.author_name || 'ผู้สร้าง';
   document.getElementById('app').innerHTML = `
-  <div class="art-wrap">
-    <h1 style="margin-bottom:14px;">เกี่ยวกับเรา</h1>
-    <div style="height:3px;width:48px;background:#2563eb;border-radius:2px;margin-bottom:28px;"></div>
+  <div class="art-wrap rv">
+    <div class="sec-eyebrow">About</div>
+    <h1 style="margin-bottom:24px;">เกี่ยวกับเรา</h1>
 
     <div class="art-body">
       <h2>เราคือใคร?</h2>
@@ -786,27 +890,24 @@ function renderAbout() {
 
       <h2>ติดต่อเรา</h2>
       <p>หากมีข้อสงสัย ข้อเสนอแนะ หรืออยากร่วมมือ ยินดีรับฟังทุกความคิดเห็น</p>
-      <p>📧 <a href="mailto:kruti.edu@gmail.com" style="color:#2563eb;font-weight:700;">kruti.edu@gmail.com</a></p>
+      <p>📧 <a href="mailto:kruti.edu@gmail.com" style="color:var(--mint);font-weight:700;">kruti.edu@gmail.com</a></p>
     </div>
 
     <div style="margin-top:32px;">
-      <a class="btn btn-outline" href="#/" style="padding:8px 18px;font-size:.9rem;font-weight:700;
-         border:1px solid #e2e8f0;border-radius:9px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-        ← กลับหน้าหลัก
-      </a>
+      <a class="btn btn-outline" href="#/">← กลับหน้าหลัก</a>
     </div>
   </div>`;
 }
 
 // ── PRIVACY POLICY ────────────────────────────────────────
 function renderPrivacy() {
-  const title = S.site_title || 'EduApps TH';
+  const title = S.site_title || 'Kru-ti ครูติ TH';
   const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
   document.getElementById('app').innerHTML = `
-  <div class="art-wrap">
+  <div class="art-wrap rv">
+    <div class="sec-eyebrow">Privacy</div>
     <h1 style="margin-bottom:8px;">นโยบายความเป็นส่วนตัว</h1>
-    <p style="color:#94a3b8;font-size:.88rem;margin-bottom:24px;">อัปเดตล่าสุด: ${today}</p>
-    <div style="height:3px;width:48px;background:#2563eb;border-radius:2px;margin-bottom:28px;"></div>
+    <p style="color:var(--slate);font-size:.88rem;margin-bottom:28px;">อัปเดตล่าสุด: ${today}</p>
 
     <div class="art-body">
 
@@ -864,10 +965,7 @@ function renderPrivacy() {
     </div>
 
     <div style="margin-top:32px;">
-      <a class="btn btn-outline" href="#/" style="padding:8px 18px;font-size:.9rem;font-weight:700;
-         border:1px solid #e2e8f0;border-radius:9px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-        ← กลับหน้าหลัก
-      </a>
+      <a class="btn btn-outline" href="#/">← กลับหน้าหลัก</a>
     </div>
   </div>`;
 }
@@ -885,7 +983,7 @@ function artCard(a) {
 function appCard(a) {
   const pid = `p_${a.id}`;
   const raw = sessionStorage.getItem('unlocked_'+a.id);
-  const storedUrl = (raw && raw.startsWith('http')) ? raw : null;  // กัน '1' หรือค่าขยะ
+  const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
   const isLocked = a.locked && !storedUrl;
   const appUrl = storedUrl || a.url;
   const previewImg = a.preview_image
@@ -926,9 +1024,8 @@ function appCard(a) {
 document.addEventListener('mouseover', e => {
   const card = e.target.closest('.app-card');
   if (!card || !card.querySelector('.app-preview')) return;
-  const navH = document.getElementById('nav')?.offsetHeight || 66;
+  const navH = document.getElementById('nav')?.offsetHeight || 64;
   const spaceAbove = card.getBoundingClientRect().top - navH;
-  // preview สูง ~230px ถ้าที่ว่างด้านบนไม่พอ → เด้งลง
   card.classList.toggle('preview-down', spaceAbove < 250);
 });
 
@@ -975,14 +1072,12 @@ function closeAppViewer() {
 function openInNewTab() {
   if (_viewerUrl) window.open(_viewerUrl, '_blank');
 }
-// ขยายเต็มจอ — ใช้ Fullscreen API ของ device (จะหมุนแนวนอน/แนวตั้งตามแอปและอุปกรณ์)
 function fullscreenApp() {
   const box = document.getElementById('viewerBox');
   if (!document.fullscreenElement) {
     const req = box.requestFullscreen || box.webkitRequestFullscreen || box.msRequestFullscreen;
     if (req) req.call(box);
     else {
-      // iOS Safari fallback — fullscreen ที่ iframe โดยตรง
       const f = document.getElementById('viewerFrame');
       (f.webkitEnterFullscreen || f.requestFullscreen)?.call(f);
     }
@@ -990,7 +1085,6 @@ function fullscreenApp() {
     document.exitFullscreen?.();
   }
 }
-// ปิด viewer ด้วยปุ่ม ESC (เฉพาะตอนไม่ได้อยู่ fullscreen)
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.fullscreenElement
       && document.getElementById('appViewer').style.display === 'flex') closeAppViewer();
@@ -1017,13 +1111,13 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-// AdSense — แสดงโฆษณาจริงถ้าตั้งค่า Publisher ID แล้ว ไม่งั้นแสดง placeholder
+// AdSense — แสดงเมื่อตั้งค่า Publisher ID แล้วเท่านั้น
 function adSlot() {
   if (S.adsense_id) {
     return `<ins class="adsbygoogle" style="display:block;margin:20px 0;"
       data-ad-client="${S.adsense_id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
   }
-  return '';  // ยังไม่มี AdSense → ไม่แสดงอะไรเลย ไม่กินพื้นที่
+  return '';
 }
 
 function activateAds() {
@@ -1071,7 +1165,7 @@ async function submitLock() {
     });
     const d = await r.json();
     if (r.ok && d.url) {
-      sessionStorage.setItem('unlocked_' + _lockAppId, d.url);  // เก็บ URL จริง ไม่ใช่ '1'
+      sessionStorage.setItem('unlocked_' + _lockAppId, d.url);
       closeLockModal();
       openAppViewer(d.url, _lockTitle, _lockIcon);
     } else {
@@ -1085,21 +1179,19 @@ async function submitLock() {
 async function init() {
   try {
     S = await get('/settings');
-    const title = S.site_title || 'EduApps TH';
+    const title = S.site_title || 'Kru-ti ครูติ TH';
     document.getElementById('pageTitle').textContent = title;
     document.getElementById('metaDesc').content = S.site_desc || '';
     document.getElementById('logoTitle').textContent = title.replace(' TH','');
     document.getElementById('footerLogo').textContent = '✦ ' + title;
     document.getElementById('footerText').textContent = '© 2568 ' + title;
 
-    // Open Graph / Twitter meta สำหรับแชร์โซเชียล
     setMeta('og:title', title);
     setMeta('og:description', S.site_desc || '');
     setMeta('og:type', 'website');
     setMeta('og:url', location.href);
     setMeta('twitter:card', 'summary');
 
-    // โหลด AdSense loader script ถ้าตั้งค่าแล้ว
     if (S.adsense_id) {
       const sc = document.createElement('script');
       sc.async = true;
@@ -1121,28 +1213,26 @@ async function init() {
   }).catch(()=>{});
 }
 
-// ── TICKER: คุมความเร็วด้วยพิกเซลตรงๆ (px/วินาที คงที่เสมอ) ──
+// ── TICKER: ความเร็วคงที่ px/วินาที ──
 let _tickerAnim = null;
 function startTicker(el) {
   const run = () => {
     if (_tickerAnim) _tickerAnim.cancel();
-    const inner = el.parentElement;            // .ticker-inner
-    const containerW = inner.offsetWidth;      // ความกว้างหน้าต่างที่เห็น
-    const textW = el.scrollWidth;              // ความกว้างข้อความจริง
+    const inner = el.parentElement;
+    const containerW = inner.offsetWidth;
+    const textW = el.scrollWidth;
     if (textW < 5) return;
-    const SPEED = 50;                          // px ต่อวินาที (ยิ่งน้อยยิ่งช้า)
-    const distance = containerW + textW;       // วิ่งจากนอกขอบขวา → นอกขอบซ้าย
-    const dur = (distance / SPEED) * 1000;     // มิลลิวินาที
+    const SPEED = 50;
+    const distance = containerW + textW;
+    const dur = (distance / SPEED) * 1000;
     _tickerAnim = el.animate(
       [{ transform: `translateX(${containerW}px)` },
        { transform: `translateX(${-textW}px)` }],
       { duration: dur, iterations: Infinity, easing: 'linear' }
     );
   };
-  // วัดหลังฟอนต์โหลดเสร็จ (กันวัดความกว้างผิดตอนฟอนต์ยังไม่มา)
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
   else run();
-  // วัดใหม่เมื่อปรับขนาดจอ
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(run, 200); });
 }
 
@@ -1167,9 +1257,11 @@ window.openLockModal = openLockModal;
 window.redeemAll = redeemAll;
 window.closeLockModal = closeLockModal;
 window.submitLock = submitLock;
+window.filterApps = filterApps;
 window.setAppFilter = setAppFilter;
 window.setAppSort = setAppSort;
 window.go = go;
+window.goSearch = goSearch;
 window.toggleNav = toggleNav;
 window.renderBlog = renderBlog;
 window.submitComment = submitComment;
