@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+# ห้าม crawl API endpoints
+Disallow: /api/
+
+Sitemap: https://kru-ti.com/sitemap.xml
