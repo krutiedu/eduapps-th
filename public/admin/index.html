@@ -217,6 +217,39 @@ tr:hover td{background:#fafafa;}
 </div>
 
 <script>
+const PREVIEW_CSS = `:root{
+  --ink:#15223c; --ink-2:#1e3358; --ink-3:#2c4a7c;
+  --ink-soft:#41506b;
+  --gold:#f0a830; --gold-deep:#c47f0e; --gold-soft:rgba(240,168,48,.13);
+  --mint:#0fa294; --mint-soft:#e4f4f1;
+  --paper:#faf7f1; --card:#ffffff;
+  --line:#e8e1d3; --line-soft:#f1ecdf;
+  --slate:#6d7588;
+  --shadow-sm:0 2px 10px rgba(21,34,60,.07);
+  --shadow-md:0 10px 30px rgba(21,34,60,.11);
+  --shadow-lg:0 18px 50px rgba(21,34,60,.16);
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:26px;
+}
+.art-wrap{max-width:730px;margin:0 auto;padding:42px 22px;}
+.art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.38;margin-bottom:16px;}
+.art-body h2{font-size:1.42rem;font-weight:600;margin:30px 0 11px;}
+.art-body h3{font-size:1.14rem;font-weight:600;margin:22px 0 8px;}
+.art-body p{margin-bottom:14px;line-height:1.95;font-size:1.04rem;}
+.art-body ul,.art-body ol{margin:0 0 14px 22px;}
+.art-body li{margin-bottom:6px;line-height:1.85;}
+.art-body code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#f1ede4;
+.art-body pre{background:#f1ede4;border:1px solid var(--line);border-radius:11px;padding:15px;margin:15px 0;overflow-x:auto;}
+.art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--ink-soft);}
+.art-body blockquote{border-left:3px solid var(--gold);padding:12px 19px;margin:15px 0;
+.art-body a{color:var(--mint);text-decoration:underline;}
+.art-body a.dl-btn,.dl-btn{display:inline-flex;align-items:center;gap:8px;background:var(--mint);
+.dl-btn:hover{background:#0c8276;transform:translateY(-1px);box-shadow:0 5px 16px rgba(15,162,148,.32);}
+.art-body img{border-radius:11px;margin:13px 0;width:100%;}
+.art-body table{width:100%;border-collapse:collapse;margin:15px 0;font-size:.92rem;}
+.art-body th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--line);font-weight:700;color:var(--ink-soft);}
+.art-body td{padding:10px 12px;border-bottom:1px solid var(--line);}
+.art-body strong{color:var(--ink);}`;
+
 'use strict';
 const API    = '/api';
 const tok    = () => localStorage.getItem('_admtok');
@@ -395,10 +428,11 @@ async function renderArticles() {
 }
 
 async function editArticle(id) {
+  currentPage = 'new-article';
+  document.getElementById('sidebar').classList.remove('open');
   const full = await api.get('/articles/admin/' + id);
   if (full.error) { toast('❌ '+full.error); return; }
   renderArticleEditor(full);
-  nav('new-article');
 }
 
 async function delArticle(id, title) {
@@ -476,6 +510,7 @@ function renderArticleEditor(art) {
       <button onclick="insertDownload()" title="ปุ่มดาวน์โหลดไฟล์" style="color:#059669;">📥 ดาวน์โหลด</button>
       <button onclick="fmtBlock()" title="ข้อความอ้างอิง">❝ Quote</button>
       <button onclick="fmtCode()" title="โค้ด">‹ โค้ด</button>
+      <button onclick="previewArticle()" title="ดูตัวอย่างบทความ (เหมือนตอนเผยแพร่จริง)" style="color:#2563eb;font-weight:700;">👁 ดูตัวอย่าง</button>
       <button onclick="document.getElementById('editorBody').innerHTML=''" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
     </div>
     <div class="editor-body" id="editorBody" contenteditable="true">${art?.content||'<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'}</div>
@@ -484,12 +519,71 @@ function renderArticleEditor(art) {
 
   <div class="btn-group">
     <button class="btn btn-success" onclick="saveArticle()">💾 บันทึกบทความ</button>
+    <button class="btn btn-outline" onclick="previewArticle()">👁 ดูตัวอย่าง</button>
     <button class="btn btn-outline" onclick="nav('articles')">ยกเลิก</button>
   </div>`;
 
   // Focus editor
   const ed = document.getElementById('editorBody');
   ed.addEventListener('focus', () => { if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = ''; });
+}
+
+
+// ดูตัวอย่างบทความ — render ด้วย CSS ชุดเดียวกับเว็บจริง โดยไม่ต้องเผยแพร่
+function previewArticle() {
+  const title   = (document.getElementById('artTitle')?.value || '').trim() || '(ยังไม่ได้ใส่หัวข้อ)';
+  const cat     = document.getElementById('artCat')?.value || '';
+  const pub     = document.getElementById('artPub')?.value === '1';
+  const body    = document.getElementById('editorBody')?.innerHTML || '';
+  const author  = myName();
+  const today   = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
+  const esc = s => String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+  const statusBadge = pub
+    ? '<span style="background:#dcfce7;color:#15803d;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">✅ จะเผยแพร่</span>'
+    : '<span style="background:#fef3e2;color:#c2660c;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">📋 แบบร่าง (ดูตัวอย่าง)</span>';
+
+  const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตัวอย่าง: ${esc(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+${PREVIEW_CSS}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
+a{color:var(--mint);}
+.pv-bar{background:#15223c;color:#fff;padding:10px 22px;font-family:'Sarabun';font-size:.85rem;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10;}
+.pv-bar b{color:#f0a830;}
+.pv-bar button{background:#f0a830;color:#15223c;border:none;padding:7px 16px;border-radius:8px;
+  font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;}
+.art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;
+  padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
+.cat-tag{background:#ebf0fa;color:#3a5a9b;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
+</style></head>
+<body>
+<div class="pv-bar">
+  <span>👁 โหมดดูตัวอย่าง — นี่คือหน้าตาบทความเมื่อเผยแพร่จริง</span>
+  <button onclick="window.close()">✕ ปิดหน้าต่าง</button>
+</div>
+<div class="art-wrap">
+  <h1>${esc(title)}</h1>
+  <div class="art-info">
+    <span class="cat-tag">${esc(cat)}</span>
+    <span>📅 ${today}</span>
+    <span>✍️ ${esc(author)}</span>
+    ${statusBadge}
+  </div>
+  <div class="art-body">${body}</div>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=900,scrollbars=yes');
+  if (!w) { toast('❌ เบราว์เซอร์บล็อกป๊อปอัป — กรุณาอนุญาต popup สำหรับเว็บนี้'); return; }
+  w.document.write(html);
+  w.document.close();
 }
 
 function fmt(cmd)  { document.execCommand(cmd, false, null); document.getElementById('editorBody').focus(); }
@@ -842,7 +936,8 @@ async function renderCodes() {
             ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
             : '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>'}</td>
           <td style="white-space:nowrap;">
-            <button class="btn btn-outline btn-sm" onclick="openCodeModal(${c.id})">✏️</button>
+            <button class="btn btn-outline btn-sm" title="สร้างอีเมลส่งรหัสให้ลูกค้า" onclick="openEmailModal(${c.id})">📧</button>
+            <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})">✏️</button>
             <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${c.code}')">🗑</button>
           </td>
         </tr>`).join('')
@@ -953,6 +1048,188 @@ async function delCode(id, code) {
   await api.delete('/codes/'+id);
   toast('🗑 ลบรหัสแล้ว'); renderCodes();
 }
+
+// ══════════════════════════════════════════════════════════
+// EMAIL — สร้างอีเมลส่งรหัสให้ลูกค้า (คัดลอกวางใน Gmail ได้เลย)
+// ══════════════════════════════════════════════════════════
+function openEmailModal(id) {
+  const c = (window._codesData?.codes || []).find(x => x.id === id);
+  if (!c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
+
+  // ดึงรายชื่อแอปที่รหัสนี้ปลดได้
+  let appIds = []; try { appIds = JSON.parse(c.app_ids || '[]'); } catch {}
+  const allApps = window._allApps || [];
+  let appList;
+  if (appIds.includes('all')) {
+    appList = allApps.filter(a => a.locked).map(a => (a.icon||'') + ' ' + a.title);
+  } else {
+    appList = appIds.map(aid => {
+      const a = allApps.find(x => x.id === parseInt(aid) || x.id === aid);
+      return a ? (a.icon||'') + ' ' + a.title : null;
+    }).filter(Boolean);
+  }
+
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-ov" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:560px;">
+      <h3>📧 สร้างอีเมลส่งรหัส</h3>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:14px;">
+        กรอกชื่อลูกค้า → กดคัดลอก → วางในช่องเนื้อหา Gmail ได้เลย (ดีไซน์ติดมาทั้งหมด)
+      </p>
+      <div class="form-group">
+        <label class="form-label">ชื่อลูกค้า</label>
+        <input type="text" class="form-input" id="emName" placeholder="เช่น คุณครูสมหญิง" autofocus>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">รหัส</label>
+          <input type="text" class="form-input" id="emCode" value="${c.code}" readonly
+            style="background:#f8fafc;font-weight:700;letter-spacing:1px;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อแพ็กเกจ (แก้ได้)</label>
+          <input type="text" class="form-input" id="emPkg" value="${(c.label||'').replace(/"/g,'&quot;')}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">รายชื่อแอปในชุด (บรรทัดละแอป — แก้ได้)</label>
+        <textarea class="form-input" id="emApps" rows="4" style="resize:vertical;font-size:.9rem;">${appList.join('\n')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">หัวข้ออีเมล (กดคัดลอกแยก)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" class="form-input" id="emSubject" value="✦ รหัสปลดล็อกแอปของคุณมาถึงแล้ว — Kru-ti ครูติ TH" style="flex:1;">
+          <button class="btn btn-outline" style="white-space:nowrap;" onclick="navigator.clipboard.writeText(document.getElementById('emSubject').value);this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)">📋</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">ปิด</button>
+        <button class="btn btn-outline" onclick="previewEmail()">👁 ดูตัวอย่าง</button>
+        <button class="btn btn-primary" id="emCopyBtn" onclick="copyEmail()">📋 คัดลอกอีเมล (วางใน Gmail)</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildEmailHTML() {
+  const name = document.getElementById('emName').value.trim() || 'คุณครู';
+  const code = document.getElementById('emCode').value.trim();
+  const pkg  = document.getElementById('emPkg').value.trim() || 'แพ็กเกจของคุณ';
+  const apps = document.getElementById('emApps').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const siteUrl = location.origin + '/#/apps';
+  const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f1;padding:28px 12px;"><tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e8e1d3;">
+<tr><td style="background-color:#15223c;padding:30px 36px 26px;text-align:center;">
+  <div style="font-size:30px;line-height:1;color:#f0a830;margin-bottom:10px;">&#10022;</div>
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:21px;font-weight:bold;color:#ffffff;">Kru-ti ครูติ <span style="color:#f0a830;">TH</span></div>
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:12px;color:#9db0cc;margin-top:5px;">แอปการสอนและบทความ เพื่อครูไทย</div>
+</td></tr>
+<tr><td style="padding:34px 36px 10px;">
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:17px;font-weight:bold;color:#15223c;margin-bottom:14px;">เรียน ${esc(name)}</div>
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.9;color:#41506b;">
+    ขอบคุณที่สนับสนุน Kru-ti ครูติ TH ครับ &#127775;<br>
+    รหัสปลดล็อกสำหรับ <strong style="color:#15223c;">${esc(pkg)}</strong> ของคุณพร้อมใช้งานแล้ว
+  </div>
+</td></tr>
+<tr><td style="padding:22px 36px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="background-color:#fdf7ea;border:2px dashed #f0a830;border-radius:14px;padding:22px;text-align:center;">
+      <div style="font-family:Tahoma,Arial,sans-serif;font-size:11px;font-weight:bold;color:#c47f0e;letter-spacing:2px;margin-bottom:9px;">&#127903;&#65039; รหัสปลดล็อกของคุณ</div>
+      <div style="font-family:Courier New,Courier,monospace;font-size:26px;font-weight:bold;color:#15223c;letter-spacing:3px;">${esc(code)}</div>
+    </td>
+  </tr></table>
+</td></tr>
+<tr><td style="padding:6px 36px 8px;">
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;font-weight:bold;color:#15223c;margin-bottom:12px;">วิธีใช้รหัส (ใช้เวลาไม่ถึง 1 นาที)</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:1.8;color:#41506b;">
+    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">1.</td>
+        <td style="padding-bottom:8px;">เข้าเว็บ <a href="${siteUrl}" style="color:#0fa294;font-weight:bold;">kru-ti.com</a> แล้วไปที่หน้า <strong>แอปทั้งหมด</strong></td></tr>
+    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">2.</td>
+        <td style="padding-bottom:8px;">กรอกรหัสด้านบนในช่อง <strong>&#127903;&#65039; "มีรหัสปลดล็อก?"</strong> แล้วกดปุ่ม ปลดล็อก</td></tr>
+    <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;">3.</td>
+        <td>แอปทั้งหมดในชุดจะเปิดใช้งานได้ทันที &#128640;</td></tr>
+  </table>
+</td></tr>
+<tr><td style="padding:22px 36px;" align="center">
+  <a href="${siteUrl}" style="display:inline-block;background-color:#f0a830;color:#15223c;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 38px;border-radius:11px;">&#128275; ไปปลดล็อกแอปเลย</a>
+</td></tr>
+${apps.length ? `<tr><td style="padding:4px 36px 8px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="background-color:#faf7f1;border-radius:12px;padding:18px 22px;">
+      <div style="font-family:Tahoma,Arial,sans-serif;font-size:12.5px;font-weight:bold;color:#6d7588;letter-spacing:1px;margin-bottom:10px;">&#10022; แอปที่รหัสนี้ปลดล็อกได้</div>
+      <div style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:2;color:#41506b;">${apps.map(a=>'&#9989; '+esc(a)).join('<br>')}</div>
+    </td>
+  </tr></table>
+</td></tr>` : ''}
+<tr><td style="padding:14px 36px 6px;">
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:12.5px;line-height:1.8;color:#6d7588;">
+    <strong style="color:#41506b;">หมายเหตุ:</strong> กรุณาเก็บรหัสนี้ไว้เป็นความลับ ไม่ส่งต่อให้ผู้อื่น
+    หากกรอกรหัสแล้วพบปัญหา ตอบกลับอีเมลฉบับนี้ได้เลย เรายินดีช่วยเหลือทันที
+  </div>
+</td></tr>
+<tr><td style="padding:20px 36px 30px;">
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.9;color:#41506b;">
+    ขอบคุณที่ร่วมเดินทางไปกับเรา<br>
+    <strong style="color:#15223c;">ครูติ</strong><br>
+    <span style="font-size:12.5px;color:#6d7588;">Kru-ti ครูติ TH — แอปการสอนและบทความ เพื่อครูไทย</span>
+  </div>
+</td></tr>
+<tr><td style="background-color:#15223c;padding:18px 36px;text-align:center;">
+  <div style="font-family:Tahoma,Arial,sans-serif;font-size:11.5px;color:#9db0cc;line-height:1.9;">
+    <a href="${location.origin}" style="color:#f0a830;text-decoration:none;font-weight:bold;">kru-ti.com</a><br>
+    &#169; 2569 Kru-ti ครูติ TH
+  </div>
+</td></tr>
+</table>
+</td></tr></table>`;
+}
+
+async function copyEmail() {
+  const btn = document.getElementById('emCopyBtn');
+  const html = buildEmailHTML();
+  const plain = 'รหัสปลดล็อกของคุณ: ' + document.getElementById('emCode').value
+    + '\nใช้งานที่ ' + location.origin + '/#/apps';
+  try {
+    // วิธีหลัก: ClipboardItem แบบ text/html → วางใน Gmail ติด format เต็ม
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/html':  new Blob([html],  { type: 'text/html' }),
+        'text/plain': new Blob([plain], { type: 'text/plain' }),
+      })
+    ]);
+    btn.textContent = '✅ คัดลอกแล้ว — ไปวางใน Gmail ได้เลย';
+    setTimeout(() => btn.textContent = '📋 คัดลอกอีเมล (วางใน Gmail)', 2500);
+  } catch (e) {
+    // fallback: execCommand บน div ชั่วคราว (เบราว์เซอร์เก่า)
+    const tmp = document.createElement('div');
+    tmp.contentEditable = 'true';
+    tmp.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    tmp.innerHTML = html;
+    document.body.appendChild(tmp);
+    const range = document.createRange();
+    range.selectNodeContents(tmp);
+    const sel = getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    const ok = document.execCommand('copy');
+    sel.removeAllRanges(); tmp.remove();
+    if (ok) {
+      btn.textContent = '✅ คัดลอกแล้ว — ไปวางใน Gmail ได้เลย';
+      setTimeout(() => btn.textContent = '📋 คัดลอกอีเมล (วางใน Gmail)', 2500);
+    } else {
+      toast('❌ คัดลอกไม่สำเร็จ — ลองใช้ปุ่มดูตัวอย่างแล้วคัดลอกเอง');
+    }
+  }
+}
+
+function previewEmail() {
+  const w = window.open('', '_blank', 'width=640,height=800');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ตัวอย่างอีเมล</title></head><body style="margin:0;">'
+    + buildEmailHTML() + '</body></html>');
+  w.document.close();
+}
+
 
 async function uploadPreviewImg() {
   const inp = document.createElement('input');
@@ -1265,6 +1542,11 @@ window.delApp = delApp;
 window.addCat = addCat;
 window.removeCat = removeCat;
 window.openCodeModal = openCodeModal;
+window.openEmailModal = openEmailModal;
+window.buildEmailHTML = buildEmailHTML;
+window.copyEmail = copyEmail;
+window.previewEmail = previewEmail;
+window.previewArticle = previewArticle;
 window.saveCode = saveCode;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
