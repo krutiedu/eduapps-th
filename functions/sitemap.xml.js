@@ -7,11 +7,9 @@ export async function onRequest({ env }) {
   const today = new Date().toISOString().split('T')[0];
 
   // หน้า static ที่ต้องการให้ Google index
+  // หมายเหตุ: Google ไม่ index URL ที่มี # (fragment) — ใส่เฉพาะ URL จริง
   const staticPages = [
-    { url: `${BASE}/`,         priority: '1.0', freq: 'daily'   },
-    { url: `${BASE}/#/blog`,   priority: '0.9', freq: 'daily'   },
-    { url: `${BASE}/#/apps`,   priority: '0.9', freq: 'weekly'  },
-    { url: `${BASE}/#/about`,  priority: '0.4', freq: 'monthly' },
+    { url: `${BASE}/`, priority: '1.0', freq: 'daily' },
   ];
 
   // ดึงบทความที่เผยแพร่แล้วจาก D1
@@ -26,7 +24,7 @@ export async function onRequest({ env }) {
       .all();
 
     articleUrls = results.map(a => ({
-      url:      `${BASE}/#/article/${a.id}`,
+      url:      `${BASE}/article/${a.id}`,
       lastmod:  (a.updated_at || a.created_at || today).split('T')[0],
       priority: '0.8',
       freq:     'monthly',
