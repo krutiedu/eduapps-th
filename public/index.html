@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" id="metaDesc" content="">
+<link rel="canonical" id="canonical" href="https://kru-ti.com/">
+<script type="application/ld+json" id="jsonld">{}</script>
 <title id="pageTitle">Kru-ti ครูติ TH</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2315223c'/><text x='16' y='13' text-anchor='middle' fill='%23f0a830' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -493,6 +495,10 @@ function route() {
   document.getElementById('navLinks').classList.remove('open');
   const _cs = document.getElementById('crownSlot');
   if (_cs && h !== '/' && h !== '') _cs.innerHTML = '';
+  // reset meta ให้ site default ก่อน render ทุกหน้า (บทความจะ set ทับอีกครั้ง)
+  if (h !== location.hash?.slice(1) || !h.startsWith('/article/')) {
+    setPageMeta({ url: location.origin + location.pathname + location.hash });
+  }
   window.scrollTo(0,0);
   if (h === '/' || h === '')         renderHome();
   else if (h === '/blog')            renderBlog();
@@ -698,6 +704,43 @@ async function renderArticle(slugOrId) {
     </div>
   </div>`;
   activateAds();
+
+  // ── SEO: meta + JSON-LD สำหรับบทความนี้ ──
+  const siteTitle = S.site_title || 'Kru-ti ครูติ TH';
+  const artUrl = `${location.origin}/#/article/${art.id}`;
+  setPageMeta({
+    title: art.title,
+    desc:  art.excerpt || art.title,
+    image: art.image_url || '',
+    url:   artUrl,
+    type:  'article',
+    ld: {
+      '@context': 'https://schema.org',
+      '@type':    'Article',
+      headline:   art.title,
+      description: art.excerpt || '',
+      image:       art.image_url ? [art.image_url] : [],
+      datePublished: art.created_at || '',
+      dateModified:  art.updated_at || art.created_at || '',
+      author: {
+        '@type': 'Person',
+        name:    art.author_name || S.author_name || 'Kru-ti ครูติ',
+        url:     location.origin + '/#/about',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name:    siteTitle,
+        logo: {
+          '@type': 'ImageObject',
+          url: `${location.origin}/favicon.ico`,
+        },
+      },
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id':   artUrl,
+      },
+    },
+  });
 }
 
 async function submitComment(articleId) {
@@ -1182,11 +1225,11 @@ async function init() {
     document.getElementById('footerLogo').textContent = title;
     document.getElementById('footerText').textContent = '© 2568 ' + title;
 
-    setMeta('og:title', title);
-    setMeta('og:description', S.site_desc || '');
-    setMeta('og:type', 'website');
-    setMeta('og:url', location.href);
-    setMeta('twitter:card', 'summary');
+    setPageMeta({
+      title: '',
+      desc:  S.site_desc || '',
+      url:   location.origin + '/',
+    });
 
     if (S.adsense_id) {
       const sc = document.createElement('script');
@@ -1230,6 +1273,30 @@ function startTicker(el) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
   else run();
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(run, 200); });
+}
+
+
+// ── SEO: อัปเดต meta tags ต่อหน้า ─────────────────────────
+function setPageMeta({ title, desc, image, url, type = 'website', ld = null } = {}) {
+  const siteTitle = S.site_title || 'Kru-ti ครูติ TH';
+  const fullTitle = title ? `${title} — ${siteTitle}` : siteTitle;
+  const canon = url || location.origin + location.pathname + location.hash;
+
+  document.getElementById('pageTitle').textContent = fullTitle;
+  document.getElementById('metaDesc').content       = desc || S.site_desc || '';
+  document.getElementById('canonical').href         = canon;
+
+  setMeta('og:title',       fullTitle);
+  setMeta('og:description', desc || S.site_desc || '');
+  setMeta('og:url',         canon);
+  setMeta('og:type',        type);
+  if (image) setMeta('og:image', image);
+  setMeta('twitter:card',  image ? 'summary_large_image' : 'summary');
+  setMeta('twitter:title', fullTitle);
+
+  // JSON-LD structured data
+  const jel = document.getElementById('jsonld');
+  if (jel) jel.textContent = ld ? JSON.stringify(ld) : '{}';
 }
 
 function setMeta(prop, content) {
