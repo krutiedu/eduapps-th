@@ -220,14 +220,14 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 
 /* ── ชั้นแอปน้ำเงิน (สลับจังหวะกับกระดาษ) ── */
 .apps-box{background:linear-gradient(150deg,var(--ink) 20%,var(--ink-2) 75%,#1d3458);
-  border-radius:26px;padding:38px 36px 36px;margin-bottom:34px;position:relative;z-index:1;overflow:visible;}
+  border-radius:26px;padding:38px 36px 36px;margin-bottom:34px;position:relative;z-index:100;overflow:visible;}
 .apps-box .sec-title{color:#fff;}
 .apps-box .sec-sub{color:#8fa0bf;}
 .apps-box .sec-more{color:var(--gold-bright);}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
 .app-card{border:1px solid var(--line);border-radius:16px;padding:19px;background:var(--card);
-  transition:transform .2s,box-shadow .2s,background .2s;position:relative;}
-.app-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);z-index:50;}
+  transition:top .18s,box-shadow .22s,background .2s,border-color .2s;position:relative;top:0;}
+.app-card:hover{top:-4px;box-shadow:var(--shadow-md);border-color:#ded2b8;}
 .apps-box .app-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);}
 .apps-box .app-card:hover{background:rgba(255,255,255,.11);box-shadow:none;}
 .apps-box .app-card h4{color:#fff;}
