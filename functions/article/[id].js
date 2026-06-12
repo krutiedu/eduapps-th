@@ -23,6 +23,20 @@ export async function onRequest({ params, env, request }) {
     }
   } catch (e) { /* DB error → 404 ด้านล่าง */ }
 
+  // ── บทความที่เกี่ยวข้อง: หมวดเดียวกัน 3 ชิ้น ──
+  let related = [];
+  if (art) {
+    try {
+      const { results } = await env.DB
+        .prepare(`SELECT id, title, category, excerpt, created_at FROM articles
+                  WHERE published=1 AND id != ?
+                  ORDER BY (category = ?) DESC, created_at DESC
+                  LIMIT 3`)
+        .bind(art.id, art.category || '').all();
+      related = results || [];
+    } catch (e) { /* related เป็นของเสริม */ }
+  }
+
   if (!art) {
     return new Response(page404(BASE), {
       status: 404,
@@ -105,6 +119,16 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canon)}" target="_blank" rel="noopener">💬 LINE</a>
     <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canon)}" target="_blank" rel="noopener">📘 Facebook</a>
   </div>
+  ${related.length ? `
+  <div class="related">
+    <h2 class="rel-head">บทความที่เกี่ยวข้อง</h2>
+    ${related.map(r => `
+    <a class="rel-card" href="${BASE}/article/${r.id}">
+      <span class="rel-cat">${esc(r.category || '')}</span>
+      <span class="rel-title">${esc(r.title)}</span>
+      <span class="rel-date">${fmtThai(r.created_at)}</span>
+    </a>`).join('')}
+  </div>` : ''}
   <div class="more">
     <a href="${BASE}/#/blog">อ่านบทความอื่น →</a>
     <a href="${BASE}/#/apps">ดูแอปการสอนทั้งหมด →</a>
@@ -189,6 +213,14 @@ nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:ce
 .share{margin-top:30px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem;}
 .share a{border:1.5px solid var(--line);background:#fff;padding:7px 16px;border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700;font-size:.84rem;}
 .share a:hover{border-color:var(--gold);}
+.related{margin-top:38px;padding-top:26px;border-top:1px solid var(--line);}
+.rel-head{font-size:1.25rem;font-weight:600;margin-bottom:14px;position:relative;padding-left:16px;}
+.rel-head::before{content:"";position:absolute;left:0;top:10%;bottom:10%;width:4px;border-radius:3px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));}
+.rel-card{display:block;background:#fff;border:1px solid var(--line);border-radius:13px;padding:15px 18px;margin-bottom:10px;text-decoration:none;color:var(--ink);transition:border-color .15s;}
+.rel-card:hover{border-color:var(--gold);}
+.rel-cat{display:inline-block;background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.71rem;font-weight:700;margin-bottom:6px;}
+.rel-title{display:block;font-family:'Pridi',serif;font-size:1.02rem;font-weight:600;line-height:1.5;}
+.rel-date{display:block;font-size:.78rem;color:var(--slate);margin-top:5px;}
 .more{margin-top:26px;padding-top:22px;border-top:1px solid var(--line);display:flex;gap:20px;flex-wrap:wrap;}
 .more a{color:var(--gold-deep);font-weight:700;font-size:.92rem;text-decoration:none;}
 footer{background:var(--ink);color:rgba(255,255,255,.72);padding:24px 22px;text-align:center;font-size:.85rem;margin-top:48px;}
