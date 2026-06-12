@@ -35,6 +35,7 @@ export async function onRequest(ctx) {
     (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE')) ||
     path.startsWith('/codes') ||
     path.startsWith('/users') ||
+    path === '/backup' ||
     path === '/upload'
   );
 
@@ -56,6 +57,7 @@ export async function onRequest(ctx) {
     if (path.startsWith('/codes'))     return codes(request,     env, segments, method);
     if (path.startsWith('/users'))     return usersHandler(request, env, segments, method);
     if (path === '/upload' && method === 'POST') return upload(request, env);
+    if (path === '/backup' && method === 'GET')  return backupAll(env);
 
     return err('ไม่พบ endpoint', 404);
   } catch (e) {
@@ -540,6 +542,35 @@ async function codes(req, env, segs, method) {
 // ════════════════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════════════════
+// ── BACKUP: dump ทุกตารางเป็น JSON (admin เท่านั้น) ──────
+async function backupAll(env) {
+  const tables = ['articles', 'apps', 'access_codes', 'comments', 'users', 'settings'];
+  const dump = {
+    _meta: {
+      site: 'kru-ti.com',
+      exported_at: new Date().toISOString(),
+      note: 'สำรองข้อมูล D1 — เก็บไฟล์นี้ไว้ในที่ปลอดภัย ใช้กู้คืนข้อมูลได้',
+    },
+  };
+  for (const t of tables) {
+    try {
+      const { results } = await env.DB.prepare(`SELECT * FROM ${t}`).all();
+      // ไม่เก็บ password hash ของ users ใน backup ธรรมดา? เก็บไว้ — จำเป็นต่อการ restore
+      dump[t] = results;
+    } catch (e) {
+      dump[t] = { _error: String(e) };
+    }
+  }
+  const filename = `kruti-backup-${new Date().toISOString().split('T')[0]}.json`;
+  return new Response(JSON.stringify(dump, null, 2), {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      ...CORS,
+    },
+  });
+}
+
 function toSlug(text) {
   return text
     .toLowerCase()
