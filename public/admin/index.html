@@ -1960,6 +1960,28 @@ async function saveProfile() {
 }
 
 // ══════════════════════════════════════════════════════════
+// ── BACKUP: ดาวน์โหลดข้อมูลทั้งหมดเป็น JSON ─────────────
+async function downloadBackup() {
+  const btn = document.getElementById('backupBtn');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ กำลังสร้างไฟล์...'; btn.disabled = true;
+  try {
+    const token = localStorage.getItem('_admtok');
+    const resp = await fetch(API + '/backup', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) throw new Error('สำรองข้อมูลไม่สำเร็จ (' + resp.status + ')');
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'kruti-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✅ ดาวน์โหลดไฟล์สำรองแล้ว — เก็บไว้ในที่ปลอดภัย');
+  } catch(e) { toast('❌ ' + e.message); }
+  btn.textContent = orig; btn.disabled = false;
+}
+
 async function renderSettings() {
   const s = await api.get('/settings');
   let cats = [];
@@ -2005,6 +2027,14 @@ async function renderSettings() {
       <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input type="password" class="form-input" id="sNewPwd" placeholder="เว้นว่างเพื่อคงเดิม"></div>
       <div class="form-group"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input type="password" class="form-input" id="sNewPwd2" placeholder="ยืนยันอีกครั้ง"></div>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💾 สำรองข้อมูล (Backup)</div>
+    <p style="font-size:.88rem;color:#64748b;margin-bottom:12px;">
+      ดาวน์โหลดข้อมูลทั้งหมด (บทความ แอป รหัส คอมเมนต์ ผู้ใช้ ตั้งค่า) เป็นไฟล์ JSON
+      เก็บไว้ในที่ปลอดภัย — แนะนำสำรองเดือนละครั้ง หรือก่อนแก้ไขครั้งใหญ่
+    </p>
+    <button class="btn btn-outline" onclick="downloadBackup()" id="backupBtn">⬇️ ดาวน์โหลดไฟล์สำรองข้อมูล</button>
   </div>
   <div class="btn-group">
     <button class="btn btn-success" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
@@ -2107,6 +2137,7 @@ window.switchImgTab = switchImgTab;
 window.previewImgFile = previewImgFile;
 window.previewImgUrl = previewImgUrl;
 window.doInsertImg = doInsertImg;
+window.downloadBackup = downloadBackup;
 window.saveCode = saveCode;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
