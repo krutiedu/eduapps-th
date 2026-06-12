@@ -513,7 +513,7 @@ function route() {
   else if (h === '/about')           renderAbout();
   else if (h === '/buy')             renderBuy();
   else if (h === '/privacy')         renderPrivacy();
-  else                               document.getElementById('app').innerHTML = empty('ไม่พบหน้านี้','🌌');
+  else                               render404();
 }
 
 const go = hash => { location.hash = hash; };
@@ -665,7 +665,7 @@ async function renderArticle(slugOrId) {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
   const art = await get('/articles/' + slugOrId);
-  if (art.error) { app.innerHTML = empty('ไม่พบบทความ','📭'); return; }
+  if (art.error) { render404('ไม่พบบทความนี้ — อาจถูกลบหรือยังไม่เผยแพร่'); return; }
   // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
   const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
   // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
@@ -693,6 +693,7 @@ async function renderArticle(slugOrId) {
       <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
               onclick="navigator.clipboard.writeText('${shareUrl}');this.textContent='✓ คัดลอกแล้ว'">🔗 คัดลอกลิงก์</button>
     </div>
+    <div id="relatedBox"></div>
     <div class="comments-box" id="cmtBox">
       <h3>💬 ความคิดเห็น (${(cmtData.comments||[]).length})</h3>
       ${(cmtData.comments||[]).map(c=>`
@@ -750,6 +751,28 @@ async function renderArticle(slugOrId) {
       },
     },
   });
+
+  // ── บทความที่เกี่ยวข้อง: หมวดเดียวกัน 3 ชิ้น (ไม่นับตัวเอง) ──
+  loadRelated(art);
+}
+
+async function loadRelated(art) {
+  const box = document.getElementById('relatedBox');
+  if (!box) return;
+  try {
+    const data = await get('/articles?page=1');
+    let pool = (data.articles || []).filter(a => a.id !== art.id);
+    // หมวดเดียวกันก่อน → ถ้าไม่ครบ 3 เติมด้วยล่าสุด
+    const same  = pool.filter(a => a.category === art.category);
+    const other = pool.filter(a => a.category !== art.category);
+    const rel = [...same, ...other].slice(0, 3);
+    if (!rel.length) return;
+    box.innerHTML = `
+    <div style="margin-top:42px;padding-top:30px;border-top:1px solid var(--line);">
+      <div class="sec-title" style="font-size:1.25rem;margin-bottom:18px;">บทความที่เกี่ยวข้อง</div>
+      <div class="arts-grid">${rel.map(artCard).join('')}</div>
+    </div>`;
+  } catch(e) { /* เงียบ — related เป็นของเสริม */ }
 }
 
 async function submitComment(articleId) {
@@ -1205,6 +1228,33 @@ function fmt(d) {
   } catch { return d; }
 }
 
+// ── 404: หน้าหาย — พากลับ + แนะนำบทความ ──────────────────
+async function render404(msg) {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+  <div class="container" style="padding:60px 22px 40px;text-align:center;">
+    <div style="font-family:'Pridi',serif;font-size:5rem;font-weight:700;color:var(--gold);line-height:1;">4✦4</div>
+    <h1 style="font-size:1.5rem;margin:14px 0 8px;">${msg || 'ไม่พบหน้านี้'}</h1>
+    <p style="color:var(--slate);margin-bottom:24px;">ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="go('/')">🏠 กลับหน้าหลัก</button>
+      <button class="btn btn-outline" onclick="go('/apps')">ดูแอปทั้งหมด</button>
+    </div>
+    <div id="nf-arts" style="text-align:left;max-width:880px;margin:48px auto 0;"></div>
+  </div>`;
+  setPageMeta({ title: 'ไม่พบหน้านี้' });
+  // แนะนำบทความล่าสุด
+  try {
+    const data = await get('/articles?page=1');
+    const arts = (data.articles || []).slice(0, 3);
+    if (arts.length) {
+      document.getElementById('nf-arts').innerHTML = `
+        <div class="sec-title" style="font-size:1.2rem;margin-bottom:16px;">หรืออ่านบทความล่าสุด</div>
+        <div class="arts-grid">${arts.map(artCard).join('')}</div>`;
+    }
+  } catch(e) {}
+}
+
 function empty(msg, icon='📭') {
   return `<div class="empty"><div style="font-size:2.5rem;margin-bottom:12px;">${icon}</div><p>${msg}</p></div>`;
 }
@@ -1380,6 +1430,8 @@ window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderBuy = renderBuy;
+window.loadRelated = loadRelated;
+window.render404 = render404;
 window.renderPrivacy = renderPrivacy;
 window.openLockModal = openLockModal;
 window.redeemAll = redeemAll;
