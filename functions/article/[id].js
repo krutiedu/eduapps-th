@@ -37,7 +37,7 @@ export async function onRequest({ params, env, request }) {
   const excerpt  = esc(art.excerpt || art.title);
   const author   = esc(art.author_name || 'Kru-ti ครูติ');
   const canon    = `${BASE}/article/${art.id}`;
-  const img      = art.image_url || '';
+  const img      = art.image_url || `${BASE}/og-image.png`; // ไม่มีรูปปก → ใช้รูปแบรนด์
   const dateISO  = (art.created_at || '').replace(' ', 'T');
   const dateThai = fmtThai(art.created_at);
 
