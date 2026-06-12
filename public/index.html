@@ -6,6 +6,10 @@
 <meta name="description" id="metaDesc" content="">
 <link rel="canonical" id="canonical" href="https://kru-ti.com/">
 <script type="application/ld+json" id="jsonld">{}</script>
+<meta property="og:image" content="https://kru-ti.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <title id="pageTitle">Kru-ti ครูติ TH</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2315223c'/><text x='16' y='13' text-anchor='middle' fill='%23f0a830' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1350,8 +1354,8 @@ function setPageMeta({ title, desc, image, url, type = 'website', ld = null } = 
   setMeta('og:description', desc || S.site_desc || '');
   setMeta('og:url',         canon);
   setMeta('og:type',        type);
-  if (image) setMeta('og:image', image);
-  setMeta('twitter:card',  image ? 'summary_large_image' : 'summary');
+  setMeta('og:image', image || (location.origin + '/og-image.png'));
+  setMeta('twitter:card',  'summary_large_image');
   setMeta('twitter:title', fullTitle);
 
   // JSON-LD structured data
