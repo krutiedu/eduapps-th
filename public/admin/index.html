@@ -1537,8 +1537,22 @@ function openCodeModal(id) {
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">วันหมดอายุ (เว้นว่าง = ไม่หมดอายุ)</label>
-          <input type="date" class="form-input" id="cExpiry" value="${c?.expires_at?c.expires_at.split('T')[0]:''}">
+          <label class="form-label">อายุการใช้งานรหัส</label>
+          <select class="form-input" id="cDuration" onchange="onDurationChange()">
+            <option value="">ไม่หมดอายุ (ใช้ได้ตลอด)</option>
+            <option value="1">1 วัน</option>
+            <option value="3">3 วัน</option>
+            <option value="7">7 วัน</option>
+            <option value="15">15 วัน</option>
+            <option value="30">1 เดือน (30 วัน)</option>
+            <option value="365">1 ปี (365 วัน)</option>
+            <option value="custom" ${c?.expires_at ? 'selected' : ''}>📅 กำหนดวันหมดอายุเอง</option>
+          </select>
+          <p style="font-size:.78rem;color:#64748b;margin-top:6px;" id="cDurationHint">
+            นับจากเวลาที่กดบันทึก — เช่น เลือก 7 วัน รหัสจะหมดอายุอีก 7 วันข้างหน้าพอดี (รวมเวลา ไม่ใช่แค่สิ้นวัน)
+          </p>
+          <input type="datetime-local" class="form-input" id="cExpiry" style="display:${c?.expires_at ? '' : 'none'};margin-top:8px;"
+            value="${c?.expires_at ? c.expires_at.slice(0,16) : ''}">
         </div>
         <div class="form-group">
           <label class="form-label">แอปที่ปลดล็อก</label>
@@ -1574,6 +1588,22 @@ function openCodeModal(id) {
   });
 }
 
+// สลับช่องกำหนดวันเอง + ปรับ hint ตาม dropdown
+function onDurationChange() {
+  const dur = document.getElementById('cDuration').value;
+  const exp = document.getElementById('cExpiry');
+  const hint = document.getElementById('cDurationHint');
+  if (dur === 'custom') {
+    exp.style.display = '';
+    hint.textContent = 'เลือกวันและเวลาที่ต้องการให้รหัสหมดอายุ';
+  } else {
+    exp.style.display = 'none';
+    hint.textContent = dur
+      ? 'นับจากเวลาที่กดบันทึก — เช่น เลือก 7 วัน รหัสจะหมดอายุอีก 7 วันข้างหน้าพอดี (รวมเวลา ไม่ใช่แค่สิ้นวัน)'
+      : 'รหัสนี้จะใช้ได้ตลอด ไม่มีวันหมดอายุ';
+  }
+}
+
 async function saveCode(id) {
   const code  = document.getElementById('cCode').value.trim();
   const label = document.getElementById('cLabel').value.trim();
@@ -1583,9 +1613,19 @@ async function saveCode(id) {
   if (!allChecked) {
     document.querySelectorAll('.cAppCb:checked').forEach(cb => appIds.push(parseInt(cb.value)));
   }
+  // คำนวณวันหมดอายุจาก dropdown อายุ หรือกำหนดเอง
+  const dur = document.getElementById('cDuration').value;
+  let expires_at = null;
+  if (dur === 'custom') {
+    const v = document.getElementById('cExpiry').value;
+    expires_at = v ? new Date(v).toISOString() : null;
+  } else if (dur) {
+    // now + N วัน (รวมเวลาเต็ม ไม่ใช่แค่สิ้นวัน)
+    expires_at = new Date(Date.now() + parseInt(dur) * 86400000).toISOString();
+  }
   const body = {
     code, label, app_ids: appIds,
-    expires_at: document.getElementById('cExpiry').value || null,
+    expires_at,
     active: document.getElementById('cActive').checked,
   };
   const res = id && id !== 'null'
@@ -2139,6 +2179,7 @@ window.previewImgUrl = previewImgUrl;
 window.doInsertImg = doInsertImg;
 window.downloadBackup = downloadBackup;
 window.saveCode = saveCode;
+window.onDurationChange = onDurationChange;
 window.delCode = delCode;
 window.uploadPreviewImg = uploadPreviewImg;
 window.insertDownload = insertDownload;
