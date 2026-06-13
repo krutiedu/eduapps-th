@@ -803,27 +803,86 @@ async function renderApps() {
   _appFilter = 'all';
   _appSort = 'newest';
   _appQ = '';
+
+  const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
+  const pills = [
+    {k:'all',    label:'ทั้งหมด'},
+    {k:'free',   label:'🆓 ฟรี'},
+    {k:'locked', label:'🔒 พรีเมียม'},
+    ...cats.map(c => ({k:c, label:c})),
+  ];
+  const pillHTML = pills.map(p =>
+    `<span class="cat-pill" data-k="${esc(p.k)}"
+      onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">${p.label}</span>`
+  ).join('');
+
+  const sortHTML = `
+    <select onchange="setAppSort(this.value)"
+      style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
+             font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
+      <option value="newest">🕐 ล่าสุด</option>
+      <option value="oldest">🕐 เก่าสุด</option>
+      <option value="name">🔤 ชื่อ A-Z</option>
+    </select>`;
+
+  const hasLocked = _allApps.some(a => a.locked);
+  const redeemHTML = hasLocked ? `
+    <div class="redeem-row rv2">
+      <span class="redeem-ico">🎟️</span>
+      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอปในชุด"
+             onkeydown="if(event.key==='Enter')redeemAll()">
+      <button onclick="redeemAll()">ปลดล็อก</button>
+      <span id="redeemMsg"></span>
+    </div>
+    <p style="text-align:center;font-size:.88rem;color:var(--slate);margin:-14px 0 24px;">
+      ยังไม่มีรหัส? <a href="#/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
+    </p>` : '';
+
+  // ── วาด shell ครั้งเดียว — search/filter/redeem อยู่นิ่ง ไม่ถูก re-render ──
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1>คลังแอปทั้งหมด</h1>
+        <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
+      </div>
+      ${sortHTML}
+    </div>
+    <div class="search-row rv" style="margin-bottom:14px;">
+      <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
+        oninput="filterApps(this.value)">
+    </div>
+    <div class="cat-strip rv2" id="appPills" style="margin-bottom:20px;">${pillHTML}</div>
+    ${redeemHTML}
+    ${adSlot()}
+    <div id="appsContent"></div>
+    <div style="margin-top:24px;">${adSlot()}</div>
+  </div>`;
   drawApps();
+  activateAds();
 }
 
+// วาดเฉพาะกริดแอป — ไม่แตะ input/search (กัน keyboard เด้งบนมือถือ)
 function drawApps() {
-  const app = document.getElementById('app');
-  const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
+  const cont = document.getElementById('appsContent');
+  if (!cont) return;
 
-  // --- sort ---
+  // sync สถานะ active ของ pills โดยไม่ rebuild (กัน reflow)
+  document.querySelectorAll('#appPills .cat-pill').forEach(el => {
+    el.classList.toggle('active', el.dataset.k === _appFilter);
+  });
+
   const sorted = [..._allApps].sort((a, b) => {
     if (_appSort === 'oldest') return (a.created_at||'') > (b.created_at||'') ? 1 : -1;
     if (_appSort === 'name')   return (a.title||'').localeCompare(b.title||'', 'th');
-    return (a.created_at||'') < (b.created_at||'') ? 1 : -1; // newest
+    return (a.created_at||'') < (b.created_at||'') ? 1 : -1;
   });
 
-  // --- filter ---
   let filtered = sorted;
-  if (_appFilter === 'free')   filtered = sorted.filter(a => !a.locked);
+  if (_appFilter === 'free')        filtered = sorted.filter(a => !a.locked);
   else if (_appFilter === 'locked') filtered = sorted.filter(a => a.locked);
   else if (_appFilter !== 'all')    filtered = sorted.filter(a => a.category === _appFilter);
 
-  // --- text search ---
   if (_appQ.trim()) {
     const q = _appQ.trim().toLowerCase();
     filtered = filtered.filter(a =>
@@ -832,30 +891,6 @@ function drawApps() {
     );
   }
 
-  // --- filter pills ---
-  const pills = [
-    {k:'all',    label:'ทั้งหมด'},
-    {k:'free',   label:'🆓 ฟรี'},
-    {k:'locked', label:'🔒 พรีเมียม'},
-    ...cats.map(c => ({k:c, label:c})),
-  ];
-
-  const pillHTML = pills.map(p =>
-    `<span class="cat-pill${_appFilter===p.k?' active':''}"
-      onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">
-      ${p.label}</span>`
-  ).join('');
-
-  const sortHTML = `
-    <select onchange="setAppSort(this.value)"
-      style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
-             font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
-      <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
-      <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
-      <option value="name"   ${_appSort==='name'  ?'selected':''}>🔤 ชื่อ A-Z</option>
-    </select>`;
-
-  // --- content ---
   let content = '';
   if (_appFilter === 'all' && filtered.length > 0) {
     const free   = filtered.filter(a => !a.locked);
@@ -875,41 +910,7 @@ function drawApps() {
   } else {
     content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
   }
-
-  // --- redeem ticket ---
-  const hasLocked = _allApps.some(a => a.locked);
-  const redeemHTML = hasLocked ? `
-    <div class="redeem-row rv2">
-      <span class="redeem-ico">🎟️</span>
-      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอปในชุด"
-             onkeydown="if(event.key==='Enter')redeemAll()">
-      <button onclick="redeemAll()">ปลดล็อก</button>
-      <span id="redeemMsg"></span>
-    </div>
-    <p style="text-align:center;font-size:.88rem;color:var(--slate);margin:-14px 0 24px;">
-      ยังไม่มีรหัส? <a href="#/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
-    </p>` : '';
-
-  app.innerHTML = `
-  <div class="container" style="padding-bottom:32px;">
-    <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-      <div>
-        <h1>คลังแอปทั้งหมด</h1>
-        <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
-      </div>
-      ${sortHTML}
-    </div>
-    <div class="search-row rv" style="margin-bottom:14px;">
-      <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..." value="${_appQ}"
-        oninput="filterApps(this.value)">
-    </div>
-    <div class="cat-strip rv2" style="margin-bottom:20px;">${pillHTML}</div>
-    ${redeemHTML}
-    ${adSlot()}
-    ${content}
-    <div style="margin-top:24px;">${adSlot()}</div>
-  </div>`;
-  activateAds();
+  cont.innerHTML = content;
 }
 
 // ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
