@@ -275,6 +275,11 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
   font-size:.88rem;font-weight:700;padding:10px 0;border-radius:10px;
   border:1px solid rgba(15,162,148,.25);cursor:pointer;transition:.15s;}
 .btn-pmt.active,.btn-pmt:hover{background:#d2efe9;}
+.btn-share{flex:0 0 auto;width:42px;background:var(--paper);color:var(--ink-soft);font-size:1rem;
+  padding:10px 0;border-radius:10px;border:1px solid var(--line);cursor:pointer;transition:.15s;}
+.btn-share:hover{border-color:var(--gold);color:var(--gold-deep);background:var(--gold-soft);}
+.apps-box .btn-share{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
+.apps-box .btn-share:hover{background:rgba(255,255,255,.18);border-color:var(--gold-bright);}
 .pmt-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   padding:12px;margin-top:9px;display:none;}
 .pmt-box.open{display:block;}
@@ -498,7 +503,9 @@ const token = () => localStorage.getItem('_tok');
 
 // ── ROUTER ───────────────────────────────────────────────
 function route() {
-  const h = location.hash.replace('#','') || '/';
+  const rawHash = location.hash.replace('#','') || '/';
+  const [h, queryStr] = rawHash.split('?');
+  const query = new URLSearchParams(queryStr || '');
   document.querySelectorAll('.nav-links a').forEach(a =>
     a.classList.toggle('active', a.dataset.r === h || (h==='/' && a.dataset.r==='/')));
   document.getElementById('navLinks').classList.remove('open');
@@ -512,7 +519,7 @@ function route() {
   if (h === '/' || h === '')         renderHome();
   else if (h === '/blog')            renderBlog();
   else if (h.startsWith('/article/'))renderArticle(h.slice(9));
-  else if (h === '/apps')            renderApps();
+  else if (h === '/apps')            renderApps(query.get('open'));
   else if (h === '/about')           renderAbout();
   else if (h === '/buy')             renderBuy();
   else if (h === '/privacy')         renderPrivacy();
@@ -798,7 +805,7 @@ async function submitComment(articleId) {
 // ── APPS PAGE ────────────────────────────────────────────
 let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
 
-async function renderApps() {
+async function renderApps(openId) {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
   const data = await get('/apps');
@@ -863,6 +870,21 @@ async function renderApps() {
   </div>`;
   drawApps();
   activateAds();
+
+  // ── แชร์ลิงก์: ?open=id → เปิดแอปอัตโนมัติ ──
+  if (openId) {
+    const target = _allApps.find(a => String(a.id) === String(openId));
+    if (target) {
+      const raw = sessionStorage.getItem('unlocked_' + target.id);
+      const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
+      if (target.locked && !storedUrl) {
+        // แอปล็อก → เด้ง modal ให้กรอกรหัส
+        openLockModal(target.id, target.title, target.icon || '🎮');
+      } else {
+        openAppViewer(storedUrl || target.url, target.title, target.icon || '🎮');
+      }
+    }
+  }
 }
 
 // วาดเฉพาะกริดแอป — ไม่แตะ input/search (กัน keyboard เด้งบนมือถือ)
@@ -1141,6 +1163,8 @@ function appCard(a) {
         : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
       }
       ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
+      <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
+        title="แชร์แอปนี้" aria-label="แชร์แอปนี้">🔗</button>
     </div>
     ${a.prompt ? `<div class="pmt-box" id="${pid}">
       <pre>${esc(a.prompt)}</pre>
@@ -1185,6 +1209,41 @@ function doCopyPre(pid, btn) {
 
 // ── APP PLAYER ───────────────────────────────────────────
 let _viewerUrl = '';
+// mini toast — แจ้งเตือนสั้นๆ มุมล่าง
+function toast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);'
+      + 'background:var(--ink);color:#fff;padding:13px 24px;border-radius:12px;font-family:\'Sarabun\',sans-serif;'
+      + 'font-size:.92rem;font-weight:600;box-shadow:0 10px 30px rgba(16,28,51,.3);z-index:10000;'
+      + 'opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;max-width:90vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 2600);
+}
+
+// แชร์แอป: สร้างลิงก์กลับมา kru-ti.com แล้วเปิด viewer อัตโนมัติ (เก็บสถิติ + เห็นแบรนด์)
+async function shareApp(id, title) {
+  const url = `${location.origin}/#/apps?open=${id}`;
+  const shareData = { title: `${title} — Kru-ti ครูติ`, text: `ลองใช้แอป "${title}" บน Kru-ti ครูติ`, url };
+  // มือถือ: ใช้ native share sheet ถ้ามี
+  if (navigator.share) {
+    try { await navigator.share(shareData); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  // เดสก์ท็อป: copy ลิงก์
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('✅ คัดลอกลิงก์แอปแล้ว — แชร์ได้เลย');
+  } catch (e) {
+    prompt('คัดลอกลิงก์นี้เพื่อแชร์:', url);
+  }
+}
+
 function openAppViewer(url, title, icon) {
   _viewerUrl = url;
   document.getElementById('viewerFrame').src = url;
@@ -1429,6 +1488,7 @@ window.togglePmt = togglePmt;
 window.doCopy = doCopy;
 window.doCopyPre = doCopyPre;
 window.openAppViewer = openAppViewer;
+window.shareApp = shareApp;
 window.closeAppViewer = closeAppViewer;
 window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
