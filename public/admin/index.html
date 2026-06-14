@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>จัดการเว็บ — Kru-ti ครูติ TH</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a5f'/><text x='16' y='13' text-anchor='middle' fill='%23f59e0b' font-size='10' font-family='sans-serif'>%E2%9C%A6</text><text x='16' y='25' text-anchor='middle' fill='white' font-size='13' font-weight='bold' font-family='sans-serif'>K</text></svg>">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -667,6 +667,11 @@ function showAdmin() {
 // ── NAVIGATION ────────────────────────────────────────────
 let currentPage = '';
 function nav(page) {
+  // ออกจากหน้าเขียนบทความ → บันทึกร่างทันที (กันข้อมูลหายตอนสลับเมนูเร็วๆ)
+  if (currentPage === 'new-article' && window._saveDraftNow) {
+    try { window._saveDraftNow(); } catch (e) {}
+    if (page !== 'new-article') window._saveDraftNow = null;
+  }
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page===page));
   document.getElementById('sidebar').classList.remove('open');
@@ -880,21 +885,35 @@ function renderArticleEditor(art) {
   const titleEl = document.getElementById('artTitle');
   const excerptEl = document.getElementById('artExcerpt');
 
-  // กู้คืนร่างที่ค้างไว้ (ถ้ามี และยังไม่เคยกรอก)
+  // กู้คืนร่างที่ค้างไว้
   try {
     const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
     if (saved && (saved.title || saved.excerpt || saved.content)) {
-      const hasContent = (titleEl.value.trim() || (ed.innerHTML.trim() && ed.innerHTML !== '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'));
-      if (!hasContent) {
-        const ago = saved.savedAt ? Math.round((Date.now() - saved.savedAt) / 60000) : 0;
-        const agoTxt = ago < 1 ? 'เมื่อสักครู่' : ago < 60 ? `${ago} นาทีที่แล้ว` : `${Math.round(ago/60)} ชั่วโมงที่แล้ว`;
-        const alert = document.getElementById('editorAlert');
-        alert.innerHTML = `
+      const isEmpty = !titleEl.value.trim() &&
+        (!ed.innerHTML.trim() || ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>');
+      const ageMin = saved.savedAt ? (Date.now() - saved.savedAt) / 60000 : 999;
+
+      if (isEmpty && !editingId) {
+        // เขียนบทความใหม่ + ฟอร์มว่าง → เติมร่างกลับทันที (สลับเมนูแล้วกลับมาข้อความยังอยู่)
+        titleEl.value = saved.title || '';
+        excerptEl.value = saved.excerpt || '';
+        if (saved.content) ed.innerHTML = saved.content;
+        // แจ้งเบาๆ ว่ากู้ร่างให้แล้ว พร้อมปุ่มทิ้งถ้าไม่ต้องการ
+        const agoTxt = ageMin < 1 ? 'เมื่อสักครู่' : ageMin < 60 ? `${Math.round(ageMin)} นาทีที่แล้ว` : `${Math.round(ageMin/60)} ชั่วโมงที่แล้ว`;
+        document.getElementById('editorAlert').innerHTML = `
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.85rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <span style="color:#15803d;">✓ กู้คืนร่างที่เขียนค้างไว้ให้แล้ว (${agoTxt})</span>
+            <button onclick="discardDraft('${draftKey}')" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;padding:5px 13px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.8rem;cursor:pointer;">เริ่มเขียนใหม่</button>
+          </div>`;
+      } else if (isEmpty && editingId) {
+        // แก้ไขบทความเดิม + มีร่างค้าง → ถามก่อน (ร่างอาจต่างจากตัวจริง)
+        const agoTxt = ageMin < 1 ? 'เมื่อสักครู่' : ageMin < 60 ? `${Math.round(ageMin)} นาทีที่แล้ว` : `${Math.round(ageMin/60)} ชั่วโมงที่แล้ว`;
+        document.getElementById('editorAlert').innerHTML = `
           <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:.88rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <span style="color:#1e40af;">📋 พบร่างที่บันทึกอัตโนมัติไว้ (${agoTxt})</span>
+            <span style="color:#1e40af;">📋 มีร่างที่แก้ไขค้างไว้ (${agoTxt})</span>
             <span style="display:flex;gap:8px;">
-              <button onclick="restoreDraft('${draftKey}')" style="background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">กู้คืนร่าง</button>
-              <button onclick="discardDraft('${draftKey}')" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">ทิ้งร่าง</button>
+              <button onclick="restoreDraft('${draftKey}')" style="background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">ใช้ร่างนี้</button>
+              <button onclick="discardDraft('${draftKey}')" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">ใช้ตัวจริง</button>
             </span>
           </div>`;
       }
@@ -903,25 +922,29 @@ function renderArticleEditor(art) {
 
   // บันทึกร่างอัตโนมัติ 2 วิ หลังหยุดพิมพ์
   let draftTimer = null;
+  const doSaveDraft = () => {
+    if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') return;
+    if (!titleEl.value.trim() && !excerptEl.value.trim() &&
+        (!ed.innerHTML.trim() || ed.innerHTML === '<p><br></p>')) return; // ว่างจริง ไม่บันทึก
+    const draft = {
+      title: titleEl.value, excerpt: excerptEl.value,
+      content: ed.innerHTML, savedAt: Date.now(),
+    };
+    try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch (e) {}
+    const ind = document.getElementById('draftIndicator');
+    if (ind) { ind.textContent = '✓ บันทึกร่างอัตโนมัติแล้ว'; ind.style.opacity = '1';
+      setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
+  };
   const saveDraft = () => {
     clearTimeout(draftTimer);
-    draftTimer = setTimeout(() => {
-      const content = ed.innerHTML;
-      if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') return;
-      const draft = {
-        title: titleEl.value, excerpt: excerptEl.value,
-        content, savedAt: Date.now(),
-      };
-      try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch (e) {}
-      const ind = document.getElementById('draftIndicator');
-      if (ind) { ind.textContent = '✓ บันทึกร่างอัตโนมัติแล้ว'; ind.style.opacity = '1';
-        setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
-    }, 2000);
+    draftTimer = setTimeout(doSaveDraft, 2000);
   };
   titleEl.addEventListener('input', saveDraft);
   excerptEl.addEventListener('input', saveDraft);
   ed.addEventListener('input', saveDraft);
 
+  // ให้ nav() เรียกบันทึกทันทีก่อนสลับหน้า
+  window._saveDraftNow = doSaveDraft;
   window._currentDraftKey = draftKey;
 }
 
