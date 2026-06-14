@@ -67,7 +67,7 @@ export async function onRequest({ params, env, request }) {
     publisher: {
       '@type': 'Organization',
       name: 'Kru-ti ครูติ TH',
-      logo: { '@type': 'ImageObject', url: `${BASE}/favicon.ico` },
+      logo: { '@type': 'ImageObject', url: `${BASE}/icon-512.png` },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': canon },
   }).replace(/</g, '\\u003c'); // กัน </script> breakout ใน JSON-LD
