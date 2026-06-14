@@ -443,6 +443,21 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
+/* เต็มจอจำลอง — ใช้ได้ทุกที่รวม iOS Safari standalone ที่ Fullscreen API ใช้ไม่ได้ */
+#appViewer.vb-full{padding:0!important;background:#000!important;}
+#appViewer.vb-full #viewerBox{
+  max-width:none!important;width:100%!important;height:100%!important;
+  height:100dvh!important;border-radius:0!important;
+}
+/* เผื่อ notch/home indicator บน iPad/iPhone standalone */
+#appViewer.vb-full #viewerBox > div:first-child{
+  padding-top:calc(9px + env(safe-area-inset-top))!important;
+  padding-left:calc(12px + env(safe-area-inset-left))!important;
+  padding-right:calc(12px + env(safe-area-inset-right))!important;
+}
+#appViewer.vb-full #viewerFrame{
+  padding-bottom:env(safe-area-inset-bottom);background:#fff;
+}
 </style>
 </head>
 <body>
@@ -500,7 +515,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
         <span id="viewerTitle" style="color:#fff;font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#f0a830;color:#15223c;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
+        <button id="fsBtn" onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#f0a830;color:#15223c;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
         <button onclick="openInNewTab()" title="เปิดแท็บใหม่" style="background:#2c4a7c;color:#cdd8ea;border:none;padding:6px 10px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">↗</button>
         <button onclick="closeAppViewer()" title="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
       </div>
@@ -1646,8 +1661,14 @@ function openAppViewer(url, title, icon) {
   document.body.style.overflow = 'hidden';
 }
 function closeAppViewer() {
-  if (document.fullscreenElement) document.exitFullscreen?.();
-  document.getElementById('appViewer').style.display = 'none';
+  const av = document.getElementById('appViewer');
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  }
+  av.classList.remove('vb-full');
+  const btn = document.getElementById('fsBtn');
+  if (btn) btn.innerHTML = '⛶ เต็มจอ';
+  av.style.display = 'none';
   document.getElementById('viewerFrame').src = 'about:blank';
   document.body.style.overflow = '';
 }
@@ -1655,23 +1676,47 @@ function openInNewTab() {
   if (_viewerUrl) window.open(_viewerUrl, '_blank');
 }
 function fullscreenApp() {
+  const av  = document.getElementById('appViewer');
   const box = document.getElementById('viewerBox');
-  if (!document.fullscreenElement) {
+  const btn = document.getElementById('fsBtn');
+  const isFull = av.classList.contains('vb-full');
+
+  if (!isFull) {
+    // ขยายเต็มจอ — CSS fullscreen ทำงานได้ทุกที่ (รวม iOS standalone)
+    av.classList.add('vb-full');
+    if (btn) btn.innerHTML = '🗗 ย่อ';
+    // เสริม: ลอง native Fullscreen API ด้วย (Android/desktop ได้ขอบจอเต็มจริง; iOS จะ no-op เฉยๆ)
     const req = box.requestFullscreen || box.webkitRequestFullscreen || box.msRequestFullscreen;
-    if (req) req.call(box);
-    else {
-      const f = document.getElementById('viewerFrame');
-      (f.webkitEnterFullscreen || f.requestFullscreen)?.call(f);
-    }
+    try { req?.call(box); } catch (_) {}
   } else {
-    document.exitFullscreen?.();
+    // ย่อกลับ
+    av.classList.remove('vb-full');
+    if (btn) btn.innerHTML = '⛶ เต็มจอ';
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    }
   }
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.fullscreenElement
-      && document.getElementById('appViewer').style.display === 'flex') closeAppViewer();
-  if (e.key === 'Escape' && document.getElementById('promptModal')?.style.display === 'flex') closePromptModal();
+  if (e.key === 'Escape' && document.getElementById('promptModal')?.style.display === 'flex') { closePromptModal(); return; }
+  if (e.key === 'Escape' && document.getElementById('appViewer').style.display === 'flex') {
+    // ถ้าเต็มจอ (CSS) อยู่ → ย่อก่อน; กด Escape อีกครั้งค่อยปิด
+    if (document.getElementById('appViewer').classList.contains('vb-full') && !document.fullscreenElement) {
+      fullscreenApp();
+    } else if (!document.fullscreenElement) {
+      closeAppViewer();
+    }
+  }
 });
+// ออกจาก native fullscreen ผ่านปุ่มระบบ → sync ปุ่ม/คลาสให้ตรง
+['fullscreenchange','webkitfullscreenchange'].forEach(ev =>
+  document.addEventListener(ev, () => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const av = document.getElementById('appViewer'), btn = document.getElementById('fsBtn');
+      if (av.classList.contains('vb-full')) { av.classList.remove('vb-full'); if (btn) btn.innerHTML = '⛶ เต็มจอ'; }
+    }
+  })
+);
 
 function catTag(cat) {
   const m = { 'เทคนิค':'tag tag-tech','วิชาการ':'tag tag-edu','AI & เครื่องมือ':'tag tag-ai','ข่าวการศึกษา':'tag tag-news' };
