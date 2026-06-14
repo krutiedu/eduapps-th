@@ -171,6 +171,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item" data-page="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
     <div class="nav-item" data-page="new-article" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
     <div class="nav-item admin-only" data-page="apps" onclick="nav('apps')" style="display:none;"><span class="ni">🎮</span> จัดการแอป</div>
+    <div class="nav-item admin-only" data-page="worksheets" onclick="nav('worksheets')" style="display:none;"><span class="ni">📄</span> จัดการใบงาน</div>
     <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
     <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
     <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
@@ -681,6 +682,7 @@ function nav(page) {
   if (page==='articles')     renderArticles();
   if (page==='new-article')  renderArticleEditor(null);
   if (page==='apps')         renderApps();
+  if (page==='worksheets')   renderWorksheets();
   if (page==='comments')     renderComments();
   if (page==='codes')        renderCodes();
   if (page==='users')        renderUsers();
@@ -818,7 +820,7 @@ function renderArticleEditor(art) {
       <div class="form-group">
         <label class="form-label">หมวดหมู่</label>
         <select class="form-select" id="artCat">
-          ${(()=>{let c=[];try{c=JSON.parse(localStorage.getItem('_cats')||'[]')}catch{}if(!c.length)c=['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู','ทั่วไป'];return c})().map(c=>
+          ${(()=>{let c=window._cats&&window._cats.length?window._cats:[];if(!c.length){try{c=JSON.parse(localStorage.getItem('_cats')||'[]')}catch{}}if(!c.length)c=['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู','ทั่วไป'];return c})().map(c=>
             `<option value="${c}" ${art?.category===c?'selected':''}>${c}</option>`).join('')}
         </select>
       </div>
@@ -1480,6 +1482,160 @@ async function delApp(id, title) {
 }
 
 // ══════════════════════════════════════════════════════════
+// WORKSHEETS (ใบงาน)
+// ══════════════════════════════════════════════════════════
+async function renderWorksheets() {
+  const data = await api.get('/worksheets/admin/list');
+  const wsArr = data.worksheets || [];
+  document.getElementById('content').innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div class="page-title" style="margin:0;">📄 จัดการใบงาน</div>
+    <button class="btn btn-primary" onclick="openWorksheetModal(null)">+ เพิ่มใบงานใหม่</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>ใบงาน</th><th>หมวด</th><th>สถานะ</th><th>ดาวน์โหลด</th><th>จัดการ</th></tr></thead>
+      <tbody>
+        ${wsArr.length ? wsArr.map(w=>`<tr style="${!w.visible?'opacity:.5;':''}">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              ${w.cover_image ? `<img src="${w.cover_image}" style="width:34px;height:44px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;">` : '<span style="font-size:1.3rem;">📄</span>'}
+              <strong>${w.title}</strong>
+            </div>
+          </td>
+          <td><span class="badge badge-gray">${w.category}</span></td>
+          <td style="white-space:nowrap;">
+            ${!w.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
+            ${w.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':'<span class="badge badge-green" style="margin-left:2px;">🆓 ฟรี</span>'}
+          </td>
+          <td style="text-align:center;">${w.downloads||0}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-outline btn-sm" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delWorksheet(${w.id},'${w.title.replace(/'/g,"\\'")}')">🗑</button>
+          </td>
+        </tr>`).join('')
+        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีใบงาน — กด "เพิ่มใบงานใหม่" เพื่อเริ่ม</td></tr>`}
+      </tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+function openWorksheetModal(id) {
+  api.get('/worksheets/admin/list').then(d => {
+    window._worksheets = d.worksheets || [];
+    const w = id ? window._worksheets.find(x=>x.id===id) : null;
+    document.getElementById('modal').innerHTML = `
+    <div class="modal-ov" onclick="closeModalSafe(event, this)">
+      <div class="modal">
+        <h3>${w ? '✏️ แก้ไขใบงาน' : '📄 เพิ่มใบงานใหม่'}</h3>
+        <div class="form-group"><label class="form-label">ชื่อใบงาน *</label><input type="text" class="form-input" id="wTitle" value="${w?.title||''}" placeholder="เช่น ใบงานคณิต ป.3 — การคูณหาร"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">หมวดหมู่</label><input type="text" class="form-input" id="wCat" value="${w?.category||''}" placeholder="เช่น คณิตศาสตร์"></div>
+          <div class="form-group"><label class="form-label">จำนวนหน้า</label><input type="number" class="form-input" id="wPages" value="${w?.pages||0}" min="0"></div>
+        </div>
+        <div class="form-group"><label class="form-label">คำอธิบาย</label><textarea class="form-ta" id="wDesc" style="min-height:80px;" placeholder="อธิบายเนื้อหาใบงาน เหมาะกับชั้นไหน ใช้ยังไง">${w?.description||''}</textarea></div>
+        <div class="form-group">
+          <label class="form-label">📎 ลิงก์ไฟล์ PDF (Google Drive ฯลฯ) *</label>
+          <input type="text" class="form-input" id="wFileUrl" value="${w?.file_url||''}" placeholder="https://drive.google.com/...">
+          <p style="font-size:.78rem;color:#64748b;margin-top:5px;">💡 อัปไฟล์ขึ้น Google Drive แล้วตั้งแชร์เป็น "ทุกคนที่มีลิงก์" แล้ววางลิงก์ที่นี่</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🖼️ รูปหน้าปก/ตัวอย่าง (แสดงตอน hover เป็น A4)</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" class="form-input" id="wCover" value="${w?.cover_image||''}" placeholder="https://... หรืออัปโหลดด้านล่าง" style="flex:1;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="uploadCoverImg()">📷 อัปโหลด</button>
+          </div>
+          ${w?.cover_image ? `<img class="cover-thumb" src="${w.cover_image}" style="margin-top:8px;width:120px;aspect-ratio:210/297;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;">` : ''}
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-weight:700;font-size:.9rem;margin-bottom:10px;color:#0f172a;">🔒 การเข้าถึงใบงาน</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
+              <input type="checkbox" id="wVisible" ${w?.visible!==0?'checked':''} onchange="document.getElementById('wVisibleNote').style.display=this.checked?'none':'block'">
+              <span>แสดงบนเว็บ</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;">
+              <input type="checkbox" id="wLocked" ${w?w.locked?'checked':'':'checked'} onchange="document.getElementById('wLockCodeWrap').style.display=this.checked?'block':'none'">
+              <span>ล็อกด้วยรหัส (ขาย)</span>
+            </label>
+          </div>
+          <div id="wVisibleNote" style="display:${w?.visible===0?'block':'none'};font-size:.83rem;color:#64748b;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:8px;">
+            🙈 ใบงานนี้ซ่อนอยู่ — คนเข้าเว็บไม่เห็น
+          </div>
+          <div id="wLockCodeWrap" style="display:${w?(w.locked?'block':'none'):'block'};">
+            <label class="form-label">รหัสเฉพาะใบงานนี้ (ไม่บังคับ)</label>
+            <input type="text" class="form-input" id="wLockCode" value="${w?.lock_code||''}" placeholder="เว้นว่างได้ถ้าใช้รหัสรวมจากหน้าจัดการรหัส">
+            <p style="font-size:.78rem;color:#64748b;margin-top:5px;">แนะนำผูกรหัสที่หน้า "รหัสปลดล็อก" แทน เพื่อใช้รหัสเดียวปลดได้หลายใบงาน</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+          <button class="btn btn-primary" onclick="saveWorksheet(${w?.id||'null'})">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+async function saveWorksheet(id) {
+  const title = document.getElementById('wTitle').value.trim();
+  if (!title) { alert('กรุณาใส่ชื่อใบงาน'); return; }
+  const fileUrl = document.getElementById('wFileUrl').value.trim();
+  if (!fileUrl) { alert('กรุณาใส่ลิงก์ไฟล์ PDF'); return; }
+  const locked = document.getElementById('wLocked').checked;
+  const body = {
+    title,
+    category: document.getElementById('wCat').value.trim() || 'อื่นๆ',
+    description: document.getElementById('wDesc').value.trim(),
+    cover_image: document.getElementById('wCover').value.trim(),
+    file_url: fileUrl,
+    pages: parseInt(document.getElementById('wPages').value) || 0,
+    visible: document.getElementById('wVisible').checked,
+    locked: locked,
+    lock_code: locked ? document.getElementById('wLockCode').value.trim() : '',
+  };
+  const res = id && id !== 'null'
+    ? await api.put('/worksheets/'+id, body)
+    : await api.post('/worksheets', body);
+  if (res.error) { toast('❌ '+res.error); return; }
+  closeModal(); toast('✅ บันทึกใบงานแล้ว');
+  renderWorksheets();
+}
+
+async function delWorksheet(id, title) {
+  if (!confirm(`ลบใบงาน "${title}" ?`)) return;
+  await api.delete('/worksheets/'+id);
+  toast('🗑 ลบใบงานแล้ว'); renderWorksheets();
+}
+
+async function uploadCoverImg() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    const btn = document.querySelector('[onclick="uploadCoverImg()"]');
+    if (btn) btn.textContent = '⏳ กำลังอัปโหลด...';
+    try {
+      const url = await uploadToImgbb(f);
+      if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
+      document.getElementById('wCover').value = url;
+      let img = document.querySelector('.cover-thumb');
+      if (!img) {
+        img = document.createElement('img'); img.className = 'cover-thumb';
+        img.style = 'margin-top:8px;width:120px;aspect-ratio:210/297;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;';
+        document.getElementById('wCover').parentNode.appendChild(img);
+      }
+      img.src = url;
+      toast('✅ อัปโหลดรูปปกแล้ว');
+    } catch(e) { toast('❌ ' + e.message); }
+    if (btn) btn.textContent = '📷 อัปโหลด';
+  };
+  inp.click();
+}
+
+// ══════════════════════════════════════════════════════════
 // COMMENTS
 // ══════════════════════════════════════════════════════════
 async function renderComments() {
@@ -1608,12 +1764,15 @@ async function renderCodes() {
 }
 
 function openCodeModal(id) {
-  api.get('/codes').then(d => {
+  Promise.all([api.get('/codes'), api.get('/worksheets/admin/list').catch(()=>({worksheets:[]}))]).then(([d, wd]) => {
     const c = id ? (d.codes||[]).find(x=>x.id===id) : null;
     let appIds = [];
     try { appIds = JSON.parse(c?.app_ids || '[]'); } catch {}
+    let wsIds = [];
+    try { wsIds = JSON.parse(c?.worksheet_ids || '[]'); } catch {}
     const allApps = window._allApps || [];
     const lockedApps = allApps.filter(a => a.locked);
+    const lockedWs = (wd.worksheets || []).filter(w => w.locked);
 
     document.getElementById('modal').innerHTML = `
     <div class="modal-ov" onclick="closeModalSafe(event, this)">
@@ -1670,6 +1829,27 @@ function openCodeModal(id) {
             </div>
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label">ใบงานที่ปลดล็อก</label>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
+              <input type="checkbox" id="cWsAll" ${wsIds.includes('all')?'checked':''}
+                onchange="document.getElementById('cWsList').style.opacity=this.checked?.3:1;document.querySelectorAll('.cWsCb').forEach(cb=>cb.disabled=this.checked)">
+              📄 ปลดทุกใบงานที่ล็อก
+            </label>
+            <div id="cWsList" style="opacity:${wsIds.includes('all')?.3:1};display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
+              ${lockedWs.length
+                ? lockedWs.map(w=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
+                    <input type="checkbox" class="cWsCb" value="${w.id}"
+                      ${(wsIds.includes(w.id)||wsIds.includes(String(w.id)))?'checked':''}
+                      ${wsIds.includes('all')?'disabled':''}>
+                    📄 ${w.title}
+                  </label>`).join('')
+                : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีใบงานที่ล็อก</span>'
+              }
+            </div>
+          </div>
+        </div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;font-size:.92rem;">
           <input type="checkbox" id="cActive" ${c ? (c.active?'checked':'') : 'checked'}>
           <span>เปิดใช้งานรหัสนี้</span>
@@ -1708,6 +1888,11 @@ async function saveCode(id) {
   if (!allChecked) {
     document.querySelectorAll('.cAppCb:checked').forEach(cb => appIds.push(parseInt(cb.value)));
   }
+  const wsAllChecked = document.getElementById('cWsAll').checked;
+  let wsIds = wsAllChecked ? ['all'] : [];
+  if (!wsAllChecked) {
+    document.querySelectorAll('.cWsCb:checked').forEach(cb => wsIds.push(parseInt(cb.value)));
+  }
   // คำนวณวันหมดอายุจาก dropdown อายุ หรือกำหนดเอง
   const dur = document.getElementById('cDuration').value;
   let expires_at = null;
@@ -1719,7 +1904,7 @@ async function saveCode(id) {
     expires_at = new Date(Date.now() + parseInt(dur) * 86400000).toISOString();
   }
   const body = {
-    code, label, app_ids: appIds,
+    code, label, app_ids: appIds, worksheet_ids: wsIds,
     expires_at,
     active: document.getElementById('cActive').checked,
   };
@@ -2203,6 +2388,12 @@ async function saveSettings() {
   const pwd  = document.getElementById('sNewPwd').value;
   const pwd2 = document.getElementById('sNewPwd2').value;
   if (pwd && pwd !== pwd2) { toast('❌ รหัสผ่านไม่ตรงกัน'); return; }
+  // เผื่อพิมพ์ชื่อหมวดค้างในช่องแล้วยังไม่กด +เพิ่ม → เพิ่มให้อัตโนมัติ
+  const pending = document.getElementById('newCatInput')?.value.trim();
+  if (pending && !getCatList().includes(pending)) {
+    window._cats.push(pending);
+    document.getElementById('newCatInput').value = '';
+  }
   const body = {
     site_title:  document.getElementById('sTitle').value,
     author_name: document.getElementById('sAuthor').value,
@@ -2214,7 +2405,13 @@ async function saveSettings() {
   };
   if (pwd) body.admin_password = pwd;
   const res = await api.put('/settings', body);
-  if (res.ok) { _imgbbKey = null; toast('✅ บันทึกการตั้งค่าแล้ว'); }
+  if (res.ok) {
+    _imgbbKey = null;
+    // อัปเดต localStorage ทันที — dropdown หน้าเขียนบทความจะเห็นหมวดใหม่โดยไม่ต้อง refresh
+    localStorage.setItem('_cats', JSON.stringify(getCatList()));
+    if (body.site_title) document.getElementById('sideTitle').textContent = '✦ '+body.site_title;
+    toast('✅ บันทึกการตั้งค่าแล้ว');
+  }
   else toast('❌ '+(res.error||'เกิดข้อผิดพลาด'));
 }
 
@@ -2314,6 +2511,11 @@ window.delArticle = delArticle;
 window.openAppModal = openAppModal;
 window.saveApp = saveApp;
 window.delApp = delApp;
+window.renderWorksheets = renderWorksheets;
+window.openWorksheetModal = openWorksheetModal;
+window.saveWorksheet = saveWorksheet;
+window.delWorksheet = delWorksheet;
+window.uploadCoverImg = uploadCoverImg;
 window.addCat = addCat;
 window.removeCat = removeCat;
 window.openCodeModal = openCodeModal;
