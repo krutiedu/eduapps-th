@@ -275,7 +275,8 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
   font-size:.88rem;font-weight:700;padding:10px 0;border-radius:10px;
   border:1px solid rgba(15,162,148,.25);cursor:pointer;transition:.15s;}
 .btn-pmt.active,.btn-pmt:hover{background:#d2efe9;}
-.btn-share{flex:0 0 auto;width:42px;background:var(--paper);color:var(--ink-soft);font-size:1rem;
+.btn-share{flex:0 0 auto;width:42px;background:var(--paper);color:var(--ink-soft);
+  display:flex;align-items:center;justify-content:center;
   padding:10px 0;border-radius:10px;border:1px solid var(--line);cursor:pointer;transition:.15s;}
 .btn-share:hover{border-color:var(--gold);color:var(--gold-deep);background:var(--gold-soft);}
 .apps-box .btn-share{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
@@ -1164,7 +1165,7 @@ function appCard(a) {
       }
       ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
-        title="แชร์แอปนี้" aria-label="แชร์แอปนี้">🔗</button>
+        title="แชร์แอปนี้" aria-label="แชร์แอปนี้"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg></button>
     </div>
     ${a.prompt ? `<div class="pmt-box" id="${pid}">
       <pre>${esc(a.prompt)}</pre>
@@ -1230,10 +1231,9 @@ function toast(msg) {
 // แชร์แอป: สร้างลิงก์กลับมา kru-ti.com แล้วเปิด viewer อัตโนมัติ (เก็บสถิติ + เห็นแบรนด์)
 async function shareApp(id, title) {
   const url = `${location.origin}/#/apps?open=${id}`;
-  const shareData = { title: `${title} — Kru-ti ครูติ`, text: `ลองใช้แอป "${title}" บน Kru-ti ครูติ`, url };
-  // มือถือ: ใช้ native share sheet ถ้ามี
+  // มือถือ: ใช้ native share sheet ถ้ามี — ส่ง url อย่างเดียว
   if (navigator.share) {
-    try { await navigator.share(shareData); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ url }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
   // เดสก์ท็อป: copy ลิงก์
   try {
