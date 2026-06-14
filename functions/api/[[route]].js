@@ -33,11 +33,12 @@ export async function onRequest(ctx) {
     (path.startsWith('/worksheets') && method !== 'GET' && !path.includes('/unlock') && !path.includes('/download')) ||
     (path.startsWith('/settings') && method !== 'GET') ||
     path.startsWith('/comments/admin') ||
+    (path.startsWith('/reports/admin')) ||
+    (path.startsWith('/reports') && (method === 'PUT' || method === 'DELETE')) ||
     (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE')) ||
     path.startsWith('/codes') ||
     path.startsWith('/users') ||
-    path === '/backup' ||
-    path === '/upload'
+    path === '/backup'
   );
 
   if (needsAuth) {
@@ -56,6 +57,7 @@ export async function onRequest(ctx) {
     if (path.startsWith('/worksheets'))return worksheets(request, env, segments, method);
     if (path.startsWith('/settings'))  return settings(request,  env, segments, method);
     if (path.startsWith('/comments'))  return comments(request,  env, segments, method);
+    if (path.startsWith('/reports'))   return reports(request,   env, segments, method);
     if (path.startsWith('/codes'))     return codes(request,     env, segments, method);
     if (path.startsWith('/users'))     return usersHandler(request, env, segments, method);
     if (path === '/upload' && method === 'POST') return upload(request, env);
@@ -549,6 +551,52 @@ async function comments(req, env, segs, method) {
 }
 
 // ════════════════════════════════════════════════════════
+// REPORTS (แจ้งปัญหา)
+// ════════════════════════════════════════════════════════
+async function reports(req, env, segs, method) {
+  const id = segs[1];
+  const action = segs[2];
+
+  // POST /reports — ส่งแจ้งปัญหา (สาธารณะ)
+  if (!id && method === 'POST') {
+    const b = await req.json();
+    if (!b.detail || !b.detail.trim()) return err('กรุณากรอกรายละเอียดปัญหา');
+    await env.DB.prepare(
+      'INSERT INTO reports (type,detail,contact,image_url) VALUES (?,?,?,?)'
+    ).bind(
+      (b.type || 'อื่นๆ').substring(0, 30),
+      b.detail.substring(0, 2000),
+      (b.contact || '').substring(0, 120),
+      (b.image_url || '').substring(0, 500)
+    ).run();
+    return ok({ ok: true, message: 'ส่งแจ้งปัญหาแล้ว ขอบคุณครับ' });
+  }
+
+  // GET /reports/admin/list
+  if (segs[1] === 'admin' && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT * FROM reports ORDER BY (status="new") DESC, created_at DESC').all();
+    return ok({ reports: results });
+  }
+
+  // PUT /reports/:id/status — เปลี่ยนสถานะ (new/doing/done)
+  if (id && action === 'status' && method === 'PUT') {
+    const b = await req.json();
+    const st = ['new','doing','done'].includes(b.status) ? b.status : 'new';
+    await env.DB.prepare('UPDATE reports SET status=? WHERE id=?').bind(st, id).run();
+    return ok({ ok: true });
+  }
+
+  // DELETE /reports/:id
+  if (id && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM reports WHERE id=?').bind(id).run();
+    return ok({ ok: true });
+  }
+
+  return err('ไม่พบ', 404);
+}
+
+// ════════════════════════════════════════════════════════
 // IMAGE UPLOAD (imgbb API)
 // ════════════════════════════════════════════════════════
 async function upload(req, env) {
@@ -634,7 +682,7 @@ async function codes(req, env, segs, method) {
 // ════════════════════════════════════════════════════════
 // ── BACKUP: dump ทุกตารางเป็น JSON (admin เท่านั้น) ──────
 async function backupAll(env) {
-  const tables = ['articles', 'apps', 'worksheets', 'access_codes', 'comments', 'users', 'settings'];
+  const tables = ['articles', 'apps', 'worksheets', 'access_codes', 'comments', 'reports', 'users', 'settings'];
   const dump = {
     _meta: {
       site: 'kru-ti.com',
