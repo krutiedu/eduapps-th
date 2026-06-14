@@ -868,11 +868,81 @@ function renderArticleEditor(art) {
     <button class="btn btn-success" onclick="saveArticle()">💾 บันทึกบทความ</button>
     <button class="btn btn-outline" onclick="previewArticle()">👁 ดูตัวอย่าง</button>
     <button class="btn btn-outline" onclick="nav('articles')">ยกเลิก</button>
+    <span id="draftIndicator" style="font-size:.8rem;color:#059669;font-weight:700;opacity:0;transition:opacity .3s;align-self:center;">✓ บันทึกร่างอัตโนมัติแล้ว</span>
   </div>`;
 
   // Focus editor
   const ed = document.getElementById('editorBody');
   ed.addEventListener('focus', () => { if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = ''; });
+
+  // ── auto-save ร่างบทความ กันข้อมูลหายเมื่อหน้า reload/หลุด ──
+  const draftKey = '_draft_' + (editingId || 'new');
+  const titleEl = document.getElementById('artTitle');
+  const excerptEl = document.getElementById('artExcerpt');
+
+  // กู้คืนร่างที่ค้างไว้ (ถ้ามี และยังไม่เคยกรอก)
+  try {
+    const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
+    if (saved && (saved.title || saved.excerpt || saved.content)) {
+      const hasContent = (titleEl.value.trim() || (ed.innerHTML.trim() && ed.innerHTML !== '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'));
+      if (!hasContent) {
+        const ago = saved.savedAt ? Math.round((Date.now() - saved.savedAt) / 60000) : 0;
+        const agoTxt = ago < 1 ? 'เมื่อสักครู่' : ago < 60 ? `${ago} นาทีที่แล้ว` : `${Math.round(ago/60)} ชั่วโมงที่แล้ว`;
+        const alert = document.getElementById('editorAlert');
+        alert.innerHTML = `
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:.88rem;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <span style="color:#1e40af;">📋 พบร่างที่บันทึกอัตโนมัติไว้ (${agoTxt})</span>
+            <span style="display:flex;gap:8px;">
+              <button onclick="restoreDraft('${draftKey}')" style="background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">กู้คืนร่าง</button>
+              <button onclick="discardDraft('${draftKey}')" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;padding:6px 14px;border-radius:7px;font-family:'Sarabun';font-weight:700;font-size:.82rem;cursor:pointer;">ทิ้งร่าง</button>
+            </span>
+          </div>`;
+      }
+    }
+  } catch (e) {}
+
+  // บันทึกร่างอัตโนมัติ 2 วิ หลังหยุดพิมพ์
+  let draftTimer = null;
+  const saveDraft = () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      const content = ed.innerHTML;
+      if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') return;
+      const draft = {
+        title: titleEl.value, excerpt: excerptEl.value,
+        content, savedAt: Date.now(),
+      };
+      try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch (e) {}
+      const ind = document.getElementById('draftIndicator');
+      if (ind) { ind.textContent = '✓ บันทึกร่างอัตโนมัติแล้ว'; ind.style.opacity = '1';
+        setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
+    }, 2000);
+  };
+  titleEl.addEventListener('input', saveDraft);
+  excerptEl.addEventListener('input', saveDraft);
+  ed.addEventListener('input', saveDraft);
+
+  window._currentDraftKey = draftKey;
+}
+
+// กู้คืนร่าง
+function restoreDraft(key) {
+  try {
+    const d = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!d) return;
+    document.getElementById('artTitle').value = d.title || '';
+    document.getElementById('artExcerpt').value = d.excerpt || '';
+    document.getElementById('editorBody').innerHTML = d.content || '';
+    document.getElementById('editorAlert').innerHTML = '';
+    toast('✅ กู้คืนร่างแล้ว');
+  } catch (e) { toast('❌ กู้คืนร่างไม่สำเร็จ'); }
+}
+
+// ทิ้งร่าง
+function discardDraft(key) {
+  localStorage.removeItem(key);
+  document.getElementById('editorAlert').innerHTML = '';
+  toast('🗑 ทิ้งร่างแล้ว');
 }
 
 
@@ -1258,6 +1328,8 @@ async function saveArticle() {
     ? await api.put('/articles/'+editingId, body)
     : await api.post('/articles', body);
   if (res.error) { toast('❌ '+res.error); return; }
+  // บันทึกสำเร็จ → ล้างร่าง auto-save ทิ้ง
+  if (window._currentDraftKey) { localStorage.removeItem(window._currentDraftKey); window._currentDraftKey = null; }
   toast(editingId ? '✅ แก้ไขบทความแล้ว' : '✅ เผยแพร่บทความแล้ว');
   setTimeout(() => nav('articles'), 800);
 }
@@ -2165,12 +2237,12 @@ async function init() {
   const t = tok();
   if (!t) { showLogin(); return; }
   try {
-    // timeout 8 วิ กันหน้าค้างถ้า backend ไม่ตอบ
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const check = await fetch(API+'/auth/check', { headers: hdr(), signal: ctrl.signal })
-      .then(r => r.json());
+    const timer = setTimeout(() => ctrl.abort(), 15000); // 15 วิ เผื่อเน็ตมือถือช้า
+    const resp = await fetch(API+'/auth/check', { headers: hdr(), signal: ctrl.signal });
     clearTimeout(timer);
+    if (!resp.ok) throw new Error('server_' + resp.status);
+    const check = await resp.json();
 
     if (check.authenticated) {
       if (check.role) localStorage.setItem('_role', check.role);
@@ -2182,14 +2254,35 @@ async function init() {
       if (s.article_categories) localStorage.setItem('_cats', s.article_categories);
       nav('dash');
     } else {
+      // server ยืนยันชัดเจนว่า session หมด → ลบ token
       localStorage.removeItem('_admtok');
       showLogin();
     }
   } catch (e) {
-    // timeout หรือ network error → กลับไปหน้า login (ไม่ค้าง)
-    localStorage.removeItem('_admtok');
-    showLogin();
+    // network error / timeout — อาจแค่เน็ตหลุดชั่วคราว ไม่ใช่ session หมดจริง
+    // จึง "ไม่ลบ token" เพื่อให้กดลองใหม่แล้วเข้าได้เลย ไม่ต้อง login ซ้ำ
+    showAdminOfflineRetry();
   }
+}
+
+// เน็ตมีปัญหาตอนเช็ค auth — ไม่ลบ token ให้กดลองใหม่ได้ทันที
+function showAdminOfflineRetry() {
+  showLogin();
+  const lp = document.getElementById('loginPage');
+  if (!lp) return;
+  const box = lp.querySelector('.login-box') || lp.firstElementChild;
+  if (!box || box.querySelector('._initmsg')) return;
+  const wrap = document.createElement('div');
+  wrap.className = '_initmsg';
+  wrap.style.cssText = 'margin-top:14px;text-align:center;';
+  wrap.innerHTML = `
+    <div style="background:#fef3e2;color:#c2660c;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:10px;">
+      เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ชั่วคราว — ยังไม่ได้ออกจากระบบ
+    </div>
+    <button onclick="init()" style="background:#2563eb;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:'Sarabun';font-weight:700;font-size:.9rem;cursor:pointer;">
+      🔄 ลองเชื่อมต่อใหม่
+    </button>`;
+  box.appendChild(wrap);
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -2215,6 +2308,9 @@ window.previewImgUrl = previewImgUrl;
 window.doInsertImg = doInsertImg;
 window.downloadBackup = downloadBackup;
 window.closeModalSafe = closeModalSafe;
+window.restoreDraft = restoreDraft;
+window.discardDraft = discardDraft;
+window.init = init;
 window.saveCode = saveCode;
 window.onDurationChange = onDurationChange;
 window.delCode = delCode;
