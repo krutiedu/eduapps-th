@@ -173,6 +173,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item admin-only" data-page="apps" onclick="nav('apps')" style="display:none;"><span class="ni">🎮</span> จัดการแอป</div>
     <div class="nav-item admin-only" data-page="worksheets" onclick="nav('worksheets')" style="display:none;"><span class="ni">📄</span> จัดการใบงาน</div>
     <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
+    <div class="nav-item admin-only" data-page="reports" onclick="nav('reports')" style="display:none;"><span class="ni">🛠️</span> แจ้งปัญหา</div>
     <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
     <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
     <div class="nav-item admin-only" data-page="users" onclick="nav('users')" style="display:none;"><span class="ni">👥</span> จัดการผู้ใช้</div>
@@ -684,6 +685,7 @@ function nav(page) {
   if (page==='apps')         renderApps();
   if (page==='worksheets')   renderWorksheets();
   if (page==='comments')     renderComments();
+  if (page==='reports')      renderReports();
   if (page==='codes')        renderCodes();
   if (page==='users')        renderUsers();
   if (page==='profile')      renderProfile();
@@ -1679,6 +1681,51 @@ async function renderComments() {
   </div>`;
 }
 
+// ── แจ้งปัญหา (reports) ──────────────────────────────────
+async function renderReports() {
+  const data = await api.get('/reports/admin/list');
+  const reps = data.reports || [];
+  const stByLabel = { new:'🔴 ใหม่', doing:'🟡 กำลังแก้', done:'🟢 แก้แล้ว' };
+  const newCount = reps.filter(r => r.status === 'new').length;
+  document.getElementById('content').innerHTML = `
+  <div class="page-title">🛠️ แจ้งปัญหา ${newCount ? `<span class="badge" style="background:#fee2e2;color:#dc2626;">${newCount} ใหม่</span>` : ''}</div>
+  ${!reps.length ? '<div class="card"><p style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีการแจ้งปัญหา 🎉</p></div>'
+  : reps.map(r => `
+    <div class="card" style="margin-bottom:12px;${r.status==='done'?'opacity:.6;':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge-gray">${r.type}</span>
+          <span style="font-size:.85rem;color:#64748b;">${new Date(r.created_at).toLocaleString('th-TH')}</span>
+        </div>
+        <select onchange="setReportStatus(${r.id},this.value)" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-family:'Sarabun';font-size:.85rem;cursor:pointer;">
+          <option value="new" ${r.status==='new'?'selected':''}>🔴 ใหม่</option>
+          <option value="doing" ${r.status==='doing'?'selected':''}>🟡 กำลังแก้</option>
+          <option value="done" ${r.status==='done'?'selected':''}>🟢 แก้แล้ว</option>
+        </select>
+      </div>
+      <p style="font-size:.95rem;line-height:1.7;color:#1e293b;margin-bottom:10px;white-space:pre-wrap;">${escapeHtml(r.detail)}</p>
+      ${r.image_url ? `<a href="${r.image_url}" target="_blank"><img src="${r.image_url}" style="max-height:160px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:10px;"></a>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid #f1f5f9;padding-top:10px;">
+        <span style="font-size:.85rem;color:#64748b;">${r.contact ? '📧 '+escapeHtml(r.contact) : '— ไม่ได้ให้ช่องทางติดต่อ —'}</span>
+        <button class="btn btn-danger btn-sm" onclick="delReport(${r.id})">🗑 ลบ</button>
+      </div>
+    </div>`).join('')}`;
+}
+
+async function setReportStatus(id, status) {
+  await api.put('/reports/'+id+'/status', { status });
+  toast('✅ อัปเดตสถานะแล้ว');
+  renderReports();
+}
+async function delReport(id) {
+  if (!confirm('ลบรายการแจ้งปัญหานี้?')) return;
+  await api.delete('/reports/'+id);
+  toast('🗑 ลบแล้ว'); renderReports();
+}
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 async function approveCmt(id) {
   await api.put('/comments/'+id+'/approve', {});
   toast('✅ อนุมัติแล้ว'); renderComments();
@@ -2512,6 +2559,9 @@ window.openAppModal = openAppModal;
 window.saveApp = saveApp;
 window.delApp = delApp;
 window.renderWorksheets = renderWorksheets;
+window.renderReports = renderReports;
+window.setReportStatus = setReportStatus;
+window.delReport = delReport;
 window.openWorksheetModal = openWorksheetModal;
 window.saveWorksheet = saveWorksheet;
 window.delWorksheet = delWorksheet;
