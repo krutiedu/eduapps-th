@@ -536,6 +536,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
       <a href="#/apps">แอปทั้งหมด</a>
       <a href="#/buy">วิธีซื้อรหัส</a>
       <a href="#/about">เกี่ยวกับเรา</a>
+      <a href="#/report">แจ้งปัญหา</a>
       <a href="#/privacy">นโยบายความเป็นส่วนตัว</a>
       <a href="/admin/" style="color:#2c4a7c;">⚙</a>
     </div>
@@ -589,6 +590,7 @@ function route() {
   else if (h === '/about')           renderAbout();
   else if (h === '/buy')             renderBuy();
   else if (h === '/privacy')         renderPrivacy();
+  else if (h === '/report')          renderReport();
   else                               render404();
 }
 
@@ -1282,6 +1284,108 @@ function bumpWsDownload(id) {
   fetch(API + '/worksheets/' + id + '/download', { method: 'POST' }).catch(() => {});
 }
 
+// ══ แจ้งปัญหา ══════════════════════════════════════════
+function renderReport() {
+  setPageMeta({ title: 'แจ้งปัญหา', desc: 'แจ้งปัญหาการใช้งาน แอป ใบงาน หรือบทความ' });
+  document.getElementById('app').innerHTML = `
+  <div class="art-wrap rv" style="max-width:620px;">
+    <div class="back-btn" onclick="go('/')" style="cursor:pointer;color:var(--slate);font-weight:700;margin-bottom:16px;">← กลับหน้าหลัก</div>
+    <h1 style="margin-bottom:8px;">แจ้งปัญหา</h1>
+    <p style="color:var(--slate);font-size:1rem;margin-bottom:24px;">เจอแอปเสีย ใบงานโหลดไม่ได้ หรือพบข้อผิดพลาด? แจ้งได้เลย ครูติจะรีบดูให้ครับ</p>
+
+    <div id="reportForm" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;">
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-weight:700;font-size:.92rem;margin-bottom:8px;color:var(--ink);">ประเภทปัญหา</label>
+        <div id="rpTypes" style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${['แอป','ใบงาน','บทความ','การซื้อรหัส','อื่นๆ'].map((t,i) =>
+            `<span class="cat-pill${i===0?' active':''}" data-type="${t}" onclick="selReportType(this)">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-weight:700;font-size:.92rem;margin-bottom:8px;color:var(--ink);">รายละเอียดปัญหา *</label>
+        <textarea id="rpDetail" placeholder="อธิบายปัญหาที่เจอ เช่น แอปไหน หน้าไหน กดแล้วเกิดอะไร..." 
+          style="width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:11px;padding:13px;font-size:.96rem;font-family:'Sarabun';outline:none;resize:vertical;"></textarea>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-weight:700;font-size:.92rem;margin-bottom:8px;color:var(--ink);">อีเมล/ช่องทางติดต่อกลับ <span style="font-weight:400;color:var(--slate);">(ไม่บังคับ)</span></label>
+        <input id="rpContact" placeholder="เผื่อครูติต้องสอบถามเพิ่มเติม" 
+          style="width:100%;border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;font-size:.96rem;font-family:'Sarabun';outline:none;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-weight:700;font-size:.92rem;margin-bottom:8px;color:var(--ink);">แนบรูป/สกรีนช็อต <span style="font-weight:400;color:var(--slate);">(ไม่บังคับ)</span></label>
+        <button type="button" onclick="uploadReportImg()" id="rpImgBtn"
+          style="background:var(--paper);border:1.5px dashed var(--line);border-radius:11px;padding:12px 18px;font-family:'Sarabun';font-size:.92rem;color:var(--slate);cursor:pointer;width:100%;">
+          📷 เลือกรูปเพื่อแนบ
+        </button>
+        <div id="rpImgPreview"></div>
+      </div>
+      <button onclick="submitReport()" id="rpSubmit"
+        style="width:100%;background:var(--gold);color:var(--ink);border:none;padding:14px;border-radius:12px;font-family:'Sarabun';font-weight:700;font-size:1.02rem;cursor:pointer;">
+        📨 ส่งแจ้งปัญหา
+      </button>
+    </div>
+  </div>`;
+  window._rpType = 'แอป';
+  window._rpImg = '';
+}
+
+function selReportType(el) {
+  document.querySelectorAll('#rpTypes .cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  window._rpType = el.dataset.type;
+}
+
+async function uploadReportImg() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    const btn = document.getElementById('rpImgBtn');
+    btn.textContent = '⏳ กำลังอัปโหลด...';
+    try {
+      const fd = new FormData();
+      fd.append('image', f);
+      const r = await fetch(API + '/upload', { method: 'POST', body: fd }).then(r => r.json());
+      if (r.url) {
+        window._rpImg = r.url;
+        document.getElementById('rpImgPreview').innerHTML =
+          `<img src="${r.url}" style="margin-top:10px;max-height:140px;border-radius:10px;border:1px solid var(--line);">`;
+        btn.textContent = '✓ แนบรูปแล้ว (กดเพื่อเปลี่ยน)';
+      } else { btn.textContent = '📷 เลือกรูปเพื่อแนบ'; toast('❌ อัปโหลดรูปไม่สำเร็จ'); }
+    } catch (e) { btn.textContent = '📷 เลือกรูปเพื่อแนบ'; toast('❌ อัปโหลดรูปไม่สำเร็จ'); }
+  };
+  inp.click();
+}
+
+async function submitReport() {
+  const detail = document.getElementById('rpDetail').value.trim();
+  if (!detail) { toast('กรุณากรอกรายละเอียดปัญหา'); document.getElementById('rpDetail').focus(); return; }
+  const btn = document.getElementById('rpSubmit');
+  btn.textContent = '⏳ กำลังส่ง...'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/reports', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: window._rpType || 'อื่นๆ',
+        detail,
+        contact: document.getElementById('rpContact').value.trim(),
+        image_url: window._rpImg || '',
+      }),
+    }).then(r => r.json());
+    if (r.error) { toast('❌ ' + r.error); btn.textContent = '📨 ส่งแจ้งปัญหา'; btn.disabled = false; return; }
+    document.getElementById('reportForm').innerHTML = `
+      <div style="text-align:center;padding:30px 10px;">
+        <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+        <h2 style="font-size:1.3rem;margin-bottom:8px;">ส่งแจ้งปัญหาแล้ว</h2>
+        <p style="color:var(--slate);">ขอบคุณที่ช่วยแจ้งครับ ครูติจะรีบตรวจสอบและแก้ไขให้เร็วที่สุด</p>
+        <button onclick="go('/')" style="margin-top:20px;background:var(--gold);color:var(--ink);border:none;padding:12px 28px;border-radius:11px;font-family:'Sarabun';font-weight:700;cursor:pointer;">กลับหน้าหลัก</button>
+      </div>`;
+  } catch (e) {
+    toast('❌ ส่งไม่สำเร็จ ลองใหม่อีกครั้ง');
+    btn.textContent = '📨 ส่งแจ้งปัญหา'; btn.disabled = false;
+  }
+}
+
 function renderBuy() {
   document.getElementById('app').innerHTML = `
   <div class="art-wrap rv">
@@ -1786,6 +1890,10 @@ window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderBuy = renderBuy;
+window.renderReport = renderReport;
+window.selReportType = selReportType;
+window.uploadReportImg = uploadReportImg;
+window.submitReport = submitReport;
 window.renderWorksheets = renderWorksheets;
 window.renderWorksheetDetail = renderWorksheetDetail;
 window.setWsView = setWsView;
