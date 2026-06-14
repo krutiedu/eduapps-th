@@ -238,6 +238,45 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .apps-box .sec-sub{color:#8fa0bf;}
 .apps-box .sec-more{color:var(--gold-bright);}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
+/* ── ใบงาน ── */
+.ws-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.ws-viewtoggle{display:flex;gap:5px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;}
+.ws-viewtoggle button{border:none;background:transparent;color:var(--slate);padding:7px 14px;border-radius:8px;
+  font-family:'Sarabun';font-size:.86rem;font-weight:700;cursor:pointer;transition:.15s;}
+.ws-viewtoggle button.active{background:var(--ink);color:#fff;}
+.ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:15px;}
+.ws-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  cursor:pointer;transition:.16s;text-decoration:none;display:block;}
+.ws-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,28,51,.1);}
+.ws-cover{aspect-ratio:210/270;background:var(--chalk);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.ws-cover img{width:100%;height:100%;object-fit:cover;}
+.ws-cover .ws-emoji{font-size:2.4rem;opacity:.5;}
+.ws-badge{position:absolute;top:8px;right:8px;padding:2px 9px;border-radius:100px;font-size:.66rem;font-weight:700;}
+.ws-badge.lock{background:var(--gold-soft);color:var(--gold-deep);}
+.ws-badge.free{background:var(--mint-soft);color:var(--mint);}
+.ws-info{padding:11px 12px;}
+.ws-info h3{font-family:'Pridi',serif;font-size:.92rem;font-weight:600;color:var(--ink);line-height:1.4;margin:0 0 5px;}
+.ws-meta{font-size:.74rem;color:var(--slate);}
+/* list view */
+.ws-list{display:flex;flex-direction:column;gap:9px;}
+.ws-row{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 14px;
+  display:flex;align-items:center;gap:13px;cursor:pointer;transition:.15s;text-decoration:none;}
+.ws-row:hover{border-color:var(--gold);}
+.ws-row .ws-rcover{width:44px;height:56px;background:var(--chalk);border-radius:7px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.ws-row .ws-rcover img{width:100%;height:100%;object-fit:cover;}
+.ws-rbody{flex:1;min-width:0;}
+.ws-rbody h3{font-family:'Pridi',serif;font-size:1rem;font-weight:600;color:var(--ink);margin:0 0 3px;}
+.ws-rbody .ws-meta{font-size:.78rem;}
+/* hover preview popup */
+.ws-pv{position:absolute;z-index:60;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);
+  width:158px;background:#fff;border:1px solid var(--gold);border-radius:9px;box-shadow:0 14px 36px rgba(16,28,51,.3);
+  overflow:hidden;pointer-events:none;opacity:0;transition:.18s;}
+.ws-pv .ws-pv-img{aspect-ratio:210/297;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.ws-pv .ws-pv-img img{width:100%;height:100%;object-fit:cover;}
+@media(max-width:640px){
+  .ws-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+  .ws-pv{display:none;}
+}
 .app-card{border:1px solid var(--line);border-radius:16px;padding:19px;background:var(--card);
   transition:top .18s,box-shadow .22s,background .2s,border-color .2s;position:relative;top:0;}
 .app-card:hover{top:-4px;box-shadow:var(--shadow-md);border-color:#ded2b8;}
@@ -420,6 +459,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
       <li><a href="#/" data-r="/">หน้าหลัก</a></li>
       <li><a href="#/blog" data-r="/blog">บทความ</a></li>
       <li><a href="#/apps" data-r="/apps">แอปทั้งหมด</a></li>
+      <li><a href="#/worksheets" data-r="/worksheets">ใบงาน</a></li>
       <li><a href="#/buy" data-r="/buy">ซื้อรหัส</a></li>
     </ul>
     <div class="nav-right">
@@ -466,6 +506,25 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
       </div>
     </div>
     <iframe id="viewerFrame" style="flex:1;width:100%;border:none;background:#fff;" allow="fullscreen; autoplay; clipboard-write; gamepad" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- Prompt modal — แสดง prompt เป็นหน้าต่างลอย -->
+<div id="promptModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,21,38,.9);align-items:center;justify-content:center;padding:14px;" onclick="if(event.target===this)closePromptModal()">
+  <div style="display:flex;flex-direction:column;width:100%;max-width:680px;max-height:86vh;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#15223c;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+        <span style="font-size:1.2rem;">📋</span>
+        <span id="promptTitle" style="color:#fff;font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+      </div>
+      <button onclick="closePromptModal()" style="background:#dc2626;color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>
+    <div style="padding:16px 18px;overflow-y:auto;flex:1;">
+      <pre id="promptBody" style="font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.82rem;line-height:1.65;color:#1e293b;white-space:pre-wrap;word-break:break-word;margin:0;"></pre>
+    </div>
+    <div style="padding:13px 18px;border-top:1px solid var(--line);flex-shrink:0;background:var(--paper);">
+      <button id="promptCopyBtn" onclick="copyPromptModal()" style="width:100%;background:var(--gold);color:var(--ink);border:none;padding:12px;border-radius:11px;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.92rem;cursor:pointer;">📋 คัดลอก Prompt</button>
+    </div>
   </div>
 </div>
 
@@ -525,6 +584,8 @@ function route() {
   else if (h === '/blog')            renderBlog();
   else if (h.startsWith('/article/'))renderArticle(h.slice(9));
   else if (h === '/apps')            renderApps(query.get('open'));
+  else if (h === '/worksheets')      renderWorksheets();
+  else if (h.startsWith('/worksheet/')) renderWorksheetDetail(h.slice(11));
   else if (h === '/about')           renderAbout();
   else if (h === '/buy')             renderBuy();
   else if (h === '/privacy')         renderPrivacy();
@@ -1007,6 +1068,220 @@ function renderAbout() {
 
 // ── BUY / วิธีซื้อรหัส ─────────────────────────────────────
 const FB_PAGE = 'https://www.facebook.com/kruti.edu';
+// ══ ใบงาน: หน้ารวม ══════════════════════════════════════
+let _allWs = [], _wsView = 'grid', _wsFilter = 'all', _wsQ = '';
+
+async function renderWorksheets() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const data = await get('/worksheets');
+  _allWs = data.worksheets || [];
+  _wsFilter = 'all'; _wsQ = '';
+  _wsView = localStorage.getItem('_wsView') || 'grid';
+
+  const cats = [...new Set(_allWs.map(w => w.category).filter(Boolean))];
+  const pills = [{k:'all',label:'ทั้งหมด'}, {k:'free',label:'🆓 ฟรี'}, {k:'locked',label:'🔒 พรีเมียม'},
+    ...cats.map(c => ({k:c, label:c}))];
+  const pillHTML = pills.map(p =>
+    `<span class="cat-pill" data-k="${esc(p.k)}" onclick="setWsFilter('${p.k.replace(/'/g,"\\'")}')">${p.label}</span>`
+  ).join('');
+
+  setPageMeta({ title: 'คลังใบงาน', desc: 'ใบงานพร้อมใช้ สำหรับครูไทย ดาวน์โหลดได้ทันที' });
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:32px;">
+    <div class="page-head rv">
+      <h1>คลังใบงาน</h1>
+      <div class="ph-sub">ใบงานพร้อมพิมพ์ใช้ในห้องเรียน — ดาวน์โหลดเป็น PDF</div>
+    </div>
+    <div class="ws-toolbar rv">
+      <div class="search-row" style="flex:1;min-width:200px;margin:0;">
+        <input class="search-in" id="wsSearch" placeholder="🔍 ค้นหาใบงาน..." oninput="filterWs(this.value)">
+      </div>
+      <div class="ws-viewtoggle">
+        <button id="wsvGrid" onclick="setWsView('grid')">▦ บล็อก</button>
+        <button id="wsvList" onclick="setWsView('list')">☰ ตาราง</button>
+      </div>
+    </div>
+    <div class="cat-strip rv2" id="wsPills" style="margin-bottom:20px;">${pillHTML}</div>
+    ${adSlot()}
+    <div id="wsContent"></div>
+    <div style="margin-top:24px;">${adSlot()}</div>
+  </div>`;
+  drawWs();
+  activateAds();
+}
+
+function setWsView(v) {
+  _wsView = v; localStorage.setItem('_wsView', v); drawWs();
+}
+function setWsFilter(f) { _wsFilter = f; drawWs(); }
+function filterWs(q) { _wsQ = q; drawWs(); }
+
+function drawWs() {
+  const cont = document.getElementById('wsContent');
+  if (!cont) return;
+  document.getElementById('wsvGrid')?.classList.toggle('active', _wsView === 'grid');
+  document.getElementById('wsvList')?.classList.toggle('active', _wsView === 'list');
+  document.querySelectorAll('#wsPills .cat-pill').forEach(el =>
+    el.classList.toggle('active', el.dataset.k === _wsFilter));
+
+  let list = [..._allWs];
+  if (_wsFilter === 'free')        list = list.filter(w => !w.locked);
+  else if (_wsFilter === 'locked') list = list.filter(w => w.locked);
+  else if (_wsFilter !== 'all')    list = list.filter(w => w.category === _wsFilter);
+  if (_wsQ.trim()) {
+    const q = _wsQ.trim().toLowerCase();
+    list = list.filter(w => (w.title||'').toLowerCase().includes(q) || (w.description||'').toLowerCase().includes(q));
+  }
+
+  if (!list.length) { cont.innerHTML = `<div class="empty">📭<br>ไม่พบใบงานที่ตรงกัน</div>`; return; }
+
+  if (_wsView === 'grid') {
+    cont.innerHTML = `<div class="ws-grid">${list.map(wsCard).join('')}</div>`;
+  } else {
+    cont.innerHTML = `<div class="ws-list">${list.map(wsRow).join('')}</div>`;
+  }
+}
+
+function wsCover(w, cls) {
+  return w.cover_image
+    ? `<img src="${esc(w.cover_image)}" alt="${esc(w.title)}" loading="lazy">`
+    : `<span class="ws-emoji">📄</span>`;
+}
+function wsBadge(w) {
+  return w.locked ? `<span class="ws-badge lock">🔒</span>` : `<span class="ws-badge free">ฟรี</span>`;
+}
+function wsCard(w) {
+  return `<a class="ws-card" href="#/worksheet/${w.id}" onmouseenter="showWsPv(this,${w.id})" onmouseleave="hideWsPv(this)">
+    <div class="ws-cover">${wsCover(w)}${wsBadge(w)}</div>
+    <div class="ws-info">
+      <h3>${esc(w.title)}</h3>
+      <div class="ws-meta">📑 ${w.pages||0} หน้า · ⬇️ ${w.downloads||0}</div>
+    </div>
+  </a>`;
+}
+function wsRow(w) {
+  const tag = w.locked
+    ? `<span class="ws-badge lock" style="position:static;">🔒 พรีเมียม</span>`
+    : `<span class="ws-badge free" style="position:static;">ฟรี</span>`;
+  return `<a class="ws-row" href="#/worksheet/${w.id}" onmouseenter="showWsPv(this,${w.id})" onmouseleave="hideWsPv(this)">
+    <div class="ws-rcover">${w.cover_image ? `<img src="${esc(w.cover_image)}" alt="" loading="lazy">` : '📄'}</div>
+    <div class="ws-rbody">
+      <h3>${esc(w.title)}</h3>
+      <div class="ws-meta">${esc(w.category||'')} · 📑 ${w.pages||0} หน้า · ⬇️ ${w.downloads||0} ดาวน์โหลด</div>
+    </div>
+    ${tag}
+  </a>`;
+}
+
+function showWsPv(el, id) {
+  const w = _allWs.find(x => x.id === id);
+  if (!w || !w.cover_image) return;
+  const pv = document.createElement('div');
+  pv.className = 'ws-pv';
+  pv.innerHTML = `<div class="ws-pv-img"><img src="${esc(w.cover_image)}" alt=""></div>`;
+  el.appendChild(pv);
+  requestAnimationFrame(() => { pv.style.opacity = '1'; pv.style.transform = 'translate(-50%,-50%) scale(1)'; });
+}
+function hideWsPv(el) { const p = el.querySelector('.ws-pv'); if (p) p.remove(); }
+
+// ══ ใบงาน: หน้ารายละเอียด ════════════════════════════════
+async function renderWorksheetDetail(id) {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const data = await get('/worksheets');
+  const w = (data.worksheets || []).find(x => String(x.id) === String(id));
+  if (!w) { render404('ไม่พบใบงานนี้ — อาจถูกลบหรือยังไม่เผยแพร่'); return; }
+
+  setPageMeta({
+    title: w.title,
+    desc: w.description || `ใบงาน ${w.category||''} — ดาวน์โหลดได้ที่ Kru-ti ครูติ`,
+    image: w.cover_image || undefined,
+    url: location.origin + '/#/worksheet/' + w.id,
+  });
+
+  const unlocked = sessionStorage.getItem('ws_url_' + w.id);
+  const fileUrl = (!w.locked && w.file_url) ? w.file_url : unlocked;
+
+  app.innerHTML = `
+  <div class="container" style="padding-bottom:40px;">
+    <div class="back-btn rv" onclick="go('/worksheets')" style="margin:8px 0 20px;cursor:pointer;color:var(--slate);font-weight:700;">← กลับคลังใบงาน</div>
+    <div class="rv" style="display:flex;gap:26px;flex-wrap:wrap;">
+      <div style="flex:0 0 260px;max-width:260px;">
+        <div style="position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(16,28,51,.1);aspect-ratio:210/297;display:flex;align-items:center;justify-content:center;">
+          ${w.cover_image ? `<img src="${esc(w.cover_image)}" alt="${esc(w.title)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="text-align:center;color:var(--slate);"><div style="font-size:3rem;">📄</div></div>`}
+          ${w.locked ? `<span class="ws-badge lock" style="top:12px;right:12px;font-size:.78rem;padding:4px 13px;">🔒 พรีเมียม</span>` : `<span class="ws-badge free" style="top:12px;right:12px;font-size:.78rem;padding:4px 13px;">🆓 ฟรี</span>`}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:11px;font-size:.82rem;color:var(--slate);">
+          <span>📑 ${w.pages||0} หน้า</span><span>·</span><span>⬇️ ${w.downloads||0} ดาวน์โหลด</span>
+        </div>
+      </div>
+      <div style="flex:1;min-width:270px;">
+        <span class="cat-pill active" style="cursor:default;margin-bottom:12px;display:inline-block;">${esc(w.category||'อื่นๆ')}</span>
+        <h1 style="font-family:'Pridi',serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.4;margin:6px 0 14px;">${esc(w.title)}</h1>
+        ${w.description ? `<p style="font-size:1.02rem;color:#444;line-height:1.85;margin-bottom:22px;">${esc(w.description)}</p>` : ''}
+        <div id="wsAction"></div>
+      </div>
+    </div>
+  </div>`;
+
+  renderWsAction(w, fileUrl);
+}
+
+function renderWsAction(w, fileUrl) {
+  const box = document.getElementById('wsAction');
+  if (!box) return;
+  if (fileUrl) {
+    box.innerHTML = `
+      <a href="${esc(fileUrl)}" target="_blank" rel="noopener" onclick="bumpWsDownload(${w.id})"
+        style="display:inline-flex;align-items:center;gap:10px;background:var(--mint);color:#fff;font-family:'Sarabun';font-weight:700;font-size:1.05rem;text-decoration:none;padding:14px 32px;border-radius:13px;box-shadow:0 6px 18px rgba(15,162,148,.32);">
+        ⬇️ ดาวน์โหลดใบงาน (PDF)
+      </a>
+      <p style="font-size:.85rem;color:var(--slate);margin-top:12px;">เปิดไฟล์ในแท็บใหม่ — บันทึกหรือพิมพ์ได้เลย</p>`;
+  } else {
+    box.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:420px;">
+        <div style="font-size:.92rem;color:var(--ink);font-weight:700;margin-bottom:11px;">🎟️ มีรหัสปลดล็อก? กรอกเพื่อดาวน์โหลด</div>
+        <div style="display:flex;gap:8px;">
+          <input id="wsCode" placeholder="กรอกรหัส เช่น WS2025" onkeydown="if(event.key==='Enter')unlockWs(${w.id})"
+            style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:.95rem;font-family:'Sarabun';outline:none;text-transform:uppercase;">
+          <button onclick="unlockWs(${w.id})" style="background:var(--gold);color:var(--ink);border:none;padding:11px 22px;border-radius:10px;font-family:'Sarabun';font-weight:700;font-size:.95rem;cursor:pointer;white-space:nowrap;">⬇️ ดาวน์โหลด</button>
+        </div>
+        <div id="wsCodeMsg" style="font-size:.85rem;font-weight:700;margin-top:9px;"></div>
+        <div style="text-align:center;margin-top:11px;font-size:.86rem;color:var(--slate);border-top:1px solid var(--line-soft);padding-top:11px;">
+          ยังไม่มีรหัส? <a href="#/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
+        </div>
+      </div>`;
+  }
+}
+
+async function unlockWs(id) {
+  const inp = document.getElementById('wsCode');
+  const msg = document.getElementById('wsCodeMsg');
+  const code = (inp.value || '').trim();
+  if (!code) { msg.style.color = 'var(--gold-deep)'; msg.textContent = 'กรุณากรอกรหัส'; return; }
+  msg.style.color = 'var(--slate)'; msg.textContent = 'กำลังตรวจสอบ...';
+  try {
+    const r = await fetch(API + '/worksheets/' + id + '/unlock', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    }).then(r => r.json());
+    if (r.error) { msg.style.color = '#dc2626'; msg.textContent = '❌ ' + r.error; return; }
+    if (r.file_url) {
+      sessionStorage.setItem('ws_url_' + id, r.file_url);
+      const w = _allWs.find(x => x.id === id) || { id };
+      renderWsAction(w, r.file_url);
+      toast('✅ ปลดล็อกสำเร็จ!');
+    }
+  } catch (e) { msg.style.color = '#dc2626'; msg.textContent = '❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง'; }
+}
+
+function bumpWsDownload(id) {
+  // ใบงานฟรี: นับยอดดาวน์โหลด (ไม่ต้องรอผล)
+  fetch(API + '/worksheets/' + id + '/download', { method: 'POST' }).catch(() => {});
+}
+
 function renderBuy() {
   document.getElementById('app').innerHTML = `
   <div class="art-wrap rv">
@@ -1167,14 +1442,10 @@ function appCard(a) {
         ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
         : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
       }
-      ${a.prompt ? `<button class="btn-pmt" id="pb_${a.id}" onclick="togglePmt('${pid}','pb_${a.id}')">📋 Prompt</button>` : ''}
+      ${a.prompt ? `<button class="btn-pmt" onclick="openPromptModal('${esc(a.title).replace(/'/g,"\\'")}', this)" data-prompt="${esc(a.prompt).replace(/"/g,'&quot;')}">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
         title="แชร์แอปนี้" aria-label="แชร์แอปนี้"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg></button>
     </div>
-    ${a.prompt ? `<div class="pmt-box" id="${pid}">
-      <pre>${esc(a.prompt)}</pre>
-      <button class="btn-copy" onclick="doCopyPre('${pid}',this)">📋 คัดลอก Prompt</button>
-    </div>` : ''}
   </div>`;
 }
 
@@ -1188,12 +1459,26 @@ document.addEventListener('mouseover', e => {
   card.classList.toggle('preview-down', spaceAbove < 250);
 });
 
-function togglePmt(pid, bid) {
-  const box = document.getElementById(pid), btn = document.getElementById(bid);
-  const open = box?.classList.contains('open');
-  document.querySelectorAll('.pmt-box').forEach(b=>b.classList.remove('open'));
-  document.querySelectorAll('.btn-pmt').forEach(b=>b.classList.remove('active'));
-  if (!open && box) { box.classList.add('open'); btn?.classList.add('active'); }
+function openPromptModal(title, btn) {
+  const prompt = btn.getAttribute('data-prompt') || '';
+  document.getElementById('promptTitle').textContent = title;
+  document.getElementById('promptBody').textContent = prompt;
+  document.getElementById('promptCopyBtn').textContent = '📋 คัดลอก Prompt';
+  document.getElementById('promptModal').style.display = 'flex';
+}
+function closePromptModal() {
+  document.getElementById('promptModal').style.display = 'none';
+}
+function copyPromptModal() {
+  const text = document.getElementById('promptBody').textContent;
+  const btn = document.getElementById('promptCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ คัดลอกแล้ว!';
+    setTimeout(() => { btn.textContent = '📋 คัดลอก Prompt'; }, 1800);
+  }).catch(() => {
+    btn.textContent = '✓ คัดลอกแล้ว!';
+    setTimeout(() => { btn.textContent = '📋 คัดลอก Prompt'; }, 1800);
+  });
 }
 
 function doCopy(btn, text) {
@@ -1281,6 +1566,7 @@ function fullscreenApp() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.fullscreenElement
       && document.getElementById('appViewer').style.display === 'flex') closeAppViewer();
+  if (e.key === 'Escape' && document.getElementById('promptModal')?.style.display === 'flex') closePromptModal();
 });
 
 function catTag(cat) {
@@ -1488,7 +1774,9 @@ function setMeta(prop, content) {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-window.togglePmt = togglePmt;
+window.openPromptModal = openPromptModal;
+window.closePromptModal = closePromptModal;
+window.copyPromptModal = copyPromptModal;
 window.doCopy = doCopy;
 window.doCopyPre = doCopyPre;
 window.openAppViewer = openAppViewer;
@@ -1498,6 +1786,15 @@ window.openInNewTab = openInNewTab;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderBuy = renderBuy;
+window.renderWorksheets = renderWorksheets;
+window.renderWorksheetDetail = renderWorksheetDetail;
+window.setWsView = setWsView;
+window.setWsFilter = setWsFilter;
+window.filterWs = filterWs;
+window.showWsPv = showWsPv;
+window.hideWsPv = hideWsPv;
+window.unlockWs = unlockWs;
+window.bumpWsDownload = bumpWsDownload;
 window.loadRelated = loadRelated;
 window.render404 = render404;
 window.renderPrivacy = renderPrivacy;
