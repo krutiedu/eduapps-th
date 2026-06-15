@@ -145,6 +145,27 @@ tr:hover td{background:#fafafa;}
 /* EMPTY STATE */
 .empty-state{text-align:center;padding:48px;color:#94a3b8;}
 .empty-state .ei{font-size:2.5rem;margin-bottom:12px;}
+
+/* FILTER TOOLBAR (จัดการแอป/ใบงาน) */
+.flt-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;}
+.flt-search{position:relative;flex:1;min-width:160px;}
+.flt-search input{width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;
+  padding:8px 32px 8px 32px;font-size:.86rem;font-family:inherit;color:#0f172a;}
+.flt-search input:focus{border-color:#93c5fd;background:#fff;outline:none;}
+.flt-search .fs-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.85rem;opacity:.5;pointer-events:none;}
+.flt-search .fs-clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;
+  cursor:pointer;font-size:.95rem;color:#94a3b8;padding:2px 5px;line-height:1;display:none;}
+.flt-search .fs-clr:hover{color:#475569;}
+.flt-select{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:8px 10px;
+  font-size:.86rem;font-family:inherit;color:#0f172a;cursor:pointer;max-width:160px;}
+.flt-select:focus{border-color:#93c5fd;background:#fff;outline:none;}
+.flt-chips{display:flex;gap:5px;flex-wrap:wrap;}
+.flt-chip{border:1px solid #e2e8f0;background:#fff;border-radius:20px;padding:6px 12px;
+  font-size:.8rem;cursor:pointer;color:#64748b;font-family:inherit;white-space:nowrap;transition:.12s;}
+.flt-chip:hover{border-color:#cbd5e1;}
+.flt-chip.on{background:var(--ink,#101c33);color:#fff;border-color:var(--ink,#101c33);}
+.flt-count{font-size:.8rem;color:#94a3b8;margin-left:auto;white-space:nowrap;}
+@media(max-width:520px){.flt-select{max-width:none;flex:1;}.flt-count{width:100%;margin:2px 0 0;text-align:right;}}
 </style>
 </head>
 <body>
@@ -1366,35 +1387,80 @@ async function saveArticle() {
 // ══════════════════════════════════════════════════════════
 async function renderApps() {
   const data = await api.get('/apps/admin/list');
-  const appsArr = data.apps || [];
+  window._appsAll = data.apps || [];
+  window._appsFlt = { q:'', cat:'', status:'all' };
+  const cats = [...new Set(window._appsAll.map(a=>a.category).filter(Boolean))].sort();
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div class="page-title" style="margin:0;">🎮 จัดการแอป</div>
     <button class="btn btn-primary" onclick="openAppModal(null)">+ เพิ่มแอปใหม่</button>
   </div>
   <div class="card">
+    <div class="flt-bar">
+      <div class="flt-search">
+        <span class="fs-ico">🔍</span>
+        <input id="appSearch" type="text" placeholder="ค้นหาชื่อแอป..." oninput="filterApps()" autocomplete="off">
+        <button class="fs-clr" id="appSearchClr" onclick="document.getElementById('appSearch').value='';filterApps();document.getElementById('appSearch').focus();" title="ล้าง">✕</button>
+      </div>
+      <select class="flt-select" id="appCat" onchange="filterApps()">
+        <option value="">ทุกหมวด</option>
+        ${cats.map(c=>`<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
+      </select>
+      <div class="flt-chips">
+        ${[['all','ทั้งหมด'],['visible','👁 แสดง'],['hidden','🙈 ซ่อน'],['locked','🔒 ล็อก']].map(([v,l])=>
+          `<button class="flt-chip${v==='all'?' on':''}" data-st="${v}" onclick="setAppStatus('${v}')">${l}</button>`).join('')}
+      </div>
+      <span class="flt-count" id="appCount"></span>
+    </div>
     <div class="table-wrap">
     <table>
       <thead><tr><th>แอป</th><th>หมวด</th><th>สถานะ</th><th>Prompt</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${appsArr.length ? appsArr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}">
-          <td>${a.icon} <strong>${a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td style="white-space:nowrap;">
-            ${!a.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
-            ${a.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':''}
-          </td>
-          <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีแอป</td></tr>`}
-      </tbody>
+      <tbody id="appsBody"></tbody>
     </table>
     </div>
   </div>`;
+  filterApps();
+}
+
+function appRowsHtml(arr) {
+  if (!arr.length) return `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบแอปที่ตรงกับเงื่อนไข</td></tr>`;
+  return arr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}">
+    <td>${a.icon} <strong>${a.title}</strong></td>
+    <td><span class="badge badge-gray">${a.category}</span></td>
+    <td style="white-space:nowrap;">
+      ${!a.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
+      ${a.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':''}
+    </td>
+    <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function setAppStatus(st) {
+  window._appsFlt.status = st;
+  document.querySelectorAll('.flt-chip[data-st]').forEach(c=>c.classList.toggle('on', c.dataset.st===st));
+  filterApps();
+}
+
+function filterApps() {
+  const q   = (document.getElementById('appSearch')?.value || '').trim().toLowerCase();
+  const cat = document.getElementById('appCat')?.value || '';
+  const st  = window._appsFlt.status;
+  const clr = document.getElementById('appSearchClr'); if (clr) clr.style.display = q ? 'block' : 'none';
+  const out = (window._appsAll||[]).filter(a=>{
+    if (q && !(a.title||'').toLowerCase().includes(q) && !(a.description||'').toLowerCase().includes(q)) return false;
+    if (cat && a.category !== cat) return false;
+    if (st==='visible' && !a.visible) return false;
+    if (st==='hidden'  &&  a.visible) return false;
+    if (st==='locked'  && !a.locked)  return false;
+    return true;
+  });
+  document.getElementById('appsBody').innerHTML = appRowsHtml(out);
+  const cnt = document.getElementById('appCount');
+  if (cnt) cnt.textContent = `${out.length} / ${(window._appsAll||[]).length} แอป`;
 }
 
 function openAppModal(id) {
@@ -1488,40 +1554,86 @@ async function delApp(id, title) {
 // ══════════════════════════════════════════════════════════
 async function renderWorksheets() {
   const data = await api.get('/worksheets/admin/list');
-  const wsArr = data.worksheets || [];
+  window._wsAll = data.worksheets || [];
+  window._wsFlt = { status:'all' };
+  const cats = [...new Set(window._wsAll.map(w=>w.category).filter(Boolean))].sort();
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div class="page-title" style="margin:0;">📄 จัดการใบงาน</div>
     <button class="btn btn-primary" onclick="openWorksheetModal(null)">+ เพิ่มใบงานใหม่</button>
   </div>
   <div class="card">
+    <div class="flt-bar">
+      <div class="flt-search">
+        <span class="fs-ico">🔍</span>
+        <input id="wsSearch" type="text" placeholder="ค้นหาชื่อใบงาน..." oninput="filterWorksheets()" autocomplete="off">
+        <button class="fs-clr" id="wsSearchClr" onclick="document.getElementById('wsSearch').value='';filterWorksheets();document.getElementById('wsSearch').focus();" title="ล้าง">✕</button>
+      </div>
+      <select class="flt-select" id="wsCat" onchange="filterWorksheets()">
+        <option value="">ทุกหมวด</option>
+        ${cats.map(c=>`<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('')}
+      </select>
+      <div class="flt-chips">
+        ${[['all','ทั้งหมด'],['visible','👁 แสดง'],['hidden','🙈 ซ่อน'],['locked','🔒 ล็อก'],['free','🆓 ฟรี']].map(([v,l])=>
+          `<button class="flt-chip${v==='all'?' on':''}" data-st="${v}" onclick="setWsStatus('${v}')">${l}</button>`).join('')}
+      </div>
+      <span class="flt-count" id="wsCount"></span>
+    </div>
     <div class="table-wrap">
     <table>
       <thead><tr><th>ใบงาน</th><th>หมวด</th><th>สถานะ</th><th>ดาวน์โหลด</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${wsArr.length ? wsArr.map(w=>`<tr style="${!w.visible?'opacity:.5;':''}">
-          <td>
-            <div style="display:flex;align-items:center;gap:10px;">
-              ${w.cover_image ? `<img src="${w.cover_image}" style="width:34px;height:44px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;">` : '<span style="font-size:1.3rem;">📄</span>'}
-              <strong>${w.title}</strong>
-            </div>
-          </td>
-          <td><span class="badge badge-gray">${w.category}</span></td>
-          <td style="white-space:nowrap;">
-            ${!w.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
-            ${w.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':'<span class="badge badge-green" style="margin-left:2px;">🆓 ฟรี</span>'}
-          </td>
-          <td style="text-align:center;">${w.downloads||0}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delWorksheet(${w.id},'${w.title.replace(/'/g,"\\'")}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีใบงาน — กด "เพิ่มใบงานใหม่" เพื่อเริ่ม</td></tr>`}
-      </tbody>
+      <tbody id="wsBody"></tbody>
     </table>
     </div>
   </div>`;
+  filterWorksheets();
+}
+
+function wsRowsHtml(arr) {
+  if (!arr.length) return `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบใบงานที่ตรงกับเงื่อนไข</td></tr>`;
+  return arr.map(w=>`<tr style="${!w.visible?'opacity:.5;':''}">
+    <td>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${w.cover_image ? `<img src="${w.cover_image}" style="width:34px;height:44px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;">` : '<span style="font-size:1.3rem;">📄</span>'}
+        <strong>${w.title}</strong>
+      </div>
+    </td>
+    <td><span class="badge badge-gray">${w.category}</span></td>
+    <td style="white-space:nowrap;">
+      ${!w.visible?'<span class="badge badge-gray">🙈 ซ่อน</span>':'<span class="badge badge-green">👁 แสดง</span>'}
+      ${w.locked?'<span class="badge badge-orange" style="background:#fef3c7;color:#92400e;margin-left:2px;">🔒 ล็อก</span>':'<span class="badge badge-green" style="margin-left:2px;">🆓 ฟรี</span>'}
+    </td>
+    <td style="text-align:center;">${w.downloads||0}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delWorksheet(${w.id},'${w.title.replace(/'/g,"\\'")}')">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function setWsStatus(st) {
+  window._wsFlt.status = st;
+  document.querySelectorAll('.flt-chip[data-st]').forEach(c=>c.classList.toggle('on', c.dataset.st===st));
+  filterWorksheets();
+}
+
+function filterWorksheets() {
+  const q   = (document.getElementById('wsSearch')?.value || '').trim().toLowerCase();
+  const cat = document.getElementById('wsCat')?.value || '';
+  const st  = window._wsFlt.status;
+  const clr = document.getElementById('wsSearchClr'); if (clr) clr.style.display = q ? 'block' : 'none';
+  const out = (window._wsAll||[]).filter(w=>{
+    if (q && !(w.title||'').toLowerCase().includes(q) && !(w.description||'').toLowerCase().includes(q)) return false;
+    if (cat && w.category !== cat) return false;
+    if (st==='visible' && !w.visible) return false;
+    if (st==='hidden'  &&  w.visible) return false;
+    if (st==='locked'  && !w.locked)  return false;
+    if (st==='free'    &&  w.locked)  return false;
+    return true;
+  });
+  document.getElementById('wsBody').innerHTML = wsRowsHtml(out);
+  const cnt = document.getElementById('wsCount');
+  if (cnt) cnt.textContent = `${out.length} / ${(window._wsAll||[]).length} ใบงาน`;
 }
 
 function openWorksheetModal(id) {
@@ -2558,6 +2670,10 @@ window.delArticle = delArticle;
 window.openAppModal = openAppModal;
 window.saveApp = saveApp;
 window.delApp = delApp;
+window.filterApps = filterApps;
+window.setAppStatus = setAppStatus;
+window.filterWorksheets = filterWorksheets;
+window.setWsStatus = setWsStatus;
 window.renderWorksheets = renderWorksheets;
 window.renderReports = renderReports;
 window.setReportStatus = setReportStatus;
