@@ -38,6 +38,7 @@ export async function onRequest(ctx) {
     (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE')) ||
     path.startsWith('/codes') ||
     path.startsWith('/users') ||
+    path.startsWith('/analytics') ||
     path === '/backup'
   );
 
@@ -60,6 +61,8 @@ export async function onRequest(ctx) {
     if (path.startsWith('/reports'))   return reports(request,   env, segments, method);
     if (path.startsWith('/codes'))     return codes(request,     env, segments, method);
     if (path.startsWith('/users'))     return usersHandler(request, env, segments, method);
+    if (path === '/track' && method === 'POST') return track(request, env);
+    if (path.startsWith('/analytics')) return analytics(request, env, segments, method);
     if (path === '/upload' && method === 'POST') return upload(request, env);
     if (path === '/backup' && method === 'GET')  return backupAll(env);
 
@@ -677,9 +680,72 @@ async function codes(req, env, segs, method) {
   return err('ไม่พบ', 404);
 }
 
-// ════════════════════════════════════════════════════════
-// UTILS
-// ════════════════════════════════════════════════════════
+// ── ANALYTICS: นับยอดคนดูแต่ละหน้า ──────────────────────
+// POST /track — public, fire-and-forget จาก frontend
+async function track(req, env) {
+  try {
+    const b = await req.json();
+    const path = String(b.path||'').slice(0,200);
+    const vid  = String(b.visitor_id||'').slice(0,64);
+    if (!path || !vid) return ok({ ok:true }); // เงียบๆ ไม่ error เพื่อไม่กระทบ user
+    // กันส่งซ้ำในเวลาสั้นๆ: ถ้า visitor นี้เพิ่ง view path เดียวกันใน 30 วินาที ข้าม
+    const recent = await env.DB.prepare(
+      "SELECT 1 FROM page_views WHERE visitor_id=? AND path=? AND created_at > datetime('now','-30 seconds') LIMIT 1"
+    ).bind(vid, path).first();
+    if (recent) return ok({ ok:true });
+    await env.DB.prepare(
+      'INSERT INTO page_views (path, visitor_id) VALUES (?, ?)'
+    ).bind(path, vid).run();
+    return ok({ ok:true });
+  } catch (_) {
+    return ok({ ok:true }); // เงียบเสมอ
+  }
+}
+
+// GET /analytics/summary — admin: สรุปยอดและ top pages
+async function analytics(req, env, segs, method) {
+  if (method !== 'GET') return err('ไม่พบ', 404);
+  const action = segs[1] || 'summary';
+
+  if (action === 'summary') {
+    // นับ views/unique ใน 24h, 7d, 30d
+    const ranges = [
+      { key:'today', sql:"created_at > datetime('now','-1 day')" },
+      { key:'week',  sql:"created_at > datetime('now','-7 days')" },
+      { key:'month', sql:"created_at > datetime('now','-30 days')" },
+    ];
+    const stats = {};
+    for (const r of ranges) {
+      const row = await env.DB.prepare(
+        `SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${r.sql}`
+      ).first();
+      stats[r.key] = { views: row?.views || 0, unique: row?.uniq || 0 };
+    }
+
+    // top 10 หน้าใน 7 วัน + 30 วัน
+    const top7 = (await env.DB.prepare(
+      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-7 days') GROUP BY path ORDER BY views DESC LIMIT 10"
+    ).all()).results;
+    const top30 = (await env.DB.prepare(
+      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-30 days') GROUP BY path ORDER BY views DESC LIMIT 10"
+    ).all()).results;
+    const topToday = (await env.DB.prepare(
+      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-1 day') GROUP BY path ORDER BY views DESC LIMIT 10"
+    ).all()).results;
+
+    // กราฟ 14 วันย้อนหลัง
+    const daily = (await env.DB.prepare(
+      `SELECT date(created_at) AS d, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq
+       FROM page_views WHERE created_at > datetime('now','-14 days')
+       GROUP BY d ORDER BY d ASC`
+    ).all()).results;
+
+    return ok({ stats, topToday, top7, top30, daily });
+  }
+  return err('ไม่พบ', 404);
+}
+
+
 // ── BACKUP: dump ทุกตารางเป็น JSON (admin เท่านั้น) ──────
 async function backupAll(env) {
   const tables = ['articles', 'apps', 'worksheets', 'access_codes', 'comments', 'reports', 'users', 'settings'];
