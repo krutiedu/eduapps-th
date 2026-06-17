@@ -39,7 +39,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);
-     display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased;}
+     display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;}
 main#app{flex:1;}
 a{text-decoration:none;color:inherit;}
 img{max-width:100%;}
@@ -176,7 +176,7 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .sec-more:hover{gap:11px;}
 
 /* ── ARTICLES GRID ── */
-.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.arts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;}
 .art-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
   padding:22px 22px 19px;cursor:pointer;display:flex;flex-direction:column;position:relative;overflow:hidden;
   transition:transform .18s,box-shadow .22s,border-color .2s;}
@@ -187,8 +187,9 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .art-meta{display:flex;gap:7px;align-items:center;margin-bottom:11px;font-size:.78rem;}
 .art-card h3{font-size:1.1rem;font-weight:600;line-height:1.5;margin-bottom:8px;}
 .art-card p{font-size:.87rem;color:var(--ink-soft);line-height:1.75;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;}
-.art-date{font-size:.76rem;color:var(--slate);margin-top:14px;font-weight:600;}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  max-height:calc(1.75em * 2);}
+.art-date{font-size:.76rem;color:var(--slate);margin-top:auto;padding-top:14px;font-weight:600;}
 
 /* ── ARTICLE PAGE ── */
 .art-wrap{max-width:730px;margin:0 auto;padding:42px 22px;}
@@ -251,9 +252,18 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .ws-cover{aspect-ratio:210/270;background:var(--chalk);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
 .ws-cover img{width:100%;height:100%;object-fit:cover;}
 .ws-cover .ws-emoji{font-size:2.4rem;opacity:.5;}
-.ws-badge{position:absolute;top:8px;right:8px;padding:2px 9px;border-radius:100px;font-size:.66rem;font-weight:700;}
-.ws-badge.lock{background:var(--gold-soft);color:var(--gold-deep);}
-.ws-badge.free{background:var(--mint-soft);color:var(--mint);}
+.ws-badge{position:absolute;top:8px;right:8px;padding:3px 10px;border-radius:100px;font-size:.66rem;font-weight:700;
+  box-shadow:0 2px 6px rgba(16,28,51,.18);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+.ws-badge.lock{background:rgba(243,172,46,.95);color:#fff;}
+.ws-badge.free{background:rgba(15,162,148,.95);color:#fff;}
+/* WORKSHEET DETAIL — 2-col desktop, รูปกลางบน mobile */
+.ws-detail-grid{display:grid;grid-template-columns:280px 1fr;gap:32px;align-items:start;}
+.ws-detail-cover{position:relative;}
+.ws-detail-body{min-width:0;}
+@media(max-width:720px){
+  .ws-detail-grid{grid-template-columns:1fr;gap:18px;}
+  .ws-detail-cover{max-width:260px;margin:0 auto;width:100%;}
+}
 .ws-info{padding:11px 12px;}
 .ws-info h3{font-family:'Pridi',serif;font-size:.92rem;font-weight:600;color:var(--ink);line-height:1.4;margin:0 0 5px;}
 .ws-meta{font-size:.74rem;color:var(--slate);}
@@ -415,7 +425,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 /* ── RESPONSIVE ── */
 @media(max-width:880px){
   .crown{padding:26px 0 46px;}
-  .crown-grid{grid-template-columns:1fr;gap:26px;}
+  .crown-grid{grid-template-columns:1fr;gap:26px;align-items:stretch;}
   .stamp{width:54px;height:54px;top:-30px;right:0;}
   .stamp b{font-size:1.05rem;}
   .stamp small{font-size:.5rem;}
@@ -1220,25 +1230,37 @@ async function renderWorksheetDetail(id) {
 
   const unlocked = sessionStorage.getItem('ws_url_' + w.id);
   const fileUrl = (!w.locked && w.file_url) ? w.file_url : unlocked;
+  const shareUrl = location.origin + '/#/worksheet/' + w.id;
+  const descIsDup = (w.description||'').trim() === (w.title||'').trim();
 
   app.innerHTML = `
-  <div class="container" style="padding-bottom:40px;">
-    <div class="back-btn rv" onclick="go('/worksheets')" style="margin:8px 0 20px;cursor:pointer;color:var(--slate);font-weight:700;">← กลับคลังใบงาน</div>
-    <div class="rv" style="display:flex;gap:26px;flex-wrap:wrap;">
-      <div style="flex:0 0 260px;max-width:260px;">
-        <div style="position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(16,28,51,.1);aspect-ratio:210/297;display:flex;align-items:center;justify-content:center;">
-          ${w.cover_image ? `<img src="${esc(w.cover_image)}" alt="${esc(w.title)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="text-align:center;color:var(--slate);"><div style="font-size:3rem;">📄</div></div>`}
-          ${w.locked ? `<span class="ws-badge lock" style="top:12px;right:12px;font-size:.78rem;padding:4px 13px;">🔒 พรีเมียม</span>` : `<span class="ws-badge free" style="top:12px;right:12px;font-size:.78rem;padding:4px 13px;">🆓 ฟรี</span>`}
+  <div class="container" style="padding:8px 22px 40px;max-width:880px;">
+    <div class="back-btn rv" onclick="go('/worksheets')" style="margin:8px 0 18px;cursor:pointer;color:var(--slate);font-weight:700;">← กลับคลังใบงาน</div>
+    <div class="rv ws-detail-grid">
+      <div class="ws-detail-cover">
+        <div style="position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(16,28,51,.1);aspect-ratio:210/297;">
+          ${w.cover_image ? `<img src="${esc(w.cover_image)}" alt="${esc(w.title)}" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--slate);"><div style="font-size:3rem;">📄</div></div>`}
+          ${w.locked ? `<span class="ws-badge lock" style="top:12px;right:12px;font-size:.74rem;padding:5px 13px;">🔒 พรีเมียม</span>` : `<span class="ws-badge free" style="top:12px;right:12px;font-size:.74rem;padding:5px 13px;">🆓 ฟรี</span>`}
         </div>
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:11px;font-size:.82rem;color:var(--slate);">
-          <span>📑 ${w.pages||0} หน้า</span><span>·</span><span>⬇️ ${w.downloads||0} ดาวน์โหลด</span>
+        <div style="display:flex;gap:14px;justify-content:center;align-items:center;margin-top:12px;font-size:.84rem;color:var(--slate);font-weight:600;">
+          <span>📑 ${w.pages||0} หน้า</span>
+          ${(w.downloads||0) > 0 ? `<span style="opacity:.4;">·</span><span>⬇️ ${w.downloads} ดาวน์โหลด</span>` : ''}
         </div>
       </div>
-      <div style="flex:1;min-width:270px;">
-        <span class="cat-pill active" style="cursor:default;margin-bottom:12px;display:inline-block;">${esc(w.category||'อื่นๆ')}</span>
-        <h1 style="font-family:'Pridi',serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.4;margin:6px 0 14px;">${esc(w.title)}</h1>
-        ${w.description ? `<p style="font-size:1.02rem;color:#444;line-height:1.85;margin-bottom:22px;">${esc(w.description)}</p>` : ''}
+      <div class="ws-detail-body">
+        <span style="display:inline-block;background:var(--gold-soft);color:var(--gold-deep);border:1px solid rgba(243,172,46,.3);padding:4px 14px;border-radius:100px;font-size:.78rem;font-weight:700;margin-bottom:14px;">${esc(w.category||'อื่นๆ')}</span>
+        <h1 style="font-family:'Pridi',serif;font-size:clamp(1.4rem,3.4vw,1.8rem);font-weight:600;color:var(--ink);line-height:1.45;margin:0 0 14px;">${esc(w.title)}</h1>
+        ${w.description && !descIsDup ? `<p style="font-size:1rem;color:#444;line-height:1.85;margin-bottom:22px;">${esc(w.description)}</p>` : '<div style="margin-bottom:8px;"></div>'}
         <div id="wsAction"></div>
+        <div style="margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <strong style="font-size:.86rem;color:var(--slate);">แชร์ใบงานนี้:</strong>
+          <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+             href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">💬 LINE</a>
+          <a class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+             href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">📘 Facebook</a>
+          <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;"
+                  onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>{this.textContent='✓ คัดลอกแล้ว';setTimeout(()=>this.innerHTML='🔗 คัดลอกลิงก์',2000)})">🔗 คัดลอกลิงก์</button>
+        </div>
       </div>
     </div>
   </div>`;
