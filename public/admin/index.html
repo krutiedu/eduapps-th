@@ -1102,8 +1102,18 @@ function restoreDraft(key) {
 // ทิ้งร่าง
 function discardDraft(key) {
   localStorage.removeItem(key);
+  // ล้างค่าใน form fields ทั้งหมด — กัน text เก่าค้างใน box หลังกด "เริ่มเขียนใหม่"
+  const title = document.getElementById('artTitle');
+  const excerpt = document.getElementById('artExcerpt');
+  const img = document.getElementById('artImg');
+  const ed = document.getElementById('editorBody');
+  if (title) title.value = '';
+  if (excerpt) excerpt.value = '';
+  if (img) img.value = '';
+  if (ed) ed.innerHTML = '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>';
   document.getElementById('editorAlert').innerHTML = '';
-  toast('🗑 ทิ้งร่างแล้ว');
+  toast('🗑 ทิ้งร่างแล้ว เริ่มเขียนใหม่ได้เลย');
+  if (title) title.focus();
 }
 
 
