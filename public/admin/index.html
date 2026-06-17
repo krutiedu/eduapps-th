@@ -752,6 +752,7 @@ async function renderDash() {
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="nav('new-article')">✏️ เขียนบทความใหม่</button>
       <button class="btn btn-success" onclick="nav('apps')">🎮 เพิ่มแอป</button>
+      <button class="btn btn-success" onclick="nav('worksheets')">📄 จัดการใบงาน</button>
       <button class="btn btn-outline" onclick="nav('comments')">💬 จัดการคอมเมนต์</button>
       <button class="btn btn-outline" onclick="nav('settings')">⚙️ ตั้งค่า</button>
     </div>
@@ -767,7 +768,7 @@ async function renderDash() {
           <td><span class="badge badge-gray">${a.category}</span></td>
           <td>${a.published?'<span class="badge badge-green">เผยแพร่</span>':'<span class="badge badge-orange">แบบร่าง</span>'}</td>
           <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
-          <td><button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button></td>
+          <td style="white-space:nowrap;"><a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บ" style="text-decoration:none;">👁</a> <button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button></td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -900,7 +901,8 @@ async function renderArticles() {
           <td style="color:#94a3b8">${a.views||0}</td>
           <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
           <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
+            <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+            <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
             <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
           </td>
         </tr>`).join('')
@@ -1486,7 +1488,9 @@ async function saveArticle() {
   if (res.error) { toast('❌ '+res.error); return; }
   // บันทึกสำเร็จ → ล้างร่าง auto-save ทิ้ง
   if (window._currentDraftKey) { localStorage.removeItem(window._currentDraftKey); window._currentDraftKey = null; }
-  toast(editingId ? '✅ แก้ไขบทความแล้ว' : '✅ เผยแพร่บทความแล้ว');
+  const itemId = editingId || res.id;
+  const url = itemId ? `${location.origin}/#/article/${itemId}` : `${location.origin}/#/blog`;
+  toastWithLink(editingId ? '✅ แก้ไขบทความแล้ว' : '✅ เผยแพร่บทความแล้ว', url);
   setTimeout(() => nav('articles'), 800);
 }
 
@@ -1542,7 +1546,8 @@ function appRowsHtml(arr) {
     </td>
     <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
   </tr>`).join('');
@@ -1654,7 +1659,8 @@ async function saveApp(id) {
     ? await api.put('/apps/'+id, body)
     : await api.post('/apps', body);
   if (res.error) { toast('❌ '+res.error); return; }
-  closeModal(); toast('✅ บันทึกแอปแล้ว');
+  closeModal();
+  toastWithLink('✅ บันทึกแอปแล้ว', `${location.origin}/#/apps`);
   renderApps();
 }
 
@@ -1720,7 +1726,8 @@ function wsRowsHtml(arr) {
     </td>
     <td style="text-align:center;">${w.downloads||0}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/#/worksheet/${w.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delWorksheet(${w.id},'${w.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
   </tr>`).join('');
@@ -1829,7 +1836,10 @@ async function saveWorksheet(id) {
     ? await api.put('/worksheets/'+id, body)
     : await api.post('/worksheets', body);
   if (res.error) { toast('❌ '+res.error); return; }
-  closeModal(); toast('✅ บันทึกใบงานแล้ว');
+  closeModal();
+  const wsId = (id && id !== 'null') ? id : res.id;
+  const wsUrl = wsId ? `${location.origin}/#/worksheet/${wsId}` : `${location.origin}/#/worksheets`;
+  toastWithLink('✅ บันทึกใบงานแล้ว', wsUrl);
   renderWorksheets();
 }
 
@@ -2772,6 +2782,18 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+// toast พร้อมปุ่ม "ดูในเว็บจริง" — สำหรับหลังบันทึก/แก้ไข
+function toastWithLink(msg, url) {
+  const t = document.getElementById('toast');
+  t.innerHTML = `<span>${msg}</span>
+    <a href="${url}" target="_blank" rel="noopener"
+       style="display:inline-block;margin-left:10px;padding:3px 11px;background:rgba(255,255,255,.18);
+              border:1px solid rgba(255,255,255,.35);border-radius:99px;color:#fff;font-weight:700;font-size:.82rem;text-decoration:none;">
+       👁 ดูในเว็บ</a>`;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 5000); // นานหน่อย จะได้ทันกด
 }
 
 // ── INIT ──────────────────────────────────────────────────
