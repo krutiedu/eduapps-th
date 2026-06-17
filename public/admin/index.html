@@ -1023,13 +1023,17 @@ function renderArticleEditor(art) {
   // กู้คืนร่างที่ค้างไว้
   try {
     const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
+    // ลบร่างเก่าเกิน 24 ชม. อัตโนมัติ (กัน draft ค้างจากการเผยแพร่ผิดพลาด)
+    if (saved && saved.savedAt && (Date.now() - saved.savedAt) > 24*60*60*1000) {
+      localStorage.removeItem(draftKey);
+    } else
     if (saved && (saved.title || saved.excerpt || saved.content)) {
       const isEmpty = !titleEl.value.trim() &&
         (!ed.innerHTML.trim() || ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>');
       const ageMin = saved.savedAt ? (Date.now() - saved.savedAt) / 60000 : 999;
 
-      if (isEmpty && !editingId) {
-        // เขียนบทความใหม่ + ฟอร์มว่าง → เติมร่างกลับทันที (สลับเมนูแล้วกลับมาข้อความยังอยู่)
+      if (isEmpty && !editingId && ageMin < 60*24) {
+        // เขียนบทความใหม่ + ฟอร์มว่าง + ร่างยังไม่เก่าเกิน 24 ชม → เติมร่างกลับทันที
         titleEl.value = saved.title || '';
         excerptEl.value = saved.excerpt || '';
         if (saved.content) ed.innerHTML = saved.content;
@@ -1056,7 +1060,6 @@ function renderArticleEditor(art) {
   } catch (e) {}
 
   // บันทึกร่างอัตโนมัติ 2 วิ หลังหยุดพิมพ์
-  let draftTimer = null;
   const doSaveDraft = () => {
     if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') return;
     if (!titleEl.value.trim() && !excerptEl.value.trim() &&
@@ -1071,8 +1074,8 @@ function renderArticleEditor(art) {
       setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
   };
   const saveDraft = () => {
-    clearTimeout(draftTimer);
-    draftTimer = setTimeout(doSaveDraft, 2000);
+    clearTimeout(window._draftTimer);
+    window._draftTimer = setTimeout(doSaveDraft, 2000);
   };
   titleEl.addEventListener('input', saveDraft);
   excerptEl.addEventListener('input', saveDraft);
@@ -1486,7 +1489,9 @@ async function saveArticle() {
     ? await api.put('/articles/'+editingId, body)
     : await api.post('/articles', body);
   if (res.error) { toast('❌ '+res.error); return; }
-  // บันทึกสำเร็จ → ล้างร่าง auto-save ทิ้ง
+  // บันทึกสำเร็จ → ยกเลิก auto-save timer ที่อาจค้างอยู่ + ล้างร่างทิ้ง
+  clearTimeout(window._draftTimer); window._draftTimer = null;
+  window._saveDraftNow = null;
   if (window._currentDraftKey) { localStorage.removeItem(window._currentDraftKey); window._currentDraftKey = null; }
   const itemId = editingId || res.id;
   const url = itemId ? `${location.origin}/#/article/${itemId}` : `${location.origin}/#/blog`;
