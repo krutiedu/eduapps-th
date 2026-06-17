@@ -374,11 +374,9 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 }
 
 .ad-slot{display:none;}
-/* AdSense: ซ่อน <ins> ที่ยังไม่มี ad fill (Firefox/Safari render iframe ว่างกินพื้นที่) */
-ins.adsbygoogle{min-height:0!important;}
-ins.adsbygoogle[data-ad-status="unfilled"],
-ins.adsbygoogle:not([data-adsbygoogle-status]){display:none!important;}
-ins.adsbygoogle[data-adsbygoogle-status="done"]{display:block;min-height:0;}
+/* AdSense: ซ่อนเสมอ ยกเว้นมี ad ถูก fill จริง (กัน iframe ว่างกินพื้นที่บน Firefox/Safari) */
+ins.adsbygoogle{display:none!important;min-height:0!important;margin:0!important;}
+ins.adsbygoogle[data-ad-status="filled"]{display:block!important;margin:20px 0!important;}
 
 /* ── FILTER PILLS ── */
 .cat-strip{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px;}
@@ -1798,7 +1796,7 @@ function esc(s) {
 // AdSense — แสดงเมื่อตั้งค่า Publisher ID แล้วเท่านั้น
 function adSlot() {
   if (S.adsense_id) {
-    return `<ins class="adsbygoogle" style="display:block;margin:20px 0;"
+    return `<ins class="adsbygoogle" style="margin:20px 0;"
       data-ad-client="${S.adsense_id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
   }
   return '';
