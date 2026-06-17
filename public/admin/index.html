@@ -719,10 +719,11 @@ const toggleSidebar = () => document.getElementById('sidebar').classList.toggle(
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
 async function renderDash() {
-  const [arts, appsData, cmts] = await Promise.all([
+  const [arts, appsData, cmts, analytics] = await Promise.all([
     api.get('/articles/admin/list'),
     api.get('/apps'),
     api.get('/comments/admin/list'),
+    api.get('/analytics/summary').catch(() => null),
   ]);
   const artList  = arts.articles  || [];
   const appList  = appsData.apps  || [];
@@ -730,6 +731,10 @@ async function renderDash() {
   const pub      = artList.filter(a=>a.published).length;
   const draft    = artList.filter(a=>!a.published).length;
   const pending  = cmtList.filter(c=>!c.approved).length;
+
+  // map path → ชื่ออ่านง่าย
+  window._artMap = Object.fromEntries(artList.map(a=>[String(a.id), a.title]));
+  window._appMap = Object.fromEntries(appList.map(a=>[String(a.id), a.title]));
 
   document.getElementById('content').innerHTML = `
   <div class="page-title">📊 Dashboard</div>
@@ -741,6 +746,7 @@ async function renderDash() {
     <div class="stat"><div class="stat-num" style="color:${pending?'#dc2626':'#059669'}">${pending}</div><div class="stat-label">💬 คอมเมนต์รอ</div></div>
   </div>
   ${pending > 0 ? `<div class="alert alert-info">💬 มีความคิดเห็น <strong>${pending} รายการ</strong> รอการอนุมัติ <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="nav('comments')">ดูเลย</button></div>` : ''}
+  ${renderAnalyticsSection(analytics)}
   <div class="card">
     <div class="card-title">📝 ทางลัด</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -767,6 +773,108 @@ async function renderDash() {
     </table>
     </div>
   </div>`;
+}
+
+function prettyPath(p) {
+  if (!p || p === '/' || p === '') return '🏠 หน้าแรก';
+  if (p === '/blog') return '📝 หน้ารวมบทความ';
+  if (p === '/apps') return '🎮 หน้ารวมแอป';
+  if (p === '/worksheets') return '📄 หน้ารวมใบงาน';
+  if (p === '/about') return 'ℹ️ เกี่ยวกับเรา';
+  if (p === '/buy')  return '💰 หน้าซื้อรหัส';
+  if (p === '/report') return '🐛 หน้าแจ้งปัญหา';
+  if (p === '/privacy') return '🔒 นโยบาย';
+  const m1 = p.match(/^\/article\/(\d+)/);
+  if (m1) return '📝 ' + ((window._artMap||{})[m1[1]] || 'บทความ #'+m1[1]);
+  const m2 = p.match(/^\/worksheet\/(\d+)/);
+  if (m2) return '📄 ใบงาน #' + m2[1];
+  return p;
+}
+
+function topTable(rows) {
+  if (!rows || !rows.length) return '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:.88rem;">ยังไม่มีข้อมูล</div>';
+  return `<table style="width:100%;font-size:.86rem;">
+    <thead><tr style="border-bottom:1px solid #e2e8f0;color:#64748b;">
+      <th style="text-align:left;padding:8px 6px;font-weight:600;">#</th>
+      <th style="text-align:left;padding:8px;font-weight:600;">หน้า</th>
+      <th style="text-align:right;padding:8px;font-weight:600;white-space:nowrap;">วิว</th>
+      <th style="text-align:right;padding:8px 6px;font-weight:600;white-space:nowrap;">คน</th>
+    </tr></thead><tbody>
+    ${rows.map((r,i)=>`<tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:8px 6px;color:#94a3b8;">${i+1}</td>
+      <td style="padding:8px;">${prettyPath(r.path)}</td>
+      <td style="padding:8px;text-align:right;font-weight:700;color:#0f172a;">${r.views}</td>
+      <td style="padding:8px 6px;text-align:right;color:#64748b;">${r.uniq}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function dailyChart(daily) {
+  if (!daily || !daily.length) return '';
+  // เติมวันที่ไม่มี view เป็น 0
+  const days = [];
+  for (let i=13;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const key = d.toISOString().slice(0,10);
+    const found = daily.find(x => x.d === key);
+    days.push({ d:key, views: found?.views||0, uniq: found?.uniq||0,
+                label: (d.getMonth()+1)+'/'+d.getDate() });
+  }
+  const max = Math.max(1, ...days.map(d=>d.views));
+  return `<div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 4px 4px;background:#f8fafc;border-radius:8px;">
+    ${days.map(d=>{
+      const h = Math.round((d.views/max)*100);
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;" title="${d.d}: ${d.views} views, ${d.uniq} คน">
+        <div style="font-size:.65rem;color:#0f172a;font-weight:700;height:14px;">${d.views||''}</div>
+        <div style="width:100%;background:linear-gradient(180deg,#3b82f6,#1d4ed8);border-radius:3px 3px 0 0;height:${h}%;min-height:${d.views?2:0}px;transition:.3s;"></div>
+        <div style="font-size:.65rem;color:#94a3b8;white-space:nowrap;">${d.label}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderAnalyticsSection(a) {
+  if (!a) return `<div class="card"><div class="card-title">📈 ยอดผู้เข้าชม</div>
+    <div style="padding:20px;text-align:center;color:#94a3b8;font-size:.88rem;">
+      ระบบนับยอดยังไม่พร้อม — ตรวจสอบว่ารัน <code>migration-analytics.sql</code> แล้วหรือยัง<br>
+      <span style="font-size:.78rem;">(หรือยังไม่มีคนเข้าเว็บในระบบใหม่)</span>
+    </div></div>`;
+  const s = a.stats || {};
+  const stat = (n, l, c) => `<div class="stat"><div class="stat-num" style="color:${c}">${n}</div><div class="stat-label">${l}</div></div>`;
+  return `
+  <div class="card">
+    <div class="card-title">📈 ยอดผู้เข้าชม</div>
+    <div class="stat-row" style="margin-bottom:14px;">
+      ${stat(s.today?.views||0, '👁 วิววันนี้', '#3b82f6')}
+      ${stat(s.today?.unique||0, '👤 คนวันนี้', '#059669')}
+      ${stat(s.week?.views||0, '👁 วิว 7 วัน', '#3b82f6')}
+      ${stat(s.week?.unique||0, '👤 คน 7 วัน', '#059669')}
+      ${stat(s.month?.unique||0, '👤 คน 30 วัน', '#7c3aed')}
+    </div>
+    <div style="font-size:.82rem;color:#64748b;margin-bottom:6px;font-weight:600;">📊 ยอดวิว 14 วันย้อนหลัง</div>
+    ${dailyChart(a.daily)}
+  </div>
+  <div class="card">
+    <div class="card-title">🔥 Top 10 หน้ายอดนิยม</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm tt-tab on" data-r="today" onclick="switchTopTab(this,'today')">วันนี้</button>
+      <button class="btn btn-outline btn-sm tt-tab" data-r="week" onclick="switchTopTab(this,'week')">7 วัน</button>
+      <button class="btn btn-outline btn-sm tt-tab" data-r="month" onclick="switchTopTab(this,'month')">30 วัน</button>
+    </div>
+    <div id="topToday" class="tt-pane">${topTable(a.topToday)}</div>
+    <div id="topWeek"  class="tt-pane" style="display:none;">${topTable(a.top7)}</div>
+    <div id="topMonth" class="tt-pane" style="display:none;">${topTable(a.top30)}</div>
+  </div>`;
+}
+
+function switchTopTab(btn, range) {
+  document.querySelectorAll('.tt-tab').forEach(b => b.classList.toggle('on', b===btn));
+  document.querySelectorAll('.tt-tab').forEach(b => {
+    b.style.background = (b===btn) ? 'var(--ink, #101c33)' : '';
+    b.style.color = (b===btn) ? '#fff' : '';
+  });
+  document.getElementById('topToday').style.display = range==='today' ? 'block' : 'none';
+  document.getElementById('topWeek').style.display  = range==='week'  ? 'block' : 'none';
+  document.getElementById('topMonth').style.display = range==='month' ? 'block' : 'none';
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2771,6 +2879,7 @@ window.saveProfile = saveProfile;
 window.delApp = delApp;
 window.approveCmt = approveCmt;
 window.delCmt = delCmt;
+window.switchTopTab = switchTopTab;
 window.nav = nav;
 window.closeModal = closeModal;
 window.toggleSidebar = toggleSidebar;
