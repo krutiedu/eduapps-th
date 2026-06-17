@@ -357,7 +357,7 @@ async function apps(req, env, segs, method) {
   // GET /apps — สาธารณะ เฉพาะ visible=1, ไม่ส่ง lock_code, locked=1 ไม่ส่ง url
   if (!id && method === 'GET') {
     const { results } = await env.DB
-      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,created_at FROM apps WHERE visible=1 ORDER BY sort_order ASC, created_at ASC').all();
+      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,created_at FROM apps WHERE visible=1 ORDER BY sort_order ASC, created_at ASC').all();
     const safe = results.map(a => ({
       ...a,
       url: a.locked ? null : a.url,   // ซ่อน URL ถ้า locked
@@ -368,16 +368,16 @@ async function apps(req, env, segs, method) {
   if (!id && method === 'POST') {
     const b = await req.json();
     await env.DB.prepare(
-      'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible,preview_image) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'').run();
+      'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible,preview_image,is_vip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0).run();
     return ok({ ok: true });
   }
 
   if (id && method === 'PUT') {
     const b = await req.json();
     await env.DB.prepare(
-      'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=?,locked=?,lock_code=?,visible=?,preview_image=? WHERE id=?'
-    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', id).run();
+      'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=?,locked=?,lock_code=?,visible=?,preview_image=?,is_vip=? WHERE id=?'
+    ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0, id).run();
     return ok({ ok: true });
   }
 
