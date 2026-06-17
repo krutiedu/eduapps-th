@@ -604,11 +604,53 @@ function get(url, ttl = 30000) {
 }
 const token = () => localStorage.getItem('_tok');
 
+// ── ANALYTICS TRACKING ───────────────────────────────────
+// fingerprint แบบเบาๆ ไม่ละเมิดความเป็นส่วนตัว — ไม่ส่ง raw data ส่งแต่ hash
+async function getVisitorId() {
+  let vid = localStorage.getItem('_vid');
+  const vidAge = +localStorage.getItem('_vid_ts') || 0;
+  // refresh ทุก 30 วัน
+  if (vid && (Date.now() - vidAge) < 30*86400*1000) return vid;
+  try {
+    const fp = [navigator.userAgent, screen.width+'x'+screen.height,
+                Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language].join('|');
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fp));
+    vid = Array.from(new Uint8Array(buf)).slice(0,8).map(b=>b.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem('_vid', vid);
+    localStorage.setItem('_vid_ts', Date.now());
+  } catch (_) {
+    // fallback: random ID
+    vid = Math.random().toString(36).slice(2,18);
+    localStorage.setItem('_vid', vid);
+    localStorage.setItem('_vid_ts', Date.now());
+  }
+  return vid;
+}
+let _lastTracked = '';
+async function trackPageView(path) {
+  if (!path || path === _lastTracked) return;
+  // ข้าม admin/internal routes ที่ขึ้นต้นด้วย /admin
+  if (path.startsWith('/admin')) return;
+  _lastTracked = path;
+  try {
+    const vid = await getVisitorId();
+    const body = JSON.stringify({ path, visitor_id: vid });
+    // ใช้ sendBeacon ไม่บล็อก, fallback fetch keepalive
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(API+'/track', new Blob([body], { type:'application/json' }));
+    } else {
+      fetch(API+'/track', { method:'POST', headers:{'Content-Type':'application/json'}, body, keepalive:true }).catch(()=>{});
+    }
+  } catch (_) {}
+}
+
 // ── ROUTER ───────────────────────────────────────────────
 function route() {
   const rawHash = location.hash.replace('#','') || '/';
   const [h, queryStr] = rawHash.split('?');
   const query = new URLSearchParams(queryStr || '');
+  // track ทุกหน้า (non-blocking)
+  trackPageView(h);
   document.querySelectorAll('.nav-links a').forEach(a =>
     a.classList.toggle('active', a.dataset.r === h || (h==='/' && a.dataset.r==='/')));
   document.getElementById('navLinks').classList.remove('open');
