@@ -370,10 +370,10 @@ async function apps(req, env, segs, method) {
 
   if (!id && method === 'POST') {
     const b = await req.json();
-    await env.DB.prepare(
+    const res = await env.DB.prepare(
       'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible,preview_image,is_vip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
     ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0).run();
-    return ok({ ok: true });
+    return ok({ ok: true, id: res?.meta?.last_row_id || res?.lastInsertRowid });
   }
 
   if (id && method === 'PUT') {
@@ -456,10 +456,10 @@ async function worksheets(req, env, segs, method) {
 
   if (!id && method === 'POST') {
     const b = await req.json();
-    await env.DB.prepare(
+    const res = await env.DB.prepare(
       'INSERT INTO worksheets (title,category,description,cover_image,file_url,pages,sort_order,locked,lock_code,visible) VALUES (?,?,?,?,?,?,?,?,?,?)'
     ).bind(b.title, b.category||'อื่นๆ', b.description||'', b.cover_image||'', b.file_url||'', b.pages||0, b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0).run();
-    return ok({ ok: true });
+    return ok({ ok: true, id: res?.meta?.last_row_id || res?.lastInsertRowid });
   }
 
   if (id && method === 'PUT') {
