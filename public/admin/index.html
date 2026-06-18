@@ -811,14 +811,21 @@ function topTable(rows) {
 
 function dailyChart(daily) {
   if (!daily || !daily.length) return '';
-  // เติมวันที่ไม่มี view เป็น 0
+  // เติมวันที่ไม่มี view เป็น 0 — ใช้เวลาประเทศไทย (UTC+7) ให้ตรงกับ backend
+  const bangkokDateKey = (date) => {
+    // shift +7 hours แล้วเอา YYYY-MM-DD
+    const t = new Date(date.getTime() + 7*60*60*1000);
+    return t.toISOString().slice(0,10);
+  };
   const days = [];
   for (let i=13;i>=0;i--) {
     const d = new Date(); d.setDate(d.getDate()-i);
-    const key = d.toISOString().slice(0,10);
+    const key = bangkokDateKey(d);
     const found = daily.find(x => x.d === key);
+    // label เอาจากวัน-เดือนในเวลาไทย
+    const bkk = new Date(d.getTime() + 7*60*60*1000);
     days.push({ d:key, views: found?.views||0, uniq: found?.uniq||0,
-                label: (d.getMonth()+1)+'/'+d.getDate() });
+                label: (bkk.getUTCMonth()+1)+'/'+bkk.getUTCDate() });
   }
   const max = Math.max(1, ...days.map(d=>d.views));
   return `<div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 4px 4px;background:#f8fafc;border-radius:8px;">
