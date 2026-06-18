@@ -708,11 +708,12 @@ async function analytics(req, env, segs, method) {
   const action = segs[1] || 'summary';
 
   if (action === 'summary') {
-    // นับ views/unique ใน 24h, 7d, 30d
+    // ใช้เวลาประเทศไทย (UTC+7) — "วันนี้" = ตั้งแต่ 00:00 ของวันนี้ในไทย, ไม่ใช่ 24 ชม.ที่ผ่านมา
+    const TZ = "'+7 hours'";
     const ranges = [
-      { key:'today', sql:"created_at > datetime('now','-1 day')" },
-      { key:'week',  sql:"created_at > datetime('now','-7 days')" },
-      { key:'month', sql:"created_at > datetime('now','-30 days')" },
+      { key:'today', sql:`datetime(created_at, ${TZ}) >= date('now', ${TZ})` },
+      { key:'week',  sql:`date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days')` },
+      { key:'month', sql:`date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days')` },
     ];
     const stats = {};
     for (const r of ranges) {
@@ -722,21 +723,21 @@ async function analytics(req, env, segs, method) {
       stats[r.key] = { views: row?.views || 0, unique: row?.uniq || 0 };
     }
 
-    // top 10 หน้าใน 7 วัน + 30 วัน
+    // top 10 หน้าในแต่ละช่วง (วันนี้/7วัน/30วัน) — ใช้ Bangkok time
     const top7 = (await env.DB.prepare(
-      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-7 days') GROUP BY path ORDER BY views DESC LIMIT 10"
+      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days') GROUP BY path ORDER BY views DESC LIMIT 10`
     ).all()).results;
     const top30 = (await env.DB.prepare(
-      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-30 days') GROUP BY path ORDER BY views DESC LIMIT 10"
+      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days') GROUP BY path ORDER BY views DESC LIMIT 10`
     ).all()).results;
     const topToday = (await env.DB.prepare(
-      "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE created_at > datetime('now','-1 day') GROUP BY path ORDER BY views DESC LIMIT 10"
+      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE datetime(created_at, ${TZ}) >= date('now', ${TZ}) GROUP BY path ORDER BY views DESC LIMIT 10`
     ).all()).results;
 
-    // กราฟ 14 วันย้อนหลัง
+    // กราฟ 14 วันย้อนหลัง — group by วันตามปฏิทินไทย
     const daily = (await env.DB.prepare(
-      `SELECT date(created_at) AS d, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq
-       FROM page_views WHERE created_at > datetime('now','-14 days')
+      `SELECT date(created_at, ${TZ}) AS d, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq
+       FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-14 days')
        GROUP BY d ORDER BY d ASC`
     ).all()).results;
 
