@@ -38,11 +38,8 @@
   --shadow-lg:0 22px 56px rgba(16,28,51,.18);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{overflow-x:hidden;overscroll-behavior-y:none;}
-/* html background = สี ink (เหมือน footer + topzone) เพื่อ overscroll บน iOS Safari ดูกลมกลืน
-   ไม่เห็นสี paper โผล่ใต้ footer */
-html{background:#101c33;}
-body{background:var(--paper);}
+html{overflow-x:hidden;background:#101c33;}
+body{overflow-x:hidden;background:var(--paper);}
 body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);
      -webkit-font-smoothing:antialiased;}
 /* main#app: display block ปกติ — footer ลอยขึ้นถ้า content สั้นก็ยอม ดีกว่ามีช่องว่างกลางหน้า */
