@@ -52,8 +52,10 @@
   .phead h2{margin:0;font-size:23px;letter-spacing:-.01em}.phead .sub{color:var(--ink-soft);font-size:14px}
   .back{font-size:14px;color:var(--ink-soft);display:inline-flex;gap:5px;align-items:center;padding:6px 0}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-  .bcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);text-align:left;position:relative;overflow:hidden;transition:transform .12s,box-shadow .15s}
+  .bcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:0;box-shadow:var(--shadow);text-align:left;position:relative;overflow:hidden;transition:transform .12s,box-shadow .15s}
   .bcard:active{transform:translateY(1px)}
+  .bcard-open{display:block;width:100%;background:none;border:none;padding:18px;text-align:left;cursor:pointer;color:inherit;font:inherit}
+  .bcard-acts{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:3}
   .bcard .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--chalk-deep);background:rgba(244,166,192,.1);padding:3px 9px;border-radius:20px;margin-bottom:10px}
   .bcard h3{margin:0 0 4px;font-size:17px;line-height:1.3}.bcard .meta{font-size:13px;color:var(--ink-soft)}
   .bcard .prog{margin-top:14px;height:7px;border-radius:10px;background:var(--line);overflow:hidden}
@@ -160,6 +162,7 @@
   .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--chalk);border-radius:50%;animation:sp 1s linear infinite;margin:30px auto}
   @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 <div class="topbar"><div class="wrap">
@@ -289,11 +292,18 @@ async function teacherHome(){
   for(const b of data.boards){
     const total=b.roster||b.submitted||0;
     const pct=total?Math.round(b.reviewed/total*100):0;
-    cards+=`<button class="bcard" onclick="go('board/${b.id}')">
-      <span class="tag">${esc(b.room||'')}</span><h3>${esc(b.title)}</h3>
-      <div class="meta">ส่งแล้ว ${b.submitted} ชิ้น · ตรวจแล้ว ${b.reviewed}</div>
-      <div class="prog"><i style="width:${pct}%"></i></div>
-      <div class="pnum"><span>ความคืบหน้าการตรวจ</span><span>${pct}%</span></div></button>`;
+    const safeTitle=esc(b.title).replace(/'/g,"\\'");
+    cards+=`<div class="bcard">
+      <div class="bcard-acts">
+        <button class="wbtn" title="ดาวน์โหลด zip" onclick="dlBoardZip('${b.id}','${safeTitle}',event)">⏬</button>
+        <button class="wbtn del" title="ลบกระดาน" onclick="delBoard('${b.id}','${safeTitle}',event)">🗑</button>
+      </div>
+      <button class="bcard-open" onclick="go('board/${b.id}')">
+        <span class="tag">${esc(b.room||'')}</span><h3>${esc(b.title)}</h3>
+        <div class="meta">ส่งแล้ว ${b.submitted} ชิ้น · ตรวจแล้ว ${b.reviewed}</div>
+        <div class="prog"><i style="width:${pct}%"></i></div>
+        <div class="pnum"><span>ความคืบหน้าการตรวจ</span><span>${pct}%</span></div>
+      </button></div>`;
   }
   app.innerHTML=`<div class="wrap"><div class="page">
     <div class="phead"><div><h2>กระดานของฉัน</h2><div class="sub">การบ้านแต่ละชิ้นคือกระดานหนึ่งใบ · มีเฉพาะของคุณ</div></div></div>
@@ -344,13 +354,14 @@ async function shareView(id){
 function copyLink(){const i=$('#lk');i.select();navigator.clipboard?.writeText(i.value);toast('คัดลอกลิงก์แล้ว')}
 
 /* ---- marking board ---- */
-let _filter='all',_subsCache=[],_currentBoardId=null;
+let _filter='all',_subsCache=[],_currentBoardId=null,_currentBoardTitle='';
 async function teacherBoard(id){
   _currentBoardId=id;
   if(!_token)return landing();
   setWho('ครู · '+(_name||_user));loading();
   let data;try{data=await api('/boards/'+id+'/subs')}catch(e){return toast(e.message)||go('t')}
   _subsCache=data.subs;
+  _currentBoardTitle=data.board?.title||'';
   let subs=data.subs;
   const counts={all:subs.length,wait:subs.filter(s=>s.status==='wait').length,done:subs.filter(s=>s.status!=='wait').length};
   let show=subs;
@@ -374,7 +385,14 @@ async function teacherBoard(id){
       </button></div>`;
   });
   app.innerHTML=`<div class="wrap"><div class="page">
-    <button class="back" onclick="go('t')">← กระดานทั้งหมด</button><div class="phead"><h2>ตรวจงาน</h2></div>
+    <button class="back" onclick="go('t')">← กระดานทั้งหมด</button>
+    <div class="phead" style="align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">ตรวจงาน${_currentBoardTitle?` <span style="font-size:14px;color:var(--ink-soft);font-weight:500">· ${esc(_currentBoardTitle)}</span>`:''}</h2>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm" onclick="dlBoardZip('${id}','${esc(_currentBoardTitle).replace(/'/g,"\\'")}',event)">⏬ ดาวน์โหลด zip</button>
+        <button class="btn sm" style="color:var(--marker);border-color:var(--marker)" onclick="delBoard('${id}','${esc(_currentBoardTitle).replace(/'/g,"\\'")}',event)">🗑 ลบกระดาน</button>
+      </div>
+    </div>
     <div class="toolbar"><div class="seg">${seg('all','ทั้งหมด '+counts.all)}${seg('wait','ยังไม่ตรวจ '+counts.wait)}${seg('done','ตรวจแล้ว '+counts.done)}</div>
       <div style="flex:1"></div><button class="btn sm" onclick="go('share/${id}')">📤 แจกลิงก์</button><button class="btn sm" onclick="go('sum/${id}')">📊 สรุปผล</button></div>
     ${show.length?`<div class="mgrid">${cells}</div>`:`<div class="empty"><div class="big">🪧</div>${subs.length?'ไม่มีงานในหมวดนี้':'ยังไม่มีนักเรียนส่งงาน — แจกลิงก์ให้ห้องได้เลย'}</div>`}
@@ -394,6 +412,66 @@ async function delSub(sid,no,ev){
   try{await api('/subs/'+sid,{method:'DELETE'});toast('ลบแล้ว');
     // refresh กระดานปัจจุบัน
     if(_currentBoardId)teacherBoard(_currentBoardId);
+  }catch(e){toast(e.message)}
+}
+
+/* ดาวน์โหลดทั้งกระดานเป็น zip (รูป + CSV สรุปคะแนน) */
+async function dlBoardZip(boardId,title,ev){
+  if(ev){ev.stopPropagation();ev.preventDefault()}
+  if(typeof JSZip==='undefined')return toast('โหลด JSZip ไม่สำเร็จ ลองใหม่อีกครั้ง');
+  toast('กำลังเตรียมไฟล์ zip…');
+  try{
+    // ดึงข้อมูล subs ของกระดาน
+    const data=await api('/boards/'+boardId+'/subs');
+    const subs=data.subs||[];
+    if(subs.length===0)return toast('กระดานนี้ยังไม่มีงานส่ง');
+
+    const zip=new JSZip();
+    // CSV สรุปคะแนน
+    const stMap={ok:'✓ ถูก',no:'✕ ผิด',star:'★ ดีเด่น',wait:'ยังไม่ตรวจ'};
+    let csv='\uFEFFเลขที่,ชื่อ,สถานะ,คะแนน,หมายเหตุ\n';
+    subs.forEach(s=>{
+      const row=[s.no,'"'+(s.name||'').replace(/"/g,'""')+'"',stMap[s.status]||s.status,s.score??'','"'+(s.comment||'').replace(/"/g,'""')+'"'];
+      csv+=row.join(',')+'\n';
+    });
+    zip.file('สรุปคะแนน.csv',csv);
+
+    // ดาวน์โหลดรูปทีละใบ (concurrent 4 อันเพื่อกัน rate limit)
+    let done=0;
+    async function fetchOne(s){
+      try{
+        const res=await fetch(s.img);if(!res.ok)throw new Error('fetch '+res.status);
+        const blob=await res.blob();
+        const fname=`เลขที่${s.no}${s.name?'-'+s.name:''}.jpg`;
+        zip.file(fname,blob);
+      }catch(e){console.warn('skip',s.no,e.message)}
+      done++;
+      if(done%5===0||done===subs.length)toast(`กำลังโหลด ${done}/${subs.length}…`);
+    }
+    // run in batches of 4
+    for(let i=0;i<subs.length;i+=4){
+      await Promise.all(subs.slice(i,i+4).map(fetchOne));
+    }
+
+    toast('กำลังสร้าง zip…');
+    const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=(title||'กระดาน').replace(/[/\\?%*:|"<>]/g,'_')+'.zip';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    toast('ดาวน์โหลดเรียบร้อย ✓');
+  }catch(e){toast('ผิดพลาด: '+e.message)}
+}
+
+/* ลบทั้งกระดาน (cascade subs + รูป R2) */
+async function delBoard(boardId,title,ev){
+  if(ev){ev.stopPropagation();ev.preventDefault()}
+  if(!confirm(`ลบกระดาน "${title}" ทั้งหมด?\nรวมงานนักเรียนทุกคน — ทำแล้วกู้คืนไม่ได้`))return;
+  if(!confirm('ยืนยันอีกครั้ง? งานที่นักเรียนส่งจะหายทั้งหมด'))return;
+  try{await api('/boards/'+boardId,{method:'DELETE'});toast('ลบกระดานแล้ว');
+    // ถ้ากำลังอยู่ในหน้ากระดานนั้น กลับไปหน้ารวม
+    if(location.hash.includes('board/'+boardId)||location.hash.includes('sum/'+boardId))go('t');
+    else teacherHome();
   }catch(e){toast(e.message)}
 }
 
