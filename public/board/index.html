@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>กระดานครู · KruBoard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;600;700&display=swap');
+  :root{
+    --paper:#F6F4EF;--card:#FFFFFF;--ink:#23201B;--ink-soft:#6B655C;--line:#E5E0D6;
+    --chalk:#1F6F5C;--chalk-deep:#155244;--marker:#E8643C;--marker-soft:#FBE7DF;
+    --star:#E5A516;--ok:#2E9E6B;
+    --shadow:0 1px 2px rgba(35,32,27,.05),0 8px 24px rgba(35,32,27,.06);
+    --shadow-lg:0 12px 40px rgba(35,32,27,.14);--r:18px;--r-sm:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:'IBM Plex Sans Thai','Sarabun',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select,textarea{font-family:inherit;font-size:16px}
+  .hidden{display:none!important}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+  .topbar{position:sticky;top:0;z-index:40;background:rgba(246,244,239,.85);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+  .topbar .wrap{display:flex;align-items:center;gap:12px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--chalk);display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);transform:rotate(-4deg)}
+  .brand small{color:var(--ink-soft);font-weight:500;font-size:12.5px;margin-left:2px}
+  .who{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-left:auto}
+  .who .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  .who button{font-size:12px;color:var(--marker);font-weight:600}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;background:var(--card);border:1px solid var(--line);color:var(--ink);transition:transform .08s,box-shadow .15s,background .15s}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--chalk);color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(31,111,92,.28)}
+  .btn.primary:active{background:var(--chalk-deep)}
+  .btn.ghost{background:transparent}.btn.sm{padding:8px 13px;font-size:13.5px;border-radius:10px}.btn.block{width:100%}
+  .btn:disabled{opacity:.5;pointer-events:none}
+  .hero{padding:54px 0 30px;text-align:center}
+  .hero h1{font-size:clamp(30px,7vw,46px);line-height:1.08;letter-spacing:-.02em;margin:0 0 14px;font-weight:700}
+  .hero h1 .hl{color:var(--chalk);position:relative;white-space:nowrap}
+  .hero h1 .hl::after{content:"";position:absolute;left:-2px;right:-2px;bottom:4px;height:10px;background:rgba(31,111,92,.16);z-index:-1;border-radius:3px}
+  .hero p{max-width:520px;margin:0 auto;color:var(--ink-soft);font-size:17px}
+  .roles{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:560px;margin:30px auto 0}
+  .role{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 18px;box-shadow:var(--shadow);transition:transform .12s,box-shadow .15s}
+  .role:active{transform:translateY(1px)}
+  .role .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:21px;margin-bottom:12px}
+  .role.t .ic{background:var(--chalk);color:#fff}.role.s .ic{background:var(--marker-soft);color:var(--marker)}
+  .role h3{margin:0 0 4px;font-size:18px}.role span{font-size:13.5px;color:var(--ink-soft)}
+  @media(max-width:520px){.roles{grid-template-columns:1fr}}
+  .page{padding:24px 0 100px;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .phead{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .phead h2{margin:0;font-size:23px;letter-spacing:-.01em}.phead .sub{color:var(--ink-soft);font-size:14px}
+  .back{font-size:14px;color:var(--ink-soft);display:inline-flex;gap:5px;align-items:center;padding:6px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .bcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);text-align:left;position:relative;overflow:hidden;transition:transform .12s,box-shadow .15s}
+  .bcard:active{transform:translateY(1px)}
+  .bcard .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--chalk-deep);background:rgba(31,111,92,.1);padding:3px 9px;border-radius:20px;margin-bottom:10px}
+  .bcard h3{margin:0 0 4px;font-size:17px;line-height:1.3}.bcard .meta{font-size:13px;color:var(--ink-soft)}
+  .bcard .prog{margin-top:14px;height:7px;border-radius:10px;background:var(--line);overflow:hidden}
+  .bcard .prog>i{display:block;height:100%;background:var(--chalk);border-radius:10px;transition:width .4s}
+  .bcard .pnum{font-size:12.5px;color:var(--ink-soft);margin-top:7px;display:flex;justify-content:space-between}
+  .newcard{border:1.5px dashed var(--line);background:transparent;border-radius:var(--r);display:grid;place-items:center;min-height:150px;color:var(--ink-soft);font-weight:600;gap:8px;transition:border-color .15s,color .15s}
+  .newcard:hover{border-color:var(--chalk);color:var(--chalk)}
+  .newcard .plus{width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:22px}
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft)}.empty .big{font-size:40px;margin-bottom:8px}
+  .field{margin-bottom:16px}.field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--chalk);box-shadow:0 0 0 3px rgba(31,111,92,.12)}
+  .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .toggle .lab{font-size:14px;font-weight:600}.toggle .lab small{display:block;font-weight:400;color:var(--ink-soft);font-size:12.5px;margin-top:2px}
+  .sw{width:48px;height:28px;border-radius:20px;background:var(--line);position:relative;transition:background .2s;flex:none}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+  .sw.on{background:var(--chalk)}.sw.on::after{left:23px}
+  .share{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;text-align:center;box-shadow:var(--shadow)}
+  .qrbox{width:188px;height:188px;margin:6px auto 16px;background:#fff;border-radius:14px;border:1px solid var(--line);display:grid;place-items:center;padding:12px}
+  .qrbox img,.qrbox canvas{width:100%;height:100%}
+  .linkrow{display:flex;gap:8px;margin-top:8px}
+  .linkrow input{flex:1;font-size:13px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink-soft)}
+  .scard{max-width:460px;margin:0 auto}
+  .stask{background:var(--chalk);color:#fff;border-radius:var(--r);padding:20px;margin-bottom:18px;box-shadow:0 8px 24px rgba(31,111,92,.25)}
+  .stask .tag{font-size:12px;opacity:.85;font-weight:600}.stask h2{margin:4px 0 2px;font-size:22px}.stask .rm{font-size:13.5px;opacity:.9}
+  .drop{border:1.5px dashed var(--line);border-radius:var(--r);background:var(--card);padding:26px 18px;text-align:center;color:var(--ink-soft);transition:border-color .15s,background .15s;display:block}
+  .drop.has{border-style:solid;border-color:var(--chalk);padding:12px}
+  .drop .cam{width:54px;height:54px;border-radius:50%;background:var(--marker-soft);color:var(--marker);display:grid;place-items:center;font-size:26px;margin:0 auto 10px}
+  .preview{width:100%;border-radius:12px;display:block}
+  .shrink-note{font-size:12px;color:var(--ok);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:5px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+  .seg button{padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
+  .seg button.on{background:var(--chalk);color:#fff}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .work{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;box-shadow:var(--shadow);position:relative;transition:transform .12s,box-shadow .15s}
+  .work:active{transform:scale(.985)}
+  .work .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:var(--line)}
+  .work .wfoot{padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .work .no{font-weight:700;font-size:14px}.work .nm{font-size:12px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:14px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .badge.ok{background:var(--ok)}.badge.no{background:var(--marker)}.badge.star{background:var(--star)}
+  .work .scorechip{font-size:12px;font-weight:700;color:var(--chalk-deep);background:rgba(31,111,92,.1);padding:2px 7px;border-radius:8px}
+  .pending-ring{position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:50%;background:var(--marker);box-shadow:0 0 0 3px rgba(232,100,60,.2)}
+  .viewer{position:fixed;inset:0;z-index:60;background:rgba(20,18,15,.96);display:flex;flex-direction:column;animation:fade .2s}
+  .vtop{display:flex;align-items:center;gap:12px;padding:14px 16px;color:#fff;padding-top:max(14px,env(safe-area-inset-top))}
+  .vtop .vname{font-weight:700;font-size:16px}.vtop .vsub{font-size:12.5px;opacity:.7}
+  .vclose{margin-left:auto;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center;font-size:18px}
+  .vstage{flex:1;position:relative;display:grid;place-items:center;overflow:hidden}
+  .vstage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+  .varrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;font-size:22px;z-index:2}
+  .varrow.l{left:10px}.varrow.r{right:10px}.varrow:disabled{opacity:.25}
+  .vmark{background:#fff;padding:14px 16px;padding-bottom:max(14px,env(safe-area-inset-bottom));border-radius:20px 20px 0 0}
+  .stamps{display:flex;gap:10px;margin-bottom:12px}
+  .stamp{flex:1;padding:12px;border-radius:13px;border:1.5px solid var(--line);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--card);transition:.12s}
+  .stamp.ok.on{background:var(--ok);color:#fff;border-color:transparent}
+  .stamp.no.on{background:var(--marker);color:#fff;border-color:transparent}
+  .stamp.star.on{background:var(--star);color:#fff;border-color:transparent}
+  .markrow{display:flex;gap:10px;align-items:stretch}
+  .markrow .sc{width:118px;flex:none}.markrow .sc input{text-align:center;font-weight:700;font-size:18px}
+  .markrow textarea{flex:1;resize:none;height:50px;padding:9px 12px}
+  .vsavebar{display:flex;gap:10px;margin-top:12px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;text-align:center}
+  .stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em}.stat .k{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .stat.accent .v{color:var(--chalk)}
+  @media(max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+  th,td{text-align:left;padding:11px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+  th{background:var(--paper);font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  tr:last-child td{border-bottom:none}
+  .st-chip{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:20px}
+  .st-chip.done{background:rgba(46,158,107,.12);color:var(--ok)}.st-chip.wait{background:rgba(232,100,60,.12);color:var(--marker)}
+  .result{max-width:460px;margin:0 auto;text-align:center}
+  .rsheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-top:14px}
+  .rsheet img{width:100%;display:block}
+  .rstamp{font-size:46px;padding:14px 0 4px}.rscore{font-size:34px;font-weight:700;color:var(--chalk)}
+  .rcomment{background:var(--marker-soft);color:#8a3a22;border-radius:13px;padding:13px 15px;margin:14px;font-size:14.5px;text-align:left;position:relative}
+  .rcomment::before{content:"ครูเขียนถึงเธอ";display:block;font-size:11px;font-weight:700;color:var(--marker);margin-bottom:4px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:30px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:90;box-shadow:var(--shadow-lg)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .modal-bg{position:fixed;inset:0;background:rgba(20,18,15,.4);z-index:70;display:grid;place-items:center;padding:18px;animation:fade .2s}
+  .modal{background:var(--card);border-radius:20px;padding:22px;max-width:420px;width:100%;box-shadow:var(--shadow-lg);max-height:90vh;overflow:auto}
+  .modal h3{margin:0 0 16px;font-size:20px}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--chalk);border-radius:50%;animation:sp 1s linear infinite;margin:30px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap">
+  <div class="brand"><span class="logo">ค</span><span>กระดานครู<small>KruBoard</small></span></div>
+  <div id="whoami" class="who hidden"><span class="dot"></span><span id="whoTxt"></span><button onclick="signOut()">ออก</button></div>
+</div></div>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   KruBoard · frontend (ต่อ API จริง · ระบบ user/password)
+   ============================================================ */
+const API = '/api/kb';
+
+// session ค้างยาว — เก็บใน localStorage (ไม่ต้องล็อกอินบ่อย)
+let _token = localStorage.getItem('kb_token') || null;
+let _user  = localStorage.getItem('kb_user') || null;
+let _name  = localStorage.getItem('kb_name') || null;
+
+/* ---- api helpers ---- */
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  if (_token && !opts.noAuth) headers['Authorization'] = 'Bearer ' + _token;
+  if (opts.json) { headers['content-type'] = 'application/json'; opts.body = JSON.stringify(opts.json); }
+  const r = await fetch(API + path, { ...opts, headers });
+  if (r.status === 401 && !opts.noAuth) { signOut(); throw new Error('กรุณาเข้าสู่ระบบใหม่'); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+  return data;
+}
+
+/* ---- image compression (ของจริง) ---- */
+function compress(file, maxW = 1200, quality = .72) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.toBlob(b => res({ blob: b, origKB: Math.round(file.size/1024), newKB: Math.round(b.size/1024) }),
+               'image/jpeg', quality);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/* ---- helpers ---- */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const go = h => location.hash = h;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),2400)}
+function esc(s){return(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function setWho(t){const w=$('#whoami');if(t){w.classList.remove('hidden');$('#whoTxt').textContent=t}else w.classList.add('hidden')}
+function loading(){app.innerHTML='<div class="wrap"><div class="spin"></div></div>'}
+function qrURL(text){return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=0&data='+encodeURIComponent(text)}
+
+/* ---- auth: user/password ---- */
+function signOut(){_token=null;_user=null;_name=null;localStorage.clear();go('')}
+function loginModal(){
+  modal(`<h3>เข้าสู่ระบบครู</h3>
+    <div class="field"><label>ชื่อผู้ใช้</label><input id="lg_u" autocomplete="username" placeholder="username"></div>
+    <div class="field"><label>รหัสผ่าน</label><input id="lg_p" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn primary block" id="lgBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <p style="font-size:12.5px;color:var(--ink-soft);text-align:center;margin:12px 0 0">ยังไม่มีบัญชี? ติดต่อผู้ดูแลระบบเพื่อขอใช้งาน</p>`);
+  setTimeout(()=>document.getElementById('lg_u')?.focus(),100);
+}
+async function doLogin(){
+  const username=$('#lg_u').value.trim(), password=$('#lg_p').value;
+  if(!username||!password)return toast('กรอกข้อมูลให้ครบ');
+  $('#lgBtn').disabled=true;$('#lgBtn').textContent='กำลังเข้า…';
+  try{
+    const r=await api('/login',{method:'POST',json:{username,password},noAuth:true});
+    _token=r.token;_user=r.username;_name=r.name;
+    localStorage.setItem('kb_token',_token);localStorage.setItem('kb_user',_user);localStorage.setItem('kb_name',_name);
+    closeModal();go('t');
+  }catch(e){$('#lgBtn').disabled=false;$('#lgBtn').textContent='เข้าสู่ระบบ';toast(e.message)}
+}
+
+/* ---- router ---- */
+async function route(){
+  const [view,arg,arg2]=location.hash.slice(1).split('/');
+  if(view==='t')return _token?teacherHome():landing();
+  if(view==='board')return teacherBoard(arg);
+  if(view==='new')return teacherNew();
+  if(view==='share')return shareView(arg);
+  if(view==='sum')return summaryView(arg);
+  if(view==='s')return studentSubmit(arg);
+  if(view==='r')return studentResult(arg);
+  return landing();
+}
+window.addEventListener('hashchange',route);
+
+/* ============================================================ VIEWS */
+function landing(){
+  setWho(_token?('ครู · '+(_name||_user)):'');
+  app.innerHTML=`<div class="wrap">
+    <div class="hero">
+      <h1>ส่งการบ้าน<br>ตรวจง่าย เห็น<span class="hl">ทั้งห้อง</span>ในจอเดียว</h1>
+      <p>นักเรียนถ่ายงานส่งในไม่กี่วิ ครูกวาดตาดูทั้งห้อง ให้คะแนนและคอมเมนต์ได้ทันที</p>
+    </div>
+    <div class="roles">
+      <button class="role t" onclick="${_token?"go('t')":'loginModal()'}"><div class="ic">ค</div><h3>ฉันเป็นครู</h3><span>เข้าสู่ระบบด้วยชื่อผู้ใช้ เพื่อสร้างและตรวจกระดาน</span></button>
+      <button class="role s" onclick="openStudentEntry()"><div class="ic">นร</div><h3>ฉันเป็นนักเรียน</h3><span>ส่งงาน หรือดูผลการตรวจของตัวเอง</span></button>
+    </div>
+  </div>`;
+}
+function openStudentEntry(){
+  modal(`<h3>เข้ากระดานของห้อง</h3>
+    <div class="field"><label>รหัสกระดาน (จากครู)</label><input id="bc" placeholder="เช่น ab12cd" autocomplete="off"></div>
+    <div class="vsavebar"><button class="btn ghost block" onclick="closeModal()">ยกเลิก</button><button class="btn primary block" onclick="enterBoard()">ไปส่งงาน</button></div>`);
+}
+function enterBoard(){const c=$('#bc').value.trim();closeModal();if(c)go('s/'+c)}
+
+/* ---- teacher home ---- */
+async function teacherHome(){
+  setWho('ครู · '+(_name||_user));loading();
+  let data;try{data=await api('/boards')}catch(e){return toast(e.message)}
+  let cards='';
+  for(const b of data.boards){
+    const total=b.roster||b.submitted||0;
+    const pct=total?Math.round(b.reviewed/total*100):0;
+    cards+=`<button class="bcard" onclick="go('board/${b.id}')">
+      <span class="tag">${esc(b.room||'')}</span><h3>${esc(b.title)}</h3>
+      <div class="meta">ส่งแล้ว ${b.submitted} ชิ้น · ตรวจแล้ว ${b.reviewed}</div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <div class="pnum"><span>ความคืบหน้าการตรวจ</span><span>${pct}%</span></div></button>`;
+  }
+  app.innerHTML=`<div class="wrap"><div class="page">
+    <div class="phead"><div><h2>กระดานของฉัน</h2><div class="sub">การบ้านแต่ละชิ้นคือกระดานหนึ่งใบ · มีเฉพาะของคุณ</div></div></div>
+    <div class="grid"><button class="newcard" onclick="go('new')"><span class="plus">+</span>สร้างการบ้านใหม่</button>${cards}</div>
+    ${data.boards.length?'':'<div class="empty"><div class="big">📋</div>ยังไม่มีกระดาน เริ่มสร้างการบ้านแรกได้เลย</div>'}
+  </div></div>`;
+}
+
+/* ---- teacher new ---- */
+function teacherNew(){
+  if(!_token)return landing();
+  setWho('ครู · '+(_name||_user));
+  app.innerHTML=`<div class="wrap"><div class="page">
+    <button class="back" onclick="go('t')">← กลับ</button><div class="phead"><h2>สร้างการบ้านใหม่</h2></div>
+    <div style="max-width:460px">
+      <div class="field"><label>ชื่อการบ้าน</label><input id="f_title" placeholder="เช่น ใบงานเศษส่วน บทที่ 3"></div>
+      <div class="field"><label>ห้อง / ระดับชั้น</label><input id="f_room" placeholder="เช่น ม.1/2"></div>
+      <div class="field"><label>จำนวนนักเรียนในห้อง</label><input id="f_roster" type="number" inputmode="numeric" value="35"></div>
+      <div class="field"><div class="toggle" onclick="this.querySelector('.sw').classList.toggle('on')">
+        <div class="lab">ให้นักเรียนเห็นงานของกัน<small>เปิด = กระดานแชร์ · ปิด = เห็นเฉพาะงานตัวเอง</small></div><div class="sw" id="f_peer"></div></div></div>
+      <button class="btn primary block" id="cbtn" onclick="createBoard()">สร้างกระดาน + รับลิงก์</button>
+    </div></div></div>`;
+}
+async function createBoard(){
+  const title=$('#f_title').value.trim();if(!title)return toast('ใส่ชื่อการบ้านก่อนนะ');
+  $('#cbtn').disabled=true;
+  try{
+    const r=await api('/boards',{method:'POST',json:{title,room:$('#f_room').value.trim(),roster:parseInt($('#f_roster').value)||0,peer:$('#f_peer').classList.contains('on')}});
+    go('share/'+r.id);
+  }catch(e){toast(e.message);$('#cbtn').disabled=false}
+}
+
+/* ---- share ---- */
+async function shareView(id){
+  setWho('ครู · '+(_name||_user));
+  const link=location.origin+location.pathname+'#s/'+id;
+  app.innerHTML=`<div class="wrap"><div class="page">
+    <button class="back" onclick="go('board/${id}')">← ไปกระดาน</button><div class="phead"><h2>แจกให้นักเรียน</h2></div>
+    <div class="share" style="max-width:420px;margin:0 auto">
+      <div class="qrbox"><img src="${qrURL(link)}" alt="QR"></div>
+      <div style="font-weight:600">ฉายโค้ดนี้หน้าห้อง ให้นักเรียนสแกน</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:4px">หรือส่งลิงก์ในไลน์กลุ่มห้อง</div>
+      <div class="linkrow"><input id="lk" value="${link}" readonly><button class="btn sm" onclick="copyLink()">คัดลอก</button></div>
+      <div style="font-size:12.5px;color:var(--ink-soft);margin-top:10px">รหัสกระดาน: <b style="color:var(--chalk)">${id}</b></div>
+      <button class="btn primary block" style="margin-top:18px" onclick="go('board/${id}')">ไปหน้าตรวจงาน</button>
+    </div></div></div>`;
+}
+function copyLink(){const i=$('#lk');i.select();navigator.clipboard?.writeText(i.value);toast('คัดลอกลิงก์แล้ว')}
+
+/* ---- marking board ---- */
+let _filter='all',_subsCache=[];
+async function teacherBoard(id){
+  if(!_token)return landing();
+  setWho('ครู · '+(_name||_user));loading();
+  let data;try{data=await api('/boards/'+id+'/subs')}catch(e){return toast(e.message)||go('t')}
+  _subsCache=data.subs;
+  let subs=data.subs;
+  const counts={all:subs.length,wait:subs.filter(s=>s.status==='wait').length,done:subs.filter(s=>s.status!=='wait').length};
+  let show=subs;
+  if(_filter==='wait')show=subs.filter(s=>s.status==='wait');
+  if(_filter==='done')show=subs.filter(s=>s.status!=='wait');
+  const seg=(k,l)=>`<button class="${_filter===k?'on':''}" onclick="setFilter('${k}','${id}')">${l}</button>`;
+  let cells='';
+  show.forEach(s=>{
+    const idx=subs.indexOf(s);
+    const badge=s.status==='ok'?'<div class="badge ok">✓</div>':s.status==='no'?'<div class="badge no">✕</div>':s.status==='star'?'<div class="badge star">★</div>':'';
+    const ring=s.status==='wait'?'<div class="pending-ring"></div>':'';
+    cells+=`<button class="work" onclick="openViewer('${id}',${idx})">${ring}${badge}
+      <img class="thumb" src="${s.img}" loading="lazy" alt="">
+      <div class="wfoot"><span class="no">เลขที่ ${s.no}</span>
+      ${s.score!=null&&s.score!==''?`<span class="scorechip">${esc(String(s.score))}</span>`:`<span class="nm">${esc(s.name||'')}</span>`}</div></button>`;
+  });
+  app.innerHTML=`<div class="wrap"><div class="page">
+    <button class="back" onclick="go('t')">← กระดานทั้งหมด</button><div class="phead"><h2>ตรวจงาน</h2></div>
+    <div class="toolbar"><div class="seg">${seg('all','ทั้งหมด '+counts.all)}${seg('wait','ยังไม่ตรวจ '+counts.wait)}${seg('done','ตรวจแล้ว '+counts.done)}</div>
+      <div style="flex:1"></div><button class="btn sm" onclick="go('share/${id}')">📤 แจกลิงก์</button><button class="btn sm" onclick="go('sum/${id}')">📊 สรุปผล</button></div>
+    ${show.length?`<div class="mgrid">${cells}</div>`:`<div class="empty"><div class="big">🪧</div>${subs.length?'ไม่มีงานในหมวดนี้':'ยังไม่มีนักเรียนส่งงาน — แจกลิงก์ให้ห้องได้เลย'}</div>`}
+  </div></div>`;
+}
+function setFilter(k,id){_filter=k;teacherBoard(id)}
+
+/* ---- viewer ---- */
+let _vCtx=null;
+function openViewer(boardId,idx){_vCtx={boardId,subs:_subsCache,idx};renderViewer()}
+function renderViewer(){
+  const{subs,idx}=_vCtx,s=subs[idx];
+  const stamp=k=>`<button class="stamp ${k} ${s.status===k?'on':''}" onclick="setStamp('${k}')">${k==='ok'?'✓ ถูก':k==='no'?'✕ ผิด':'★ ดีเด่น'}</button>`;
+  let el=document.getElementById('viewer');
+  if(!el){el=document.createElement('div');el.id='viewer';el.className='viewer';document.body.appendChild(el)}
+  el.innerHTML=`<div class="vtop"><div><div class="vname">เลขที่ ${s.no}${s.name?' · '+esc(s.name):''}</div><div class="vsub">${idx+1} / ${subs.length}</div></div><button class="vclose" onclick="closeViewer()">✕</button></div>
+    <div class="vstage"><button class="varrow l" ${idx===0?'disabled':''} onclick="vNav(-1)">‹</button><img src="${s.img}" alt=""><button class="varrow r" ${idx===subs.length-1?'disabled':''} onclick="vNav(1)">›</button></div>
+    <div class="vmark"><div class="stamps">${stamp('ok')}${stamp('no')}${stamp('star')}</div>
+      <div class="markrow"><div class="sc field" style="margin:0"><input id="v_score" inputmode="decimal" placeholder="คะแนน" value="${s.score??''}"></div>
+      <textarea id="v_comment" placeholder="คอมเมนต์ถึงนักเรียน (ไม่บังคับ)">${esc(s.comment||'')}</textarea></div>
+      <div class="vsavebar"><button class="btn ghost" onclick="closeViewer()">ปิด</button><button class="btn primary block" onclick="saveMark()">บันทึก & ถัดไป →</button></div></div>`;
+  document.body.style.overflow='hidden';
+}
+function setStamp(k){const s=_vCtx.subs[_vCtx.idx];collectInputs();s.status=s.status===k?'wait':k;renderViewer()}
+function collectInputs(){const sc=document.getElementById('v_score'),cm=document.getElementById('v_comment'),s=_vCtx.subs[_vCtx.idx];if(sc)s.score=sc.value;if(cm)s.comment=cm.value}
+function vNav(d){collectInputs();const n=_vCtx.idx+d;if(n<0||n>=_vCtx.subs.length)return;_vCtx.idx=n;renderViewer()}
+async function saveMark(){
+  collectInputs();const s=_vCtx.subs[_vCtx.idx];
+  if(s.status==='wait'&&s.score!==''&&s.score!=null)s.status='ok';
+  try{await api('/subs/'+s.id,{method:'PUT',json:{status:s.status,score:s.score,comment:s.comment}});toast('บันทึกแล้ว')}
+  catch(e){return toast(e.message)}
+  if(_vCtx.idx<_vCtx.subs.length-1){_vCtx.idx++;renderViewer()}else closeViewer();
+}
+function closeViewer(){const el=document.getElementById('viewer');if(el)el.remove();document.body.style.overflow='';teacherBoard(_vCtx.boardId)}
+
+/* ---- summary ---- */
+async function summaryView(id){
+  setWho('ครู · '+(_name||_user));loading();
+  let data;try{data=await api('/boards/'+id+'/subs')}catch(e){return toast(e.message)}
+  const subs=data.subs;
+  const scored=subs.map(s=>parseFloat(s.score)).filter(n=>!isNaN(n));
+  const avg=scored.length?(scored.reduce((a,b)=>a+b,0)/scored.length).toFixed(1):'–';
+  const mx=scored.length?Math.max(...scored):'–',mn=scored.length?Math.min(...scored):'–';
+  const done=subs.filter(s=>s.status!=='wait').length;
+  let rows='';subs.forEach(s=>{rows+=`<tr><td>${s.no}</td><td>${esc(s.name||'–')}</td><td>${s.score??'–'}</td><td>${s.status!=='wait'?'<span class="st-chip done">ตรวจแล้ว</span>':'<span class="st-chip wait">รอตรวจ</span>'}</td></tr>`});
+  app.innerHTML=`<div class="wrap"><div class="page"><button class="back" onclick="go('board/${id}')">← กลับกระดาน</button><div class="phead"><h2>สรุปผล</h2></div>
+    <div class="stats"><div class="stat accent"><div class="v">${subs.length}</div><div class="k">ส่งแล้ว</div></div>
+      <div class="stat"><div class="v">${done}</div><div class="k">ตรวจแล้ว</div></div>
+      <div class="stat accent"><div class="v">${avg}</div><div class="k">คะแนนเฉลี่ย</div></div>
+      <div class="stat"><div class="v">${mx}/${mn}</div><div class="k">สูงสุด/ต่ำสุด</div></div></div>
+    <div class="toolbar"><div style="flex:1"></div><button class="btn sm" onclick='exportCSV(${JSON.stringify(subs)})'>⬇ ดาวน์โหลด CSV</button></div>
+    <table><thead><tr><th>เลขที่</th><th>ชื่อ</th><th>คะแนน</th><th>สถานะ</th></tr></thead><tbody>${rows||'<tr><td colspan=4 style="text-align:center;color:var(--ink-soft)">ยังไม่มีข้อมูล</td></tr>'}</tbody></table>
+  </div></div>`;
+}
+function exportCSV(subs){
+  let csv='\uFEFFเลขที่,ชื่อ,คะแนน,สถานะ,คอมเมนต์\n';
+  subs.forEach(s=>{csv+=`${s.no},"${(s.name||'').replace(/"/g,'""')}",${s.score??''},${s.status!=='wait'?'ตรวจแล้ว':'รอตรวจ'},"${(s.comment||'').replace(/"/g,'""')}"\n`});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='สรุปผล.csv';a.click();toast('ดาวน์โหลดแล้ว');
+}
+
+/* ---- student submit ---- */
+let _pendingBlob=null;
+async function studentSubmit(id){
+  setWho('');loading();
+  let b;try{b=await api('/board/'+id,{noAuth:true})}catch(e){
+    app.innerHTML=`<div class="wrap"><div class="empty" style="padding-top:80px"><div class="big">🔍</div>ไม่พบกระดานนี้<br><button class="btn sm" style="margin-top:14px" onclick="go('')">กลับหน้าแรก</button></div></div>`;return}
+  _pendingBlob=null;
+  app.innerHTML=`<div class="wrap"><div class="page"><div class="scard">
+    <div class="stask"><div class="tag">ส่งการบ้าน</div><h2>${esc(b.title)}</h2><div class="rm">${esc(b.room||'')}</div></div>
+    <div class="field"><label>เลขที่ของเธอ</label><input id="s_no" type="number" inputmode="numeric" placeholder="เช่น 12"></div>
+    <div class="field"><label>ชื่อ (ไม่บังคับ)</label><input id="s_name" placeholder="ชื่อเล่นก็ได้"></div>
+    <div class="field"><label>รูปงานของเธอ</label>
+      <label class="drop" id="drop"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickImg(this)">
+      <div id="dropInner"><div class="cam">📷</div>แตะเพื่อถ่ายรูป หรือเลือกจากเครื่อง</div></label></div>
+    <button class="btn primary block" id="subBtn" onclick="submitWork('${id}')">ส่งงาน</button>
+    <button class="btn ghost block" style="margin-top:8px" onclick="go('r/${id}')">ดูผลการตรวจของฉัน</button>
+  </div></div></div>`;
+}
+async function pickImg(input){
+  const f=input.files[0];if(!f)return;
+  $('#dropInner').innerHTML='<div style="color:var(--ink-soft)">กำลังย่อรูป…</div>';
+  const{blob,origKB,newKB}=await compress(f);_pendingBlob=blob;
+  const u=URL.createObjectURL(blob);
+  $('#drop').classList.add('has');
+  $('#dropInner').innerHTML=`<img class="preview" src="${u}"><div class="shrink-note">✓ ย่อรูปแล้ว ${origKB}KB → ${newKB}KB</div>`;
+}
+async function submitWork(id){
+  const no=$('#s_no').value.trim();if(!no)return toast('ใส่เลขที่ก่อนนะ');
+  if(!_pendingBlob)return toast('ยังไม่ได้แนบรูปงาน');
+  $('#subBtn').disabled=true;$('#subBtn').textContent='กำลังส่ง…';
+  const fd=new FormData();fd.append('board',id);fd.append('no',no);fd.append('name',$('#s_name').value.trim());fd.append('file',_pendingBlob,'work.jpg');
+  try{await api('/submit',{method:'POST',body:fd,noAuth:true})}
+  catch(e){$('#subBtn').disabled=false;$('#subBtn').textContent='ส่งงาน';return toast(e.message)}
+  app.innerHTML=`<div class="wrap"><div class="page"><div class="result">
+    <div style="font-size:60px;margin-top:30px">🎉</div><h2 style="margin:6px 0">ส่งงานเรียบร้อย!</h2>
+    <p style="color:var(--ink-soft)">เลขที่ ${no}</p>
+    <button class="btn primary block" style="margin-top:20px;max-width:300px;margin-inline:auto" onclick="go('r/${id}')">ดูผลการตรวจ (เมื่อครูตรวจแล้ว)</button>
+    <button class="btn ghost block" style="margin-top:8px;max-width:300px;margin-inline:auto" onclick="go('s/${id}')">ส่งงานคนอื่น / ส่งใหม่</button>
+  </div></div></div>`;
+}
+
+/* ---- student result ---- */
+async function studentResult(id){
+  setWho('');
+  app.innerHTML=`<div class="wrap"><div class="page"><div class="result">
+    <div class="phead" style="justify-content:center"><h2>ดูผลการตรวจ</h2></div>
+    <div class="field" style="max-width:240px;margin:0 auto"><label>ใส่เลขที่ของเธอ</label><input id="r_no" type="number" inputmode="numeric" placeholder="เลขที่"></div>
+    <button class="btn primary" style="margin-top:6px" onclick="showResult('${id}')">ดูผล</button><div id="rOut"></div></div></div></div>`;
+}
+async function showResult(id){
+  const no=$('#r_no').value.trim();if(!no)return toast('ใส่เลขที่ก่อนนะ');
+  const out=$('#rOut');out.innerHTML='<div class="spin"></div>';
+  let s;try{s=await api('/result/'+id+'/'+no,{noAuth:true})}catch(e){out.innerHTML=`<div class="empty" style="padding:30px"><div class="big">🤔</div>${esc(e.message)}</div>`;return}
+  if(s.status==='wait'){out.innerHTML=`<div class="rsheet"><img src="${s.img}"><div style="padding:18px"><div style="font-size:34px">⏳</div><div style="font-weight:600">ครูยังไม่ได้ตรวจงานนี้</div><div style="font-size:13px;color:var(--ink-soft)">กลับมาดูใหม่ทีหลังนะ</div></div></div>`;return}
+  const stamp=s.status==='ok'?'✅':s.status==='no'?'❌':'⭐';
+  out.innerHTML=`<div class="rsheet"><img src="${s.img}"><div class="rstamp">${stamp}</div>
+    ${s.score!=null&&s.score!==''?`<div class="rscore">${esc(String(s.score))} คะแนน</div>`:''}
+    ${s.comment?`<div class="rcomment">${esc(s.comment)}</div>`:'<div style="height:14px"></div>'}</div>`;
+}
+
+/* ---- modal ---- */
+function modal(html){let m=document.createElement('div');m.className='modal-bg';m.id='mbg';m.onclick=e=>{if(e.target===m)closeModal()};m.innerHTML=`<div class="modal">${html}</div>`;document.body.appendChild(m)}
+function closeModal(){const m=$('#mbg');if(m)m.remove()}
+
+route();
+</script>
+</body>
+</html>
