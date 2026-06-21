@@ -394,6 +394,42 @@ ins.adsbygoogle[data-ad-status="filled"]{display:block!important;margin:20px 0!i
 .cat-pill:hover{border-color:var(--gold);color:var(--ink);}
 .cat-pill.active{background:var(--ink);color:var(--gold-bright);border-color:var(--ink);}
 
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);}
+.vt-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:.86rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.15s;}
+.vt-btn:hover{color:var(--ink);}
+.vt-btn.on{background:var(--ink);color:var(--gold-bright);}
+
+/* ── TABLE VIEW ── */
+.apps-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1.5px solid var(--line);}
+.apps-table th{background:var(--paper);font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;color:var(--ink-soft);text-align:left;padding:11px 14px;border-bottom:1.5px solid var(--line);text-transform:uppercase;letter-spacing:.04em;}
+.apps-table td{padding:13px 14px;border-bottom:1px solid var(--line);font-size:.92rem;vertical-align:middle;}
+.apps-table tr:last-child td{border-bottom:none;}
+.apps-table tr:hover{background:var(--paper);}
+.apps-table .at-icon{font-size:1.6rem;width:36px;}
+.apps-table .at-title{font-weight:700;color:var(--ink);}
+.apps-table .at-desc{font-size:.79rem;color:var(--slate);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+.apps-table .at-tier{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;}
+.apps-table .at-tier.free{background:var(--mint-soft);color:var(--mint);}
+.apps-table .at-tier.lock{background:var(--gold-soft);color:var(--gold-deep);}
+.apps-table .at-tier.vip{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;}
+.apps-table .at-btn{padding:6px 12px;border-radius:8px;background:var(--ink);color:#fff;border:none;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+.apps-table .at-btn.lock{background:var(--slate);}
+.apps-table .at-btn:hover{opacity:.85;}
+.apps-table .at-date{font-size:.8rem;color:var(--slate);white-space:nowrap;}
+@media(max-width:600px){
+  .apps-table .at-hide-mobile{display:none;}
+  .apps-table th,.apps-table td{padding:9px 10px;font-size:.84rem;}
+}
+
+/* ── PAGINATION ── */
+.pager{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:18px;flex-wrap:wrap;}
+.pager button{min-width:36px;height:36px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);font-family:'Sarabun',sans-serif;font-weight:600;color:var(--ink);cursor:pointer;padding:0 10px;transition:.15s;}
+.pager button:hover:not(:disabled){border-color:var(--gold);}
+.pager button.on{background:var(--ink);color:var(--gold-bright);border-color:var(--ink);}
+.pager button:disabled{opacity:.4;cursor:not-allowed;}
+.pager .pinfo{color:var(--slate);font-size:.82rem;margin:0 8px;}
+
 /* ── SEARCH ── */
 .search-row{display:flex;gap:11px;margin-bottom:18px;}
 .search-in{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:13px;
@@ -691,6 +727,15 @@ function goSearch() {
   }
 }
 window.addEventListener('hashchange', route);
+
+// เมื่อ viewport เปลี่ยน (resize) — redraw apps page ถ้าอยู่ในนั้น (กัน pagination แตก)
+let _appRz;
+window.addEventListener('resize', () => {
+  clearTimeout(_appRz);
+  _appRz = setTimeout(() => {
+    if (location.hash.startsWith('#/apps') && document.getElementById('appsContent')) drawApps();
+  }, 250);
+});
 const toggleNav = () => document.getElementById('navLinks').classList.toggle('open');
 
 // ── HOME ─────────────────────────────────────────────────
@@ -955,15 +1000,37 @@ async function submitComment(articleId) {
 
 // ── APPS PAGE ────────────────────────────────────────────
 let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
+let _appView = 'block', _pageFree = 1, _pageLocked = 1, _pageVip = 1, _pageOther = 1, _pageTable = 1;
+
+// อ่าน preferences จาก localStorage (จำ view + filter ของผู้ใช้)
+try {
+  const pref = JSON.parse(localStorage.getItem('appsPref') || '{}');
+  if (pref.view === 'block' || pref.view === 'table') _appView = pref.view;
+  if (pref.filter) _appFilter = pref.filter;
+  if (pref.sort) _appSort = pref.sort;
+} catch(e) {}
+
+function saveAppsPref() {
+  try { localStorage.setItem('appsPref', JSON.stringify({ view:_appView, filter:_appFilter, sort:_appSort })); } catch(e) {}
+}
+
+// คำนวณจำนวนแอปต่อหน้าตาม viewport (block view: 3 rows × N cols)
+function calcPageSize() {
+  const w = window.innerWidth;
+  if (w < 600) return 3;        // มือถือ: 1 col × 3 rows
+  if (w < 900) return 6;        // tablet: 2 col × 3 rows
+  if (w < 1200) return 9;       // เล็ก: 3 col × 3 rows
+  return 12;                    // PC: 4 col × 3 rows
+}
 
 async function renderApps(openId) {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
   const data = await get('/apps');
   _allApps = data.apps || [];
-  _appFilter = 'all';
-  _appSort = 'newest';
+  // ไม่ reset _appFilter, _appSort, _appView — โหลดจาก localStorage แล้ว
   _appQ = '';
+  _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1;
 
   const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
   const pills = [
@@ -982,10 +1049,22 @@ async function renderApps(openId) {
     <select onchange="setAppSort(this.value)"
       style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
              font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
-      <option value="newest">🕐 ล่าสุด</option>
-      <option value="oldest">🕐 เก่าสุด</option>
-      <option value="name">🔤 ชื่อ A-Z</option>
+      <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
+      <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
+      <option value="name" ${_appSort==='name'?'selected':''}>🔤 ชื่อ A-Z</option>
     </select>`;
+
+  const viewToggleHTML = `
+    <div class="view-toggle">
+      <button class="vt-btn ${_appView==='block'?'on':''}" onclick="setAppView('block')" title="มุมมองบล็อก">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>บล็อก</span>
+      </button>
+      <button class="vt-btn ${_appView==='table'?'on':''}" onclick="setAppView('table')" title="มุมมองตาราง">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span>ตาราง</span>
+      </button>
+    </div>`;
 
   const hasLocked = _allApps.some(a => a.locked);
   const redeemHTML = hasLocked ? `
@@ -1008,7 +1087,10 @@ async function renderApps(openId) {
         <h1>คลังแอปทั้งหมด</h1>
         <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
       </div>
-      ${sortHTML}
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        ${viewToggleHTML}
+        ${sortHTML}
+      </div>
     </div>
     <div class="search-row rv" style="margin-bottom:14px;">
       <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
@@ -1069,26 +1151,108 @@ function drawApps() {
     );
   }
 
-  let content = '';
-  if (_appFilter === 'all' && filtered.length > 0) {
+  if (filtered.length === 0) {
+    cont.innerHTML = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
+    return;
+  }
+
+  // ── TABLE VIEW ──
+  if (_appView === 'table') {
+    cont.innerHTML = renderTableView(filtered);
+    return;
+  }
+
+  // ── BLOCK VIEW ──
+  const pageSize = calcPageSize();
+
+  // เมื่อ filter = all → แยกกลุ่ม free + locked + pagination แยก
+  if (_appFilter === 'all') {
     const free   = filtered.filter(a => !a.locked);
     const locked = filtered.filter(a =>  a.locked);
-    if (free.length > 0) content += `
-      <div style="margin-bottom:30px;">
-        <h2 class="sec-title mint" style="font-size:1.18rem;margin-bottom:14px;">แอปฟรี <span style="background:var(--mint-soft);color:var(--mint);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${free.length}</span></h2>
-        <div class="apps-grid">${free.map(appCard).join('')}</div>
-      </div>`;
-    if (locked.length > 0) content += `
-      <div style="margin-bottom:30px;">
-        <h2 class="sec-title" style="font-size:1.18rem;margin-bottom:14px;">แอปพรีเมียม <span style="background:var(--gold-soft);color:var(--gold-deep);padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${locked.length}</span></h2>
-        <div class="apps-grid">${locked.map(appCard).join('')}</div>
-      </div>`;
-  } else if (filtered.length > 0) {
-    content = `<div class="apps-grid">${filtered.map(appCard).join('')}</div>`;
-  } else {
-    content = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
+    let content = '';
+    if (free.length > 0)   content += renderBlockGroup('แอปฟรี', 'mint', 'var(--mint-soft)', 'var(--mint)', free, _pageFree, pageSize, 'free');
+    if (locked.length > 0) content += renderBlockGroup('แอปพรีเมียม', '', 'var(--gold-soft)', 'var(--gold-deep)', locked, _pageLocked, pageSize, 'locked');
+    cont.innerHTML = content;
   }
-  cont.innerHTML = content;
+  // filter เฉพาะ → แสดงกลุ่มเดียว + pagination
+  else {
+    const groupKey = _appFilter === 'vip' ? 'vip' : 'other';
+    const page = groupKey === 'vip' ? _pageVip : _pageOther;
+    cont.innerHTML = `<div class="apps-grid">${filtered.slice((page-1)*pageSize, page*pageSize).map(appCard).join('')}</div>
+      ${pagerHTML(filtered.length, page, pageSize, groupKey)}`;
+  }
+}
+
+// render section ใน block view + pagination ของ section นั้น
+function renderBlockGroup(title, titleClass, badgeBg, badgeColor, items, page, pageSize, groupKey) {
+  const slice = items.slice((page-1)*pageSize, page*pageSize);
+  return `<div style="margin-bottom:30px;">
+    <h2 class="sec-title ${titleClass}" style="font-size:1.18rem;margin-bottom:14px;">${title} <span style="background:${badgeBg};color:${badgeColor};padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${items.length}</span></h2>
+    <div class="apps-grid">${slice.map(appCard).join('')}</div>
+    ${pagerHTML(items.length, page, pageSize, groupKey)}
+  </div>`;
+}
+
+// pagination component
+function pagerHTML(total, current, pageSize, groupKey) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return '';
+  let buttons = `<button onclick="gotoPage('${groupKey}',${current-1})" ${current===1?'disabled':''}>‹</button>`;
+  // แสดงเลขหน้า: หน้า 1, ..., n-1, n, n+1, ..., last
+  const pages = new Set([1, totalPages, current, current-1, current+1]);
+  const sortedPages = [...pages].filter(p => p>=1 && p<=totalPages).sort((a,b)=>a-b);
+  let prev = 0;
+  for (const p of sortedPages) {
+    if (p - prev > 1) buttons += `<span class="pinfo">…</span>`;
+    buttons += `<button class="${p===current?'on':''}" onclick="gotoPage('${groupKey}',${p})">${p}</button>`;
+    prev = p;
+  }
+  buttons += `<button onclick="gotoPage('${groupKey}',${current+1})" ${current===totalPages?'disabled':''}>›</button>`;
+  return `<div class="pager">${buttons}</div>`;
+}
+
+// table view + pagination 20 row/page
+function renderTableView(items) {
+  const perPage = 20;
+  const total = items.length;
+  const totalPages = Math.ceil(total / perPage);
+  if (_pageTable > totalPages) _pageTable = 1;
+  const slice = items.slice((_pageTable-1)*perPage, _pageTable*perPage);
+
+  const rows = slice.map(a => {
+    const pid = `p_${a.id}`;
+    const raw = sessionStorage.getItem('unlocked_'+a.id);
+    const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
+    const isLocked = a.locked && !storedUrl;
+    const appUrl = storedUrl || a.url;
+    const tier = a.is_vip ? '<span class="at-tier vip">👑 VIP</span>'
+               : a.locked ? '<span class="at-tier lock">🔒 พรีเมียม</span>'
+               : '<span class="at-tier free">🆓 ฟรี</span>';
+    const btn = isLocked
+      ? `<button class="at-btn lock" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
+      : (appUrl ? `<button class="at-btn" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิด</button>` : '');
+    return `<tr>
+      <td class="at-icon">${a.icon||'🎮'}</td>
+      <td><div class="at-title">${esc(a.title)}</div><div class="at-desc">${esc(a.description||'')}</div></td>
+      <td class="at-hide-mobile">${esc(a.category||'')}</td>
+      <td>${tier}</td>
+      <td class="at-hide-mobile at-date">${fmt(a.created_at)}</td>
+      <td>${btn}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto;">
+    <table class="apps-table">
+      <thead><tr>
+        <th></th><th>ชื่อแอป</th><th class="at-hide-mobile">หมวดหมู่</th><th>ประเภท</th><th class="at-hide-mobile">วันที่</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div style="color:var(--slate);font-size:.82rem;text-align:center;margin-top:10px;">
+    แสดง ${(_pageTable-1)*perPage+1}–${Math.min(_pageTable*perPage,total)} จาก ${total} แอป
+  </div>
+  ${pagerHTML(total, _pageTable, perPage, 'table')}`;
 }
 
 // ใส่รหัสเดียว ปลดทุกแอปที่รหัสนั้นเข้าได้
@@ -1113,9 +1277,20 @@ async function redeemAll() {
   }
 }
 
-function filterApps(q)   { _appQ      = q; drawApps(); }
-function setAppFilter(f) { _appFilter = f; drawApps(); }
-function setAppSort(s)   { _appSort   = s; drawApps(); }
+function filterApps(q)   { _appQ      = q; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; drawApps(); }
+function setAppFilter(f) { _appFilter = f; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; saveAppsPref(); drawApps(); }
+function setAppSort(s)   { _appSort   = s; saveAppsPref(); drawApps(); }
+function setAppView(v)   { _appView   = v; saveAppsPref(); renderApps(); }
+function gotoPage(group, p) {
+  if (group === 'free') _pageFree = p;
+  else if (group === 'locked') _pageLocked = p;
+  else if (group === 'vip') _pageVip = p;
+  else if (group === 'other') _pageOther = p;
+  else if (group === 'table') _pageTable = p;
+  drawApps();
+  // scroll ขึ้นบน section
+  document.getElementById('appsContent')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 // ── ABOUT ─────────────────────────────────────────────────
 function renderAbout() {
