@@ -249,11 +249,25 @@ export async function onRequest(context) {
 
     if (path.match(/^boards\/[^/]+\/subs$/) && method === 'GET') {
       const id = path.split('/')[1];
-      const b = await env.DB.prepare('SELECT id FROM kb_boards WHERE id=? AND owner=?').bind(id, me).first();
+      const b = await env.DB.prepare('SELECT id,title,room FROM kb_boards WHERE id=? AND owner=?').bind(id, me).first();
       if (!b) return json({ error: 'ไม่พบกระดาน หรือไม่ใช่ของคุณ' }, 404);
       const { results } = await env.DB.prepare('SELECT id,no,name,img_key,status,score,comment FROM kb_subs WHERE board=? ORDER BY no').bind(id).all();
       results.forEach(s => { s.img = `/api/kb/img/${encodeURIComponent(s.img_key)}`; delete s.img_key; });
-      return json({ subs: results });
+      return json({ board: b, subs: results });
+    }
+
+    // DELETE /boards/:id — ลบทั้งกระดาน (cascade: subs + รูปใน R2)
+    if (path.match(/^boards\/[^/]+$/) && method === 'DELETE') {
+      const id = path.split('/')[1];
+      const b = await env.DB.prepare('SELECT id FROM kb_boards WHERE id=? AND owner=?').bind(id, me).first();
+      if (!b) return json({ error: 'ไม่พบกระดาน หรือไม่ใช่ของคุณ' }, 404);
+      // ลบรูปทุกใบใน R2 ก่อน
+      const { results: subs } = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=?').bind(id).all();
+      for (const s of subs) await env.BUCKET.delete(s.img_key).catch(() => {});
+      // ลบ subs และ board
+      await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(id).run();
+      await env.DB.prepare('DELETE FROM kb_boards WHERE id=?').bind(id).run();
+      return json({ ok: true });
     }
 
     if (path.match(/^subs\/[^/]+$/) && method === 'PUT') {
