@@ -266,6 +266,19 @@ export async function onRequest(context) {
       return json({ ok: true });
     }
 
+    // DELETE /subs/:id — ลบ submission (เฉพาะครูเจ้าของกระดาน)
+    if (path.match(/^subs\/[^/]+$/) && method === 'DELETE') {
+      const sid = path.split('/')[1];
+      const s = await env.DB.prepare(
+        'SELECT s.id, s.img_key FROM kb_subs s JOIN kb_boards b ON s.board=b.id WHERE s.id=? AND b.owner=?'
+      ).bind(sid, me).first();
+      if (!s) return json({ error: 'ไม่มีสิทธิ์ หรือไม่พบ submission' }, 403);
+      // ลบรูปใน R2 ก่อน (ไม่ block ถ้าลบไม่ได้)
+      if (s.img_key) await env.BUCKET.delete(s.img_key).catch(() => {});
+      await env.DB.prepare('DELETE FROM kb_subs WHERE id=?').bind(sid).run();
+      return json({ ok: true });
+    }
+
     return json({ error: 'ไม่พบเส้นทางนี้' }, 404);
 
   } catch (e) {
