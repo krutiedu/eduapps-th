@@ -197,6 +197,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item admin-only" data-page="reports" onclick="nav('reports')" style="display:none;"><span class="ni">🛠️</span> แจ้งปัญหา</div>
     <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
     <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
+    <div class="nav-item admin-only" data-page="kruboard" onclick="nav('kruboard')" style="display:none;"><span class="ni">📋</span> KruBoard</div>
     <div class="nav-item admin-only" data-page="users" onclick="nav('users')" style="display:none;"><span class="ni">👥</span> จัดการผู้ใช้</div>
     <div class="nav-item admin-only" data-page="settings" onclick="nav('settings')" style="display:none;"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
     <div class="sidebar-sec">บัญชีของฉัน</div>
@@ -708,6 +709,7 @@ function nav(page) {
   if (page==='comments')     renderComments();
   if (page==='reports')      renderReports();
   if (page==='codes')        renderCodes();
+  if (page==='kruboard')     renderKruboard();
   if (page==='users')        renderUsers();
   if (page==='profile')      renderProfile();
   if (page==='settings')     renderSettings();
@@ -883,6 +885,178 @@ function switchTopTab(btn, range) {
   document.getElementById('topToday').style.display = range==='today' ? 'block' : 'none';
   document.getElementById('topWeek').style.display  = range==='week'  ? 'block' : 'none';
   document.getElementById('topMonth').style.display = range==='month' ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// KRUBOARD — จัดการบัญชีครู (ใช้ Bearer token ของครูติเดิม ผ่าน /api/kb/admin)
+const kbApi = {
+  get:    p     => fetch('/api/kb'+p, { headers:{ Authorization:'Bearer '+tok() }, cache:'no-store' }).then(r=>r.json()),
+  post:   (p,b) => fetch('/api/kb'+p, { method:'POST',   headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()),
+  put:    (p,b) => fetch('/api/kb'+p, { method:'PUT',    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()),
+  delete: p     => fetch('/api/kb'+p, { method:'DELETE', headers:{ Authorization:'Bearer '+tok() } }).then(r=>r.json()),
+};
+
+function kbFmtDate(ms) { if (!ms) return '–'; return new Date(ms).toLocaleDateString('th-TH', { day:'numeric', month:'short' }); }
+function kbBytes(b) { if (!b) return '0'; if (b<1048576) return Math.round(b/1024)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+
+async function renderKruboard() {
+  document.getElementById('content').innerHTML = `<div class="empty-state"><div class="spinner2"></div></div>`;
+  const data = await kbApi.get('/admin/teachers');
+  if (data.error) {
+    document.getElementById('content').innerHTML = `<div class="card"><div class="alert alert-info">⚠️ ${data.error}<br><small style="color:#94a3b8;">ตรวจสอบ: 1) deploy ไฟล์ใหม่แล้วหรือยัง 2) รัน migration-kruboard.sql แล้วหรือยัง 3) ตั้ง R2 binding (BUCKET) ใน Cloudflare Pages</small></div></div>`;
+    return;
+  }
+  const T = data.teachers || [];
+  const active = T.filter(t=>t.active).length;
+  const totalBoards = T.reduce((a,t)=>a+(t.boards||0),0);
+  const totalBytes = T.reduce((a,t)=>a+(t.bytes_used||0),0);
+
+  document.getElementById('content').innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+      <div class="page-title" style="margin:0;">📋 KruBoard — จัดการบัญชีครู</div>
+      <div style="font-size:.86rem;color:#64748b;margin-top:4px;">ระบบรับ-ตรวจการบ้านแบบกระดาน — เพิ่ม/รีเซ็ตรหัส/ระงับครูที่ใช้งาน</div>
+    </div>
+    <button class="btn btn-primary" onclick="kbAddTeacher()">+ เพิ่มครูใหม่</button>
+  </div>
+  <div class="stat-row" style="margin-bottom:20px;">
+    <div class="stat"><div class="stat-num" style="color:#3b82f6;">${T.length}</div><div class="stat-label">ครูทั้งหมด</div></div>
+    <div class="stat"><div class="stat-num" style="color:#059669;">${active}</div><div class="stat-label">กำลังใช้งาน</div></div>
+    <div class="stat"><div class="stat-num" style="color:#7c3aed;">${totalBoards}</div><div class="stat-label">กระดานรวม</div></div>
+    <div class="stat"><div class="stat-num" style="color:#d97706;">${kbBytes(totalBytes)}</div><div class="stat-label">พื้นที่ใช้</div></div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>ครู</th><th>กระดาน</th><th>พื้นที่</th><th>ใช้ล่าสุด</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+      <tbody>
+        ${T.length ? T.map(t=>`<tr style="${!t.active?'opacity:.5;':''}">
+          <td><strong>${(t.name||t.username).replace(/[<>&"]/g,c=>({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}</strong><div style="font-size:.78rem;color:#94a3b8;">@${t.username}</div></td>
+          <td>${t.boards||0}</td>
+          <td>${kbBytes(t.bytes_used)}</td>
+          <td style="font-size:.86rem;color:#64748b;">${kbFmtDate(t.last_seen)}</td>
+          <td>${t.active?'<span class="badge badge-green">✅ ใช้งาน</span>':'<span class="badge badge-gray">⏸ ระงับ</span>'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-outline btn-sm" onclick="kbResetPw('${t.username}')">🔑 รีเซ็ต</button>
+            <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="kbToggleActive('${t.username}',${t.active?0:1})">${t.active?'⏸':'▶'}</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="kbDelTeacher('${t.username}','${(t.name||t.username).replace(/'/g,"\\'")}')">🗑</button>
+          </td>
+        </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบัญชีครู — กด "+ เพิ่มครูใหม่" เพื่อเริ่ม</td></tr>`}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card" style="background:#f8fafc;">
+    <div class="card-title" style="font-size:.9rem;">💡 วิธีใช้งาน KruBoard</div>
+    <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
+      <li>เพิ่มครู → แชร์ ชื่อผู้ใช้ + รหัส ให้ครูเข้าใช้งานที่ <code>kru-ti.com/board</code></li>
+      <li>ครูสร้างกระดาน (= การบ้าน 1 ชิ้น) → ได้ลิงก์ + QR แชร์ให้นักเรียน</li>
+      <li>นักเรียนเปิดลิงก์ → ใส่เลขที่ → ถ่ายรูปงาน → ส่ง</li>
+      <li>ครูเปิดกระดาน → เห็นการ์ดงาน ตรวจ/ให้คะแนน/ตีตรา (✓/✗/★)</li>
+      <li>ลบบัญชีครู = ลบกระดาน + ผลงานนักเรียน + รูปทั้งหมด (ทำไม่ได้คืน)</li>
+    </ul>
+  </div>`;
+}
+
+function kbGenPw() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({length:8}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function kbOpenModal(inner, maxW) {
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-ov" onclick="closeModalSafe(event, this)">
+    <div class="modal" style="max-width:${maxW||440}px;">${inner}</div>
+  </div>`;
+}
+
+function kbAddTeacher() {
+  const html = `
+  <h3 style="margin:0 0 16px;font-family:'Pridi',serif;">เพิ่มครูใหม่</h3>
+  <div class="form-group"><label>ชื่อ-สกุล (แสดงผล)</label>
+    <input id="kbAddName" class="form-input" placeholder="เช่น ครูศักรินทร์"></div>
+  <div class="form-group"><label>ชื่อผู้ใช้ (สำหรับล็อกอิน)</label>
+    <input id="kbAddUser" class="form-input" placeholder="เช่น kru.sak" autocomplete="off"></div>
+  <div class="form-group"><label>รหัสผ่านเริ่มต้น</label>
+    <div style="display:flex;gap:8px;">
+      <input id="kbAddPw" class="form-input" style="flex:1;" placeholder="ตั้งรหัสหรือกดสุ่ม">
+      <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('kbAddPw').value=kbGenPw()">🎲 สุ่ม</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+    <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+    <button class="btn btn-primary" id="kbAddBtn" onclick="kbDoAdd()">สร้างบัญชี</button>
+  </div>`;
+  kbOpenModal(html);
+}
+
+async function kbDoAdd() {
+  const name = document.getElementById('kbAddName').value.trim();
+  const username = document.getElementById('kbAddUser').value.trim();
+  const password = document.getElementById('kbAddPw').value;
+  if (!username || !password) return toast('❌ กรอกชื่อผู้ใช้และรหัสผ่าน');
+  document.getElementById('kbAddBtn').disabled = true;
+  const res = await kbApi.post('/admin/teachers', { username, name, password });
+  if (res.error) { toast('❌ '+res.error); document.getElementById('kbAddBtn').disabled = false; return; }
+  closeModal();
+  kbShowCreds(username, password, name);
+}
+
+function kbShowCreds(username, password, name) {
+  const html = `
+  <h3 style="margin:0 0 8px;font-family:'Pridi',serif;">✅ สร้างบัญชีแล้ว</h3>
+  <p style="font-size:.86rem;color:#64748b;margin:0 0 16px;">ส่งข้อมูลนี้ให้ครู${name?' '+name:''} เพื่อเข้าใช้งาน — <strong>รหัสนี้จะไม่แสดงอีก</strong></p>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;">
+    <div style="font-size:.78rem;color:#64748b;margin-bottom:4px;">ชื่อผู้ใช้</div>
+    <div style="font-family:monospace;font-weight:700;font-size:1rem;">${username}</div>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;">
+    <div style="font-size:.78rem;color:#64748b;margin-bottom:4px;">รหัสผ่าน</div>
+    <div style="font-family:monospace;font-weight:700;font-size:1rem;">${password}</div>
+  </div>
+  <button class="btn btn-primary" style="width:100%;" onclick="navigator.clipboard.writeText('ชื่อผู้ใช้: ${username}\\nรหัสผ่าน: ${password}\\nเข้าใช้งาน: ${location.origin}/board').then(()=>{toast('📋 คัดลอกแล้ว');closeModal();renderKruboard();})">📋 คัดลอกข้อมูลทั้งหมด</button>`;
+  kbOpenModal(html);
+}
+
+function kbResetPw(username) {
+  const html = `
+  <h3 style="margin:0 0 16px;font-family:'Pridi',serif;">รีเซ็ตรหัส @${username}</h3>
+  <div class="form-group"><label>รหัสผ่านใหม่</label>
+    <div style="display:flex;gap:8px;">
+      <input id="kbRpw" class="form-input" style="flex:1;" placeholder="ตั้งรหัสใหม่หรือกดสุ่ม">
+      <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('kbRpw').value=kbGenPw()">🎲 สุ่ม</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+    <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+    <button class="btn btn-primary" id="kbRBtn" onclick="kbDoReset('${username}')">ตั้งรหัสใหม่</button>
+  </div>`;
+  kbOpenModal(html);
+}
+
+async function kbDoReset(username) {
+  const password = document.getElementById('kbRpw').value;
+  if (!password) return toast('❌ ใส่รหัสใหม่ก่อน');
+  document.getElementById('kbRBtn').disabled = true;
+  const res = await kbApi.put('/admin/teachers/'+encodeURIComponent(username), { password });
+  if (res.error) { toast('❌ '+res.error); document.getElementById('kbRBtn').disabled = false; return; }
+  closeModal();
+  kbShowCreds(username, password);
+}
+
+async function kbToggleActive(username, active) {
+  const res = await kbApi.put('/admin/teachers/'+encodeURIComponent(username), { active });
+  if (res.error) return toast('❌ '+res.error);
+  toast(active ? '✅ เปิดใช้งานแล้ว' : '⏸ ระงับแล้ว');
+  renderKruboard();
+}
+
+async function kbDelTeacher(username, name) {
+  if (!confirm(`⚠️ ลบบัญชีครู "${name}"?\n\nจะลบกระดาน + ผลงานนักเรียน + รูปทั้งหมดของครูคนนี้\nทำแล้วไม่สามารถกู้คืนได้`)) return;
+  const res = await kbApi.delete('/admin/teachers/'+encodeURIComponent(username));
+  if (res.error) return toast('❌ '+res.error);
+  toast('🗑 ลบบัญชีแล้ว');
+  renderKruboard();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2924,6 +3098,14 @@ window.delApp = delApp;
 window.approveCmt = approveCmt;
 window.delCmt = delCmt;
 window.switchTopTab = switchTopTab;
+window.renderKruboard = renderKruboard;
+window.kbAddTeacher = kbAddTeacher;
+window.kbDoAdd = kbDoAdd;
+window.kbResetPw = kbResetPw;
+window.kbDoReset = kbDoReset;
+window.kbToggleActive = kbToggleActive;
+window.kbDelTeacher = kbDelTeacher;
+window.kbGenPw = kbGenPw;
 window.nav = nav;
 window.closeModal = closeModal;
 window.toggleSidebar = toggleSidebar;
