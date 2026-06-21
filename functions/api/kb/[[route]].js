@@ -119,6 +119,20 @@ export async function onRequest(context) {
       return json(b);
     }
 
+    // GET /peer/:boardId — นักเรียนดูงานเพื่อน (เฉพาะกระดานที่ peer=1)
+    // ส่งแค่รูป + เลขที่ + ชื่อ ไม่ส่งผลตรวจของครู (status/score/comment)
+    if (path.startsWith('peer/') && method === 'GET') {
+      const id = path.slice(5);
+      const b = await env.DB.prepare('SELECT id,title,room,peer FROM kb_boards WHERE id=?').bind(id).first();
+      if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
+      if (!b.peer) return json({ error: 'ครูไม่ได้เปิดให้นักเรียนดูงานเพื่อน' }, 403);
+      const { results } = await env.DB.prepare(
+        'SELECT no,name,img_key FROM kb_subs WHERE board=? ORDER BY no ASC'
+      ).bind(id).all();
+      results.forEach(s => { s.img = `/api/kb/img/${encodeURIComponent(s.img_key)}`; delete s.img_key; });
+      return json({ board: { id:b.id, title:b.title, room:b.room }, subs: results });
+    }
+
     if (path === 'submit' && method === 'POST') {
       const form = await request.formData();
       const board = form.get('board'); const no = parseInt(form.get('no'));
