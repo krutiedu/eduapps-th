@@ -1774,7 +1774,7 @@ function appRowsHtml(arr) {
     </td>
     <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
     <td style="white-space:nowrap">
-      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps?open=${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
