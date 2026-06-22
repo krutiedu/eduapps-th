@@ -858,6 +858,10 @@ function renderAnalyticsSection(a) {
     </div></div>`;
   const s = a.stats || {};
   const stat = (n, l, c) => `<div class="stat"><div class="stat-num" style="color:${c}">${n}</div><div class="stat-label">${l}</div></div>`;
+  // เก็บ data ไว้ใน window สำหรับสลับ tab (ต้อง set ก่อน return — ไม่งั้นเป็น dead code)
+  window._anaTops = a.tops || { today:{all:a.topToday}, week:{all:a.top7}, month:{all:a.top30} };
+  window._anaRange = 'today';
+  window._anaCat = 'all';
   return `
   <div class="card">
     <div class="card-title">📈 ยอดผู้เข้าชม</div>
@@ -887,10 +891,6 @@ function renderAnalyticsSection(a) {
     </div>
     <div id="topListWrap">${topTable((a.tops?.today?.all) || a.topToday)}</div>
   </div>`;
-  // เก็บ data ไว้ใน window สำหรับสลับ tab
-  window._anaTops = a.tops || { today:{all:a.topToday}, week:{all:a.top7}, month:{all:a.top30} };
-  window._anaRange = 'today';
-  window._anaCat = 'all';
 }
 
 function rerenderTop() {
