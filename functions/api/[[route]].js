@@ -702,7 +702,7 @@ async function track(req, env) {
   }
 }
 
-// GET /analytics/summary — admin: สรุปยอดและ top pages
+// GET /analytics/summary — admin: สรุปยอดและ top pages (พร้อม breakdown ตาม category)
 async function analytics(req, env, segs, method) {
   if (method !== 'GET') return err('ไม่พบ', 404);
   const action = segs[1] || 'summary';
@@ -723,16 +723,33 @@ async function analytics(req, env, segs, method) {
       stats[r.key] = { views: row?.views || 0, unique: row?.uniq || 0 };
     }
 
-    // top 10 หน้าในแต่ละช่วง (วันนี้/7วัน/30วัน) — ใช้ Bangkok time
-    const top7 = (await env.DB.prepare(
-      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days') GROUP BY path ORDER BY views DESC LIMIT 10`
-    ).all()).results;
-    const top30 = (await env.DB.prepare(
-      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days') GROUP BY path ORDER BY views DESC LIMIT 10`
-    ).all()).results;
-    const topToday = (await env.DB.prepare(
-      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE datetime(created_at, ${TZ}) >= date('now', ${TZ}) GROUP BY path ORDER BY views DESC LIMIT 10`
-    ).all()).results;
+    // SQL pattern ของแต่ละ category — ใช้ LIKE บน path
+    const cats = {
+      page:      `(path IN ('/','/blog','/apps','/worksheets','/about','/buy','/report','/privacy') OR path='')`,
+      article:   `path LIKE '/article/%'`,
+      app:       `path LIKE '/apps/%'`,
+      worksheet: `path LIKE '/worksheet/%'`,
+    };
+    const periods = {
+      today: `datetime(created_at, ${TZ}) >= date('now', ${TZ})`,
+      week:  `date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days')`,
+      month: `date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days')`,
+    };
+    // คืน top ของแต่ละ category × แต่ละ period
+    const tops = {};
+    for (const [pk, psql] of Object.entries(periods)) {
+      tops[pk] = { all: [], page: [], article: [], app: [], worksheet: [] };
+      // all: ทุก path รวมกัน
+      tops[pk].all = (await env.DB.prepare(
+        `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${psql} GROUP BY path ORDER BY views DESC LIMIT 10`
+      ).all()).results;
+      // แยกตาม category
+      for (const [ck, csql] of Object.entries(cats)) {
+        tops[pk][ck] = (await env.DB.prepare(
+          `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${psql} AND ${csql} GROUP BY path ORDER BY views DESC LIMIT 10`
+        ).all()).results;
+      }
+    }
 
     // กราฟ 14 วันย้อนหลัง — group by วันตามปฏิทินไทย
     const daily = (await env.DB.prepare(
@@ -741,7 +758,13 @@ async function analytics(req, env, segs, method) {
        GROUP BY d ORDER BY d ASC`
     ).all()).results;
 
-    return ok({ stats, topToday, top7, top30, daily });
+    // backward compatible: ส่ง topToday/top7/top30 = tops.X.all เพื่อไม่ break frontend เก่า
+    return ok({
+      stats, daily, tops,
+      topToday: tops.today.all,
+      top7: tops.week.all,
+      top30: tops.month.all,
+    });
   }
   return err('ไม่พบ', 404);
 }
