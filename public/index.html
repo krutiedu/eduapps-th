@@ -1115,7 +1115,7 @@ async function renderApps(openId) {
         // แอปล็อก → เด้ง modal ให้กรอกรหัส
         openLockModal(target.id, target.title, target.icon || '🎮');
       } else {
-        openAppViewer(storedUrl || target.url, target.title, target.icon || '🎮');
+        openAppViewer(storedUrl || target.url, target.title, target.icon || '🎮', target.id);
       }
     }
   }
@@ -1230,7 +1230,7 @@ function renderTableView(items) {
                : '<span class="at-tier free">🆓 ฟรี</span>';
     const btn = isLocked
       ? `<button class="at-btn lock" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
-      : (appUrl ? `<button class="at-btn" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิด</button>` : '');
+      : (appUrl ? `<button class="at-btn" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิด</button>` : '');
     return `<tr>
       <td class="at-icon">${a.icon||'🎮'}</td>
       <td><div class="at-title">${esc(a.title)}</div><div class="at-desc">${esc(a.description||'')}</div></td>
@@ -1817,7 +1817,7 @@ function appCard(a) {
     <div class="app-btns">
       ${isLocked
         ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
-        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🚀 เปิดแอป</button>` : '')
+        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิดแอป</button>` : '')
       }
       ${a.prompt ? `<button class="btn-pmt" onclick="openPromptModal('${esc(a.title).replace(/'/g,"\\'")}', this)" data-prompt="${esc(a.prompt).replace(/"/g,'&quot;')}">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
@@ -1910,13 +1910,15 @@ async function shareApp(id, title) {
   }
 }
 
-function openAppViewer(url, title, icon) {
+function openAppViewer(url, title, icon, appId) {
   _viewerUrl = url;
   document.getElementById('viewerFrame').src = url;
   document.getElementById('viewerTitle').textContent = title || 'แอป';
   document.getElementById('viewerIcon').textContent = icon || '🎮';
   document.getElementById('appViewer').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  // track การเปิดแอป (ใช้ path /apps/:id เพื่อแยกจาก /apps หน้ารวม)
+  if (appId) trackPageView('/apps/' + appId);
 }
 function closeAppViewer() {
   const av = document.getElementById('appViewer');
@@ -2080,7 +2082,7 @@ async function submitLock() {
     if (r.ok && d.url) {
       sessionStorage.setItem('unlocked_' + _lockAppId, d.url);
       closeLockModal();
-      openAppViewer(d.url, _lockTitle, _lockIcon);
+      openAppViewer(d.url, _lockTitle, _lockIcon, _lockAppId);
     } else {
       document.getElementById('lockErr').style.display = 'block';
       document.getElementById('lockInput').select();
