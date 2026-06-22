@@ -721,22 +721,25 @@ const toggleSidebar = () => document.getElementById('sidebar').classList.toggle(
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
 async function renderDash() {
-  const [arts, appsData, cmts, analytics] = await Promise.all([
+  const [arts, appsData, cmts, wks, analytics] = await Promise.all([
     api.get('/articles/admin/list'),
     api.get('/apps'),
     api.get('/comments/admin/list'),
+    api.get('/worksheets/admin/list').catch(() => ({ worksheets: [] })),
     api.get('/analytics/summary').catch(() => null),
   ]);
   const artList  = arts.articles  || [];
   const appList  = appsData.apps  || [];
   const cmtList  = cmts.comments  || [];
+  const wsList   = wks.worksheets || [];
   const pub      = artList.filter(a=>a.published).length;
   const draft    = artList.filter(a=>!a.published).length;
   const pending  = cmtList.filter(c=>!c.approved).length;
 
-  // map path → ชื่ออ่านง่าย
+  // map path → ชื่ออ่านง่าย (เก็บทั้ง title และ icon)
   window._artMap = Object.fromEntries(artList.map(a=>[String(a.id), a.title]));
-  window._appMap = Object.fromEntries(appList.map(a=>[String(a.id), a.title]));
+  window._appMap = Object.fromEntries(appList.map(a=>[String(a.id), { title:a.title, icon:a.icon || '🎮' }]));
+  window._wsMap  = Object.fromEntries(wsList.map(w=>[String(w.id), w.title]));
 
   document.getElementById('content').innerHTML = `
   <div class="page-title">📊 Dashboard</div>
@@ -787,10 +790,15 @@ function prettyPath(p) {
   if (p === '/buy')  return '💰 หน้าซื้อรหัส';
   if (p === '/report') return '🐛 หน้าแจ้งปัญหา';
   if (p === '/privacy') return '🔒 นโยบาย';
-  const m1 = p.match(/^\/article\/(\d+)/);
-  if (m1) return '📝 ' + ((window._artMap||{})[m1[1]] || 'บทความ #'+m1[1]);
-  const m2 = p.match(/^\/worksheet\/(\d+)/);
-  if (m2) return '📄 ใบงาน #' + m2[1];
+  const mArt = p.match(/^\/article\/(\d+)/);
+  if (mArt) return '📝 ' + ((window._artMap||{})[mArt[1]] || 'บทความ #'+mArt[1]);
+  const mApp = p.match(/^\/apps\/(\d+)/);
+  if (mApp) {
+    const a = (window._appMap||{})[mApp[1]];
+    return (a?.icon || '🎮') + ' ' + (a?.title || 'แอป #'+mApp[1]);
+  }
+  const mWs = p.match(/^\/worksheet\/(\d+)/);
+  if (mWs) return '📄 ' + ((window._wsMap||{})[mWs[1]] || 'ใบงาน #'+mWs[1]);
   return p;
 }
 
@@ -865,15 +873,30 @@ function renderAnalyticsSection(a) {
   </div>
   <div class="card">
     <div class="card-title">🔥 Top 10 หน้ายอดนิยม</div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm tt-tab on" data-r="today" onclick="switchTopTab(this,'today')">วันนี้</button>
       <button class="btn btn-outline btn-sm tt-tab" data-r="week" onclick="switchTopTab(this,'week')">7 วัน</button>
       <button class="btn btn-outline btn-sm tt-tab" data-r="month" onclick="switchTopTab(this,'month')">30 วัน</button>
     </div>
-    <div id="topToday" class="tt-pane">${topTable(a.topToday)}</div>
-    <div id="topWeek"  class="tt-pane" style="display:none;">${topTable(a.top7)}</div>
-    <div id="topMonth" class="tt-pane" style="display:none;">${topTable(a.top30)}</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;padding-top:4px;border-top:1px solid #f1f5f9;padding-top:10px;">
+      <button class="btn btn-outline btn-sm tc-tab on" data-c="all" onclick="switchCatTab(this,'all')">📊 ทั้งหมด</button>
+      <button class="btn btn-outline btn-sm tc-tab" data-c="page" onclick="switchCatTab(this,'page')">🏠 หน้า</button>
+      <button class="btn btn-outline btn-sm tc-tab" data-c="article" onclick="switchCatTab(this,'article')">📝 บทความ</button>
+      <button class="btn btn-outline btn-sm tc-tab" data-c="app" onclick="switchCatTab(this,'app')">🎮 แอป</button>
+      <button class="btn btn-outline btn-sm tc-tab" data-c="worksheet" onclick="switchCatTab(this,'worksheet')">📄 ใบงาน</button>
+    </div>
+    <div id="topListWrap">${topTable((a.tops?.today?.all) || a.topToday)}</div>
   </div>`;
+  // เก็บ data ไว้ใน window สำหรับสลับ tab
+  window._anaTops = a.tops || { today:{all:a.topToday}, week:{all:a.top7}, month:{all:a.top30} };
+  window._anaRange = 'today';
+  window._anaCat = 'all';
+}
+
+function rerenderTop() {
+  const rows = (window._anaTops?.[window._anaRange]?.[window._anaCat]) || [];
+  const wrap = document.getElementById('topListWrap');
+  if (wrap) wrap.innerHTML = topTable(rows);
 }
 
 function switchTopTab(btn, range) {
@@ -882,9 +905,18 @@ function switchTopTab(btn, range) {
     b.style.background = (b===btn) ? 'var(--ink, #101c33)' : '';
     b.style.color = (b===btn) ? '#fff' : '';
   });
-  document.getElementById('topToday').style.display = range==='today' ? 'block' : 'none';
-  document.getElementById('topWeek').style.display  = range==='week'  ? 'block' : 'none';
-  document.getElementById('topMonth').style.display = range==='month' ? 'block' : 'none';
+  window._anaRange = range;
+  rerenderTop();
+}
+
+function switchCatTab(btn, cat) {
+  document.querySelectorAll('.tc-tab').forEach(b => b.classList.toggle('on', b===btn));
+  document.querySelectorAll('.tc-tab').forEach(b => {
+    b.style.background = (b===btn) ? 'var(--ink, #101c33)' : '';
+    b.style.color = (b===btn) ? '#fff' : '';
+  });
+  window._anaCat = cat;
+  rerenderTop();
 }
 
 // ══════════════════════════════════════════════════════════
