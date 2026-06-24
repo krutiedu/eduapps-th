@@ -3,15 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#F6F4EF">
 <title>กระดานครู · KruBoard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;600;700&display=swap');
   :root{
+    color-scheme: light only;
     --paper:#F6F4EF;--card:#FFFFFF;--ink:#23201B;--ink-soft:#6B655C;--line:#E5E0D6;
     --chalk:#F4A6C0;--chalk-deep:#D87FA0;--marker:#E8643C;--marker-soft:#FBE7DF;
     --star:#E5A516;--ok:#2E9E6B;
     --shadow:0 1px 2px rgba(35,32,27,.05),0 8px 24px rgba(35,32,27,.06);
     --shadow-lg:0 12px 40px rgba(35,32,27,.14);--r:18px;--r-sm:12px;
+  }
+  /* บังคับ light mode แม้ผู้ใช้เปิด iOS Dark Mode */
+  html{color-scheme: light only !important;}
+  @media (prefers-color-scheme: dark) {
+    :root{
+      color-scheme: light only;
+      --paper:#F6F4EF;--card:#FFFFFF;--ink:#23201B;--ink-soft:#6B655C;--line:#E5E0D6;
+    }
+    html, body{background:#F6F4EF !important;color:#23201B !important;}
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -27,7 +40,9 @@
   .brand small{color:var(--ink-soft);font-weight:500;font-size:12.5px;margin-left:2px}
   .who{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-left:auto}
   .who .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
-  .who button{font-size:12px;color:var(--marker);font-weight:600}
+  .who button{font-size:13px;color:var(--marker);font-weight:700;background:transparent;border:none;padding:6px 10px;cursor:pointer;border-radius:8px;transition:.15s}
+  .who button:hover{background:rgba(232,100,60,.1)}
+  .who button:active{transform:scale(.96)}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;background:var(--card);border:1px solid var(--line);color:var(--ink);transition:transform .08s,box-shadow .15s,background .15s}
   .btn:active{transform:scale(.97)}
   .btn.primary{background:var(--chalk);color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(244,166,192,.28)}
@@ -222,7 +237,14 @@ function loading(){app.innerHTML='<div class="wrap"><div class="spin"></div></di
 function qrURL(text){return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=0&data='+encodeURIComponent(text)}
 
 /* ---- auth: user/password ---- */
-function signOut(){_token=null;_user=null;_name=null;localStorage.clear();go('')}
+function signOut(){
+  _token=null; _user=null; _name=null;
+  localStorage.clear();
+  setWho('');
+  location.hash = '';
+  route();  // re-render ทันที — ไม่พึ่ง hashchange (กรณีอยู่หน้า root อยู่แล้ว)
+  toast('ออกจากระบบแล้ว');
+}
 function loginModal(){
   modal(`<h3>เข้าสู่ระบบครู</h3>
     <div class="field"><label>ชื่อผู้ใช้</label><input id="lg_u" autocomplete="username" placeholder="username"></div>
