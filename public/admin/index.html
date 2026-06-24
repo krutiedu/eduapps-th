@@ -1105,21 +1105,23 @@ async function renderArticles() {
   <div class="card">
     <div class="table-wrap">
     <table>
-      <thead><tr><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>ยอดวิว</th><th>วันที่</th><th>จัดการ</th></tr></thead>
+      <thead><tr><th>📌</th><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>ยอดวิว</th><th>วันที่</th><th>จัดการ</th></tr></thead>
       <tbody>
-        ${arts.length ? arts.map(a=>`<tr>
+        ${arts.length ? arts.map(a=>`<tr${a.pinned?' style="background:#fffbeb"':''}>
+          <td style="text-align:center;width:40px">${pinBadge(a.pinned)}</td>
           <td><strong>${a.title.length>45?a.title.slice(0,45)+'…':a.title}</strong></td>
           <td><span class="badge badge-gray">${a.category}</span></td>
           <td>${a.published?'<span class="badge badge-green">✅ เผยแพร่</span>':'<span class="badge badge-orange">📋 แบบร่าง</span>'}</td>
           <td style="color:#94a3b8">${a.views||0}</td>
           <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
           <td style="white-space:nowrap">
-            <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+            <button class="btn btn-outline btn-sm" onclick="openPinModal('article',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
+            <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
             <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
             <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
           </td>
         </tr>`).join('')
-        : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบทความ</td></tr>`}
+        : `<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบทความ</td></tr>`}
       </tbody>
     </table>
     </div>
@@ -1140,6 +1142,64 @@ async function delArticle(id, title) {
   toast('🗑 ลบบทความแล้ว');
   renderArticles();
 }
+
+// ══════════════════════════════════════════════════════════
+// PIN SYSTEM — pin บทความ/แอป ลงหน้าแรก (สูงสุด 3 ชิ้น/หมวด)
+// ══════════════════════════════════════════════════════════
+function pinBadge(n) {
+  if (!n || n < 1 || n > 3) return '<span style="color:#cbd5e1;font-size:.95rem;">·</span>';
+  const colors = { 1:'#dc2626', 2:'#ea580c', 3:'#ca8a04' };
+  return `<span style="display:inline-block;background:${colors[n]};color:#fff;font-weight:700;font-size:.7rem;padding:2px 6px;border-radius:6px;min-width:22px;text-align:center;">${n}</span>`;
+}
+
+function openPinModal(type, id, title, current) {
+  const typeLabel = type === 'article' ? 'บทความ' : 'แอป';
+  const safeTitle = title.length > 60 ? title.slice(0,60) + '…' : title;
+  const m = document.createElement('div');
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+  m.innerHTML = `
+  <div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">📌 Pin ${typeLabel}</div>
+    <div style="color:#64748b;font-size:.88rem;margin-bottom:18px;line-height:1.5;">${safeTitle}</div>
+    <div style="font-size:.82rem;color:#64748b;margin-bottom:10px;">เลือกตำแหน่ง pin (ถ้ามี ${typeLabel}อื่นใช้ slot นี้อยู่ ระบบจะย้ายออกอัตโนมัติ):</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+      <button class="pin-opt" data-v="1" style="text-align:left;padding:11px 14px;border:2px solid ${current===1?'#dc2626':'#e2e8f0'};border-radius:10px;background:${current===1?'#fef2f2':'#fff'};cursor:pointer;font-family:inherit;font-size:.92rem;display:flex;align-items:center;gap:10px;">
+        ${pinBadge(1)} <span><strong>Slot 1</strong> — แสดงเป็นอันดับแรก</span>
+      </button>
+      <button class="pin-opt" data-v="2" style="text-align:left;padding:11px 14px;border:2px solid ${current===2?'#ea580c':'#e2e8f0'};border-radius:10px;background:${current===2?'#fff7ed':'#fff'};cursor:pointer;font-family:inherit;font-size:.92rem;display:flex;align-items:center;gap:10px;">
+        ${pinBadge(2)} <span><strong>Slot 2</strong> — แสดงเป็นอันดับสอง</span>
+      </button>
+      <button class="pin-opt" data-v="3" style="text-align:left;padding:11px 14px;border:2px solid ${current===3?'#ca8a04':'#e2e8f0'};border-radius:10px;background:${current===3?'#fefce8':'#fff'};cursor:pointer;font-family:inherit;font-size:.92rem;display:flex;align-items:center;gap:10px;">
+        ${pinBadge(3)} <span><strong>Slot 3</strong> — แสดงเป็นอันดับสาม</span>
+      </button>
+      <button class="pin-opt" data-v="0" style="text-align:left;padding:11px 14px;border:2px solid ${current===0?'#64748b':'#e2e8f0'};border-radius:10px;background:${current===0?'#f8fafc':'#fff'};cursor:pointer;font-family:inherit;font-size:.92rem;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1rem;">❌</span> <span><strong>ไม่ Pin</strong> — ยกเลิก/ไม่แสดงเป็น pin</span>
+      </button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-outline" id="pinCancel">ยกเลิก</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.querySelector('#pinCancel').onclick = () => m.remove();
+  m.onclick = (e) => { if (e.target === m) m.remove(); };
+  m.querySelectorAll('.pin-opt').forEach(btn => {
+    btn.onclick = async () => {
+      const pin = parseInt(btn.dataset.v);
+      if (pin === current) { m.remove(); return; }
+      const endpoint = type === 'article' ? `/articles/${id}/pin` : `/apps/${id}/pin`;
+      const r = await api.put(endpoint, { pin });
+      if (r.error) { toast('❌ ' + r.error); return; }
+      m.remove();
+      toast(pin > 0 ? `📌 Pin ที่ Slot ${pin} แล้ว` : '✓ ยกเลิก pin แล้ว');
+      // refresh ตารางที่เกี่ยวข้อง
+      if (type === 'article') renderArticles();
+      else renderApps();
+    };
+  });
+}
+
+window.openPinModal = openPinModal;
 
 // ══════════════════════════════════════════════════════════
 // ARTICLE EDITOR
@@ -1754,7 +1814,7 @@ async function renderApps() {
     </div>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>แอป</th><th>หมวด</th><th>สถานะ</th><th>Prompt</th><th>จัดการ</th></tr></thead>
+      <thead><tr><th>📌</th><th>แอป</th><th>หมวด</th><th>สถานะ</th><th>Prompt</th><th>จัดการ</th></tr></thead>
       <tbody id="appsBody"></tbody>
     </table>
     </div>
@@ -1763,8 +1823,9 @@ async function renderApps() {
 }
 
 function appRowsHtml(arr) {
-  if (!arr.length) return `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบแอปที่ตรงกับเงื่อนไข</td></tr>`;
-  return arr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}">
+  if (!arr.length) return `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบแอปที่ตรงกับเงื่อนไข</td></tr>`;
+  return arr.map(a=>`<tr style="${!a.visible?'opacity:.5;':''}${a.pinned?'background:#fffbeb;':''}">
+    <td style="text-align:center;width:40px">${pinBadge(a.pinned)}</td>
     <td>${a.icon} <strong>${a.title}</strong></td>
     <td><span class="badge badge-gray">${a.category}</span></td>
     <td style="white-space:nowrap;">
@@ -1774,7 +1835,8 @@ function appRowsHtml(arr) {
     </td>
     <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
     <td style="white-space:nowrap">
-      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps?open=${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+      <button class="btn btn-outline btn-sm" onclick="openPinModal('app',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps?open=${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
