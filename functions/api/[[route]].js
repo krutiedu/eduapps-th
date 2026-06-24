@@ -209,7 +209,7 @@ async function articles(req, env, segs, method) {
     if (cat) { where += ' AND category=?'; wArgs.push(cat); }
     if (q)   { where += ' AND (title LIKE ? OR excerpt LIKE ?)'; wArgs.push('%'+q+'%','%'+q+'%'); }
 
-    const listSql  = `SELECT id,title,slug,category,excerpt,image_url,views,created_at FROM articles ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const listSql  = `SELECT id,title,slug,category,excerpt,image_url,views,created_at,pinned FROM articles ${where} ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC LIMIT ? OFFSET ?`;
     const countSql = `SELECT COUNT(*) as n FROM articles ${where}`;
 
     const [data, count] = await Promise.all([
@@ -222,7 +222,7 @@ async function articles(req, env, segs, method) {
   // GET /articles/admin/list — admin list (includes drafts) — must come BEFORE single GET
   if (segs[1] === 'admin' && segs[2] === 'list' && method === 'GET') {
     const { results } = await env.DB
-      .prepare('SELECT id,title,slug,category,published,views,created_at FROM articles ORDER BY created_at DESC')
+      .prepare('SELECT id,title,slug,category,published,views,created_at,pinned FROM articles ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC')
       .all();
     return ok({ articles: results });
   }
@@ -261,6 +261,20 @@ async function articles(req, env, segs, method) {
     return ok(results[0]);
   }
 
+  // PUT /articles/:id/pin (admin) — ตั้ง/ยกเลิก pin (ต้องอยู่ก่อน PUT update)
+  // body: { pin: 0|1|2|3 } — 0 = ไม่ pin, 1-3 = ลำดับ
+  if (id && segs[2] === 'pin' && method === 'PUT') {
+    const body = await req.json();
+    const pin = parseInt(body.pin) || 0;
+    if (pin < 0 || pin > 3) return err('pin ต้องเป็น 0-3', 400);
+    if (pin > 0) {
+      // ถ้ามีบทความอื่นใช้ pin slot นี้อยู่ → ย้ายให้ไม่ pin (0)
+      await env.DB.prepare('UPDATE articles SET pinned=0 WHERE pinned=? AND id!=?').bind(pin, id).run();
+    }
+    await env.DB.prepare('UPDATE articles SET pinned=? WHERE id=?').bind(pin, id).run();
+    return ok({ ok: true, pin });
+  }
+
   // PUT /articles/:id — update (admin)
   if (id && method === 'PUT') {
     const b = await req.json();
@@ -291,7 +305,7 @@ async function apps(req, env, segs, method) {
   // GET /apps/admin/list — admin ดูทุกแอป รวม hidden (with lock_code)
   if (segs[1] === 'admin' && segs[2] === 'list' && method === 'GET') {
     const { results } = await env.DB
-      .prepare('SELECT * FROM apps ORDER BY sort_order ASC, created_at ASC').all();
+      .prepare('SELECT * FROM apps ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC').all();
     return ok({ apps: results });
   }
 
@@ -360,7 +374,7 @@ async function apps(req, env, segs, method) {
   // GET /apps — สาธารณะ เฉพาะ visible=1, ไม่ส่ง lock_code, locked=1 ไม่ส่ง url
   if (!id && method === 'GET') {
     const { results } = await env.DB
-      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,created_at FROM apps WHERE visible=1 ORDER BY sort_order ASC, created_at ASC').all();
+      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at FROM apps WHERE visible=1 ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC').all();
     const safe = results.map(a => ({
       ...a,
       url: a.locked ? null : a.url,   // ซ่อน URL ถ้า locked
@@ -374,6 +388,18 @@ async function apps(req, env, segs, method) {
       'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible,preview_image,is_vip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
     ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0).run();
     return ok({ ok: true, id: res?.meta?.last_row_id || res?.lastInsertRowid });
+  }
+
+  // PUT /apps/:id/pin (admin) — ตั้ง/ยกเลิก pin (ต้องอยู่ก่อน PUT update)
+  if (id && segs[2] === 'pin' && method === 'PUT') {
+    const body = await req.json();
+    const pin = parseInt(body.pin) || 0;
+    if (pin < 0 || pin > 3) return err('pin ต้องเป็น 0-3', 400);
+    if (pin > 0) {
+      await env.DB.prepare('UPDATE apps SET pinned=0 WHERE pinned=? AND id!=?').bind(pin, id).run();
+    }
+    await env.DB.prepare('UPDATE apps SET pinned=? WHERE id=?').bind(pin, id).run();
+    return ok({ ok: true, pin });
   }
 
   if (id && method === 'PUT') {
