@@ -758,7 +758,7 @@ async function renderHome() {
     <div class="container" style="position:relative;">
       <div class="crown-grid">
         <div class="crown-feat rv" onclick="go('/article/${feat.id}')">
-          <div class="stamp"><b>✦</b><small>เด่น</small></div>
+          <div class="stamp">${feat.pinned?'<b>📌</b><small>Pin</small>':'<b>✦</b><small>เด่น</small>'}</div>
           <div class="crown-meta"><span class="crown-cat">${feat.category}</span><span>${fmt(feat.created_at)}</span></div>
           <h2>${feat.title}</h2>
           <p class="cx">${feat.excerpt||''}</p>
@@ -768,7 +768,7 @@ async function renderHome() {
           <div class="crown-side-label">น่าอ่านต่อ</div>
           ${sideArts.map((a,i)=>`
           <div class="crown-item" onclick="go('/article/${a.id}')">
-            <div class="crown-num">${i+1}</div>
+            <div class="crown-num">${a.pinned?'📌':(i+1)}</div>
             <div><h3>${a.title}</h3><div class="ci-cat">${a.category} · ${fmt(a.created_at)}</div></div>
           </div>`).join('')}
         </div>
@@ -1842,8 +1842,9 @@ function appCard(a) {
     </div>`;
   return `<div class="app-card">
     ${preview}
+    ${a.pinned?'<div style="position:absolute;top:10px;left:10px;background:#fbbf24;color:#78350f;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:99px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.15);">📌 PIN</div>':''}
     ${a.is_vip?'<div class="app-vip-badge" title="แอประดับ VIP">👑 VIP</div>':''}
-    ${isLocked?'<div style="position:absolute;top:10px;left:10px;font-size:1.1rem;" title="แอปนี้ต้องใช้รหัสผ่าน">🔒</div>':''}
+    ${isLocked?`<div style="position:absolute;top:10px;${a.pinned?'left:78px':'left:10px'};font-size:1.1rem;" title="แอปนี้ต้องใช้รหัสผ่าน">🔒</div>`:''}
     <div class="app-top">
       <div class="app-icon icon-blue">${a.icon||'🎮'}</div>
       <div><h4>${esc(a.title)}</h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
