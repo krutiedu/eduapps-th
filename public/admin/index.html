@@ -196,11 +196,11 @@ tr:hover td{background:#fafafa;}
     <div class="sidebar-sec">หลัก</div>
     <div class="nav-item" data-page="dash" onclick="nav('dash')"><span class="ni">📊</span> Dashboard</div>
     <div class="sidebar-sec">เนื้อหา</div>
-    <div class="nav-item" data-page="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
-    <div class="nav-item" data-page="new-article" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
-    <div class="nav-item admin-only" data-page="apps" onclick="nav('apps')" style="display:none;"><span class="ni">🎮</span> จัดการแอป</div>
-    <div class="nav-item admin-only" data-page="worksheets" onclick="nav('worksheets')" style="display:none;"><span class="ni">📄</span> จัดการใบงาน</div>
-    <div class="nav-item" data-page="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
+    <div class="nav-item" data-page="articles" data-perm="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
+    <div class="nav-item" data-page="new-article" data-perm="articles" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
+    <div class="nav-item" data-page="apps" data-perm="apps" onclick="nav('apps')"><span class="ni">🎮</span> จัดการแอป</div>
+    <div class="nav-item" data-page="worksheets" data-perm="worksheets" onclick="nav('worksheets')"><span class="ni">📄</span> จัดการใบงาน</div>
+    <div class="nav-item" data-page="comments" data-perm="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
     <div class="nav-item admin-only" data-page="reports" onclick="nav('reports')" style="display:none;"><span class="ni">🛠️</span> แจ้งปัญหา</div>
     <div class="sidebar-sec admin-only" style="display:none;">ระบบ</div>
     <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
@@ -657,6 +657,8 @@ async function doLogin() {
     localStorage.setItem('_display_name', res.display_name || 'Admin');
     localStorage.setItem('_username', res.username || 'admin');
     localStorage.setItem('_uid', res.user_id || '0');
+    localStorage.setItem('_perms', res.permissions || '[]');
+    localStorage.setItem('_roleLabel', res.role_label || '');
     showAdmin(); applyRole(); nav('dash');
   } else {
     document.getElementById('loginAlert').innerHTML =
@@ -666,18 +668,32 @@ async function doLogin() {
 
 async function doLogout() {
   await fetch(API+'/auth/logout', { method:'POST', headers: hdr() });
-  ['_admtok','_role','_display_name','_username','_uid'].forEach(k=>localStorage.removeItem(k));
+  ['_admtok','_role','_display_name','_username','_uid','_perms','_roleLabel'].forEach(k=>localStorage.removeItem(k));
   showLogin();
+}
+
+function myPerms() {
+  try { return JSON.parse(localStorage.getItem('_perms') || '[]'); } catch(e) { return []; }
 }
 
 function applyRole() {
   const isAdmin = myRole() === 'super_admin';
+  const perms = myPerms();
+  // super_admin เห็นทุกอย่าง
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  // permission-based: แสดงเมนูตามสิทธิ์ที่มี (สำหรับ non-admin)
+  if (!isAdmin) {
+    document.querySelectorAll('[data-perm]').forEach(el => {
+      const need = el.getAttribute('data-perm');
+      el.style.display = perms.includes(need) ? '' : 'none';
+    });
+  }
   const sideUser = document.getElementById('sideUser');
   if (sideUser) {
+    const roleLabel = localStorage.getItem('_roleLabel') || '';
     const badge = isAdmin
       ? '<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">admin</span>'
-      : '<span style="background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">editor</span>';
+      : `<span style="background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:100px;font-size:.7rem;font-weight:700;">${roleLabel||'editor'}</span>`;
     sideUser.innerHTML = myName() + ' ' + badge;
   }
 }
@@ -2897,32 +2913,42 @@ async function renderUsers() {
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div class="page-title" style="margin:0;">👥 จัดการผู้ใช้</div>
-    <button class="btn btn-primary" onclick="openUserModal(null)">+ เพิ่ม Editor</button>
+    <button class="btn btn-primary" onclick="openUserModal(null)">+ เพิ่มผู้ใช้</button>
   </div>
   <div class="card">
     <div class="table-wrap"><table>
-      <thead><tr><th>ชื่อแสดง</th><th>Username</th><th>Role</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
+      <thead><tr><th>ชื่อแสดง</th><th>Username</th><th>Role / สิทธิ์</th><th>สร้างเมื่อ</th><th>จัดการ</th></tr></thead>
       <tbody>
-        ${list.length ? list.map(u=>`<tr>
+        ${list.length ? list.map(u=>{
+          let perms = [];
+          try { perms = JSON.parse(u.permissions || '[]'); } catch(e) {}
+          const permLabels = { articles:'📝', comments:'💬', apps:'🎮', worksheets:'📄' };
+          let roleCell;
+          if (u.role==='super_admin') {
+            roleCell = '<span class="badge" style="background:#fef3c7;color:#92400e;">👑 Super Admin</span>';
+          } else {
+            const label = u.role_label || 'กำหนดเอง';
+            const chips = perms.map(p=>`<span title="${p}" style="font-size:.85rem;">${permLabels[p]||''}</span>`).join(' ');
+            roleCell = `<span class="badge badge-blue">🎫 ${label}</span>${chips?` <span style="margin-left:4px;">${chips}</span>`:''}`;
+          }
+          return `<tr>
           <td><strong>${u.display_name}</strong></td>
           <td><code style="background:#f1f5f9;padding:2px 8px;border-radius:5px;">${u.username}</code></td>
-          <td>${u.role==='super_admin'
-            ?'<span class="badge" style="background:#fef3c7;color:#92400e;">👑 Super Admin</span>'
-            :'<span class="badge badge-blue">✏️ Editor</span>'}</td>
+          <td>${roleCell}</td>
           <td style="font-size:.82rem;color:#64748b;">${fmtD(u.created_at)}</td>
           <td style="white-space:nowrap;">
             <button class="btn btn-outline btn-sm" onclick="openUserModal(${u.id})">✏️</button>
             <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delUser(${u.id},'${u.display_name}')">🗑</button>
           </td>
-        </tr>`).join('')
-        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มี Editor — กด "+ เพิ่ม Editor" ด้านบน</td></tr>`}
+        </tr>`}).join('')
+        : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีผู้ใช้ — กด "+ เพิ่มผู้ใช้" ด้านบน</td></tr>`}
       </tbody>
     </table></div>
   </div>
   <div class="card" style="background:#f8fafc;">
     <p style="font-size:.88rem;color:#475569;line-height:2;">
-      <strong>Editor</strong> สามารถเขียนและแก้ไขบทความ จัดการความคิดเห็น และแก้โปรไฟล์ตัวเองได้<br>
-      <strong>Super Admin</strong> มีสิทธิ์ทุกอย่าง รวมถึงจัดการแอป รหัสปลดล็อก ตั้งค่าเว็บ และผู้ใช้
+      <strong>🎫 กำหนดเอง</strong> — เลือกได้ว่าให้เข้าถึงหมวดไหนบ้าง (บทความ/ความคิดเห็น/แอป/ใบงาน) ตั้งชื่อ Role เองได้<br>
+      <strong>👑 Super Admin</strong> — มีสิทธิ์ทุกอย่าง รวมถึงรหัสปลดล็อก ตั้งค่าเว็บ จัดการผู้ใช้ KruBoard และแจ้งปัญหา
     </p>
   </div>`;
 }
@@ -2932,26 +2958,51 @@ function fmtD(dt) { if(!dt)return'-'; try{return new Date(dt).toLocaleDateString
 function openUserModal(id) {
   api.get('/users').then(d => {
     const u = id ? (d.users||[]).find(x=>x.id===id) : null;
+    let curPerms = [];
+    try { curPerms = JSON.parse(u?.permissions || '[]'); } catch(e) {}
+    const isSuperAdmin = u?.role === 'super_admin';
+    const PERM_LIST = [
+      ['articles', '📝 บทความ', 'เขียน แก้ไข ลบบทความ'],
+      ['comments', '💬 ความคิดเห็น', 'อนุมัติ/ลบความคิดเห็น'],
+      ['apps', '🎮 แอป', 'เพิ่ม แก้ไข ลบแอป + pin'],
+      ['worksheets', '📄 ใบงาน', 'เพิ่ม แก้ไข ลบใบงาน'],
+    ];
     document.getElementById('modal').innerHTML = `
     <div class="modal-ov" onclick="closeModalSafe(event, this)">
       <div class="modal">
-        <h3>${u ? '✏️ แก้ไขผู้ใช้' : '👤 เพิ่ม Editor ใหม่'}</h3>
+        <h3>${u ? '✏️ แก้ไขผู้ใช้' : '👤 เพิ่มผู้ใช้ใหม่'}</h3>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Username *</label>
             <input type="text" class="form-input" id="uUsername" value="${u?.username||''}" ${u?'readonly style="background:#f8fafc;"':''} placeholder="เช่น teacher1">
           </div>
           <div class="form-group">
-            <label class="form-label">Role</label>
-            <select class="form-select" id="uRole">
-              <option value="editor" ${(!u||u.role==='editor')?'selected':''}>✏️ Editor</option>
-              <option value="super_admin" ${u?.role==='super_admin'?'selected':''}>👑 Super Admin</option>
+            <label class="form-label">ระดับสิทธิ์</label>
+            <select class="form-select" id="uRole" onchange="togglePermSection()">
+              <option value="editor" ${(!u||u.role==='editor')?'selected':''}>🎫 กำหนดเอง (เลือกหมวด)</option>
+              <option value="super_admin" ${isSuperAdmin?'selected':''}>👑 Super Admin (ทุกสิทธิ์)</option>
             </select>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">ชื่อที่แสดง *</label>
           <input type="text" class="form-input" id="uDisplayName" value="${u?.display_name||''}" placeholder="เช่น ครูสมชาย">
+        </div>
+        <div class="form-group" id="roleLabelGroup" style="${isSuperAdmin?'display:none;':''}">
+          <label class="form-label">ชื่อ Role (ตั้งเอง)</label>
+          <input type="text" class="form-input" id="uRoleLabel" value="${(u?.role_label||'').replace(/"/g,'&quot;')}" placeholder="เช่น ผู้ดูแลแอป, ทีมเขียนบทความ" maxlength="40">
+        </div>
+        <div class="form-group" id="permSection" style="${isSuperAdmin?'display:none;':''}">
+          <label class="form-label">✅ สิทธิ์การเข้าถึง (เลือกหมวดที่ทำได้)</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+            ${PERM_LIST.map(([key,label,desc])=>`
+            <label style="display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:.15s;" 
+                   onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='#e2e8f0'">
+              <input type="checkbox" class="perm-check" value="${key}" ${curPerms.includes(key)?'checked':''} style="margin-top:3px;width:17px;height:17px;cursor:pointer;flex-shrink:0;">
+              <div><div style="font-weight:600;font-size:.92rem;">${label}</div><div style="font-size:.78rem;color:#94a3b8;margin-top:1px;">${desc}</div></div>
+            </label>`).join('')}
+          </div>
+          <p style="font-size:.78rem;color:#94a3b8;margin-top:8px;line-height:1.5;">หมายเหตุ: รหัสปลดล็อก, ตั้งค่าเว็บ, จัดการผู้ใช้, KruBoard และแจ้งปัญหา สงวนไว้สำหรับ Super Admin เท่านั้น</p>
         </div>
         <div class="form-group">
           <label class="form-label">${u?'รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)':'รหัสผ่าน *'}</label>
@@ -2966,6 +3017,16 @@ function openUserModal(id) {
   });
 }
 
+// สลับการแสดง permission section ตาม role ที่เลือก
+function togglePermSection() {
+  const role = document.getElementById('uRole').value;
+  const show = role !== 'super_admin';
+  const permSec = document.getElementById('permSection');
+  const labelGrp = document.getElementById('roleLabelGroup');
+  if (permSec) permSec.style.display = show ? '' : 'none';
+  if (labelGrp) labelGrp.style.display = show ? '' : 'none';
+}
+
 async function saveUser(id) {
   const un   = document.getElementById('uUsername').value.trim();
   const dn   = document.getElementById('uDisplayName').value.trim();
@@ -2974,6 +3035,12 @@ async function saveUser(id) {
   if (!dn || (!id && (!un || !pw))) { alert('กรุณาใส่ข้อมูลให้ครบ'); return; }
   const body = { username:un, display_name:dn, role };
   if (pw) body.password = pw;
+  // ถ้าไม่ใช่ super_admin → เก็บ permissions + role_label
+  if (role !== 'super_admin') {
+    body.permissions = [...document.querySelectorAll('.perm-check:checked')].map(c=>c.value);
+    body.role_label = (document.getElementById('uRoleLabel')?.value || '').trim();
+    if (body.permissions.length === 0) { alert('กรุณาเลือกสิทธิ์อย่างน้อย 1 หมวด'); return; }
+  }
   const r = id && id!=='null'
     ? await api.put('/users/'+id, body)
     : await api.post('/users', body);
