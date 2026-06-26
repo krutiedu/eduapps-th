@@ -1059,23 +1059,19 @@ async function renderApps(openId) {
       onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">${p.label}</span>`
   ).join('');
 
+  // ค่า sort ปัจจุบันสำหรับ popular: รวม sort+days เป็น 'popular-30' / 'popular-7' / 'popular-0'
+  const sortVal = _appSort === 'popular' ? `popular-${_popularDays}` : _appSort;
   const sortHTML = `
     <select onchange="setAppSort(this.value)"
       style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
              font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
-      <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
-      <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
-      <option value="name" ${_appSort==='name'?'selected':''}>🔤 ชื่อ A-Z</option>
-      <option value="popular" ${_appSort==='popular'?'selected':''}>🔥 ยอดนิยม</option>
-    </select>
-    ${_appSort==='popular' ? `
-    <select onchange="setPopularDays(parseInt(this.value))"
-      style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
-             font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;margin-left:6px;">
-      <option value="30" ${_popularDays===30?'selected':''}>30 วันล่าสุด</option>
-      <option value="7" ${_popularDays===7?'selected':''}>7 วันล่าสุด</option>
-      <option value="0" ${_popularDays===0?'selected':''}>ทั้งหมด</option>
-    </select>` : ''}`;
+      <option value="newest" ${sortVal==='newest'?'selected':''}>🕐 ล่าสุด</option>
+      <option value="oldest" ${sortVal==='oldest'?'selected':''}>🕐 เก่าสุด</option>
+      <option value="name" ${sortVal==='name'?'selected':''}>🔤 ชื่อ A-Z</option>
+      <option value="popular-30" ${sortVal==='popular-30'?'selected':''}>🔥 ยอดนิยม (30 วัน)</option>
+      <option value="popular-7" ${sortVal==='popular-7'?'selected':''}>🔥 ยอดนิยม (7 วัน)</option>
+      <option value="popular-0" ${sortVal==='popular-0'?'selected':''}>🔥 ยอดนิยม (ทั้งหมด)</option>
+    </select>`;
 
   const viewToggleHTML = `
     <div class="view-toggle">
@@ -1310,16 +1306,17 @@ function filterApps(q)   { _appQ      = q; _pageFree = _pageLocked = _pageVip = 
 function setAppFilter(f) { _appFilter = f; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; saveAppsPref(); drawApps(); }
 function setAppSort(s)   {
   const wasPopular = _appSort === 'popular';
-  _appSort = s;
+  // parse 'popular-30' / 'popular-7' / 'popular-0' → sort='popular' + days
+  if (s.startsWith('popular-')) {
+    _popularDays = parseInt(s.split('-')[1]) || 0;
+    _appSort = 'popular';
+  } else {
+    _appSort = s;
+  }
   saveAppsPref();
   // ถ้าเข้า/ออกจาก popular → ต้อง re-fetch จาก backend
-  if (s === 'popular' || wasPopular) renderApps();
+  if (_appSort === 'popular' || wasPopular) renderApps();
   else drawApps();
-}
-function setPopularDays(d) {
-  _popularDays = d;
-  saveAppsPref();
-  renderApps();  // re-fetch ด้วยช่วงเวลาใหม่
 }
 function setAppView(v)   { _appView   = v; saveAppsPref(); renderApps(); }
 function gotoPage(group, p) {
