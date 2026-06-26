@@ -45,6 +45,23 @@ export async function onRequest(ctx) {
   if (needsAuth) {
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
     if (!token || !(await validToken(env, token))) return err('กรุณาเข้าสู่ระบบ', 401);
+
+    // ── permission gate — เช็คสิทธิ์รายหมวด (super_admin ผ่านหมด) ──
+    const sess = await getSession(env, token);
+    // map path → permission ที่ต้องมี (เฉพาะ write operations กับ admin endpoints)
+    let neededPerm = null;
+    if (path.startsWith('/articles') && (method !== 'GET' || path.startsWith('/articles/admin'))) neededPerm = 'articles';
+    else if (path.startsWith('/apps') && (path.startsWith('/apps/admin') || (method !== 'GET' && !path.includes('/unlock')))) neededPerm = 'apps';
+    else if (path.startsWith('/worksheets') && (method !== 'GET' && !path.includes('/unlock') && !path.includes('/download'))) neededPerm = 'worksheets';
+    else if (path.startsWith('/comments/admin') || (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE'))) neededPerm = 'comments';
+    // หมวดที่สงวนให้ super_admin เท่านั้น (codes/users/settings/reports/backup/analytics)
+    const superOnly = (
+      path.startsWith('/codes') || path.startsWith('/users') ||
+      (path.startsWith('/settings') && method !== 'GET') ||
+      path.startsWith('/reports') || path === '/backup' || path.startsWith('/analytics')
+    );
+    if (superOnly && sess?.role !== 'super_admin') return err('ไม่มีสิทธิ์เข้าถึงส่วนนี้', 403);
+    if (neededPerm && !hasPerm(sess, neededPerm)) return err('ไม่มีสิทธิ์ในหมวดนี้', 403);
   }
 
   try {
@@ -91,7 +108,7 @@ async function login(req, env) {
     await env.DB.prepare(
       "INSERT INTO sessions (token,created_at,expires_at,user_id,username,role,display_name) VALUES (?,datetime('now'),?,?,?,?,?)"
     ).bind(token, expires, u.id, u.username, u.role, u.display_name).run();
-    return ok({ token, expires, role: u.role, display_name: u.display_name, username: u.username });
+    return ok({ token, expires, user_id: u.id, role: u.role, display_name: u.display_name, username: u.username, permissions: u.permissions||'[]', role_label: u.role_label||'' });
   }
 
   // ── Login admin หลัก (backward compat) ──
@@ -117,14 +134,29 @@ async function authCheck(req, env) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
   const sess  = token ? await getSession(env, token) : null;
   if (!sess) return ok({ authenticated: false });
-  return ok({ authenticated: true, role: sess.role||'super_admin', display_name: sess.display_name||'Admin', username: sess.username||'admin' });
+  return ok({ authenticated: true, role: sess.role||'super_admin', display_name: sess.display_name||'Admin', username: sess.username||'admin', permissions: sess.user_permissions||'[]', role_label: sess.user_role_label||'' });
 }
 
 async function getSession(env, token) {
   const { results } = await env.DB
-    .prepare("SELECT * FROM sessions WHERE token=? AND expires_at > datetime('now')")
+    .prepare(`SELECT s.*, u.permissions AS user_permissions, u.role_label AS user_role_label
+              FROM sessions s LEFT JOIN users u ON s.user_id = u.id
+              WHERE s.token=? AND s.expires_at > datetime('now')`)
     .bind(token).all();
   return results[0] || null;
+}
+
+// ── permission helper ──
+// super_admin (และ admin หลัก user_id=0) ได้ทุก permission
+// คนอื่นเช็คจาก permissions JSON array ใน users
+const ALL_PERMS = ['articles', 'comments', 'apps', 'worksheets'];
+function hasPerm(sess, perm) {
+  if (!sess) return false;
+  if (sess.role === 'super_admin') return true;
+  try {
+    const perms = JSON.parse(sess.user_permissions || '[]');
+    return Array.isArray(perms) && perms.includes(perm);
+  } catch { return false; }
 }
 
 async function validToken(env, token) {
@@ -143,7 +175,7 @@ async function usersHandler(req, env, segs, method) {
   if (!id && method === 'GET') {
     if (sess?.role !== 'super_admin') return err('ไม่มีสิทธิ์', 403);
     const { results } = await env.DB
-      .prepare('SELECT id,username,display_name,role,created_at FROM users ORDER BY created_at ASC').all();
+      .prepare('SELECT id,username,display_name,role,permissions,role_label,created_at FROM users ORDER BY created_at ASC').all();
     return ok({ users: results });
   }
 
@@ -155,9 +187,11 @@ async function usersHandler(req, env, segs, method) {
     const { results: exist } = await env.DB.prepare('SELECT id FROM users WHERE username=?').bind(b.username.trim()).all();
     if (exist[0]) return err('ชื่อผู้ใช้นี้มีอยู่แล้ว');
     const ph = await sha256(b.password);
+    // sanitize permissions: เก็บเฉพาะที่อยู่ใน ALL_PERMS
+    const perms = Array.isArray(b.permissions) ? b.permissions.filter(p => ALL_PERMS.includes(p)) : [];
     await env.DB.prepare(
-      "INSERT INTO users (username,password_hash,display_name,role) VALUES (?,?,?,?)"
-    ).bind(b.username.trim(), ph, b.display_name.trim(), b.role||'editor').run();
+      "INSERT INTO users (username,password_hash,display_name,role,permissions,role_label) VALUES (?,?,?,?,?,?)"
+    ).bind(b.username.trim(), ph, b.display_name.trim(), b.role||'editor', JSON.stringify(perms), (b.role_label||'').slice(0,40)).run();
     return ok({ ok: true });
   }
 
@@ -170,6 +204,14 @@ async function usersHandler(req, env, segs, method) {
     const vals = [b.display_name?.trim() || ''];
     if (b.password) { sets.push('password_hash=?'); vals.push(await sha256(b.password)); }
     if (sess?.role === 'super_admin' && b.role && !isSelf) { sets.push('role=?'); vals.push(b.role); }
+    // super_admin แก้ permissions + role_label ของคนอื่นได้ (ไม่ใช่ตัวเอง — กันล็อกตัวเอง)
+    if (sess?.role === 'super_admin' && !isSelf) {
+      if (b.permissions !== undefined) {
+        const perms = Array.isArray(b.permissions) ? b.permissions.filter(p => ALL_PERMS.includes(p)) : [];
+        sets.push('permissions=?'); vals.push(JSON.stringify(perms));
+      }
+      if (b.role_label !== undefined) { sets.push('role_label=?'); vals.push((b.role_label||'').slice(0,40)); }
+    }
     vals.push(id);
     await env.DB.prepare(`UPDATE users SET ${sets.join(',')} WHERE id=?`).bind(...vals).run();
     return ok({ ok: true });
