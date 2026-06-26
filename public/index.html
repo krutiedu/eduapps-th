@@ -27,6 +27,7 @@
    Display: Pridi | Body: Sarabun | ✦ ใช้เฉพาะ: โลโก้ / ตรา / หัวข้อ
 ════════════════════════════════════════════════════════ */
 :root{
+  color-scheme: light only;
   --ink:#101c33; --ink-2:#18294a; --ink-3:#234070;
   --ink-soft:#3d4c68;
   --gold:#f3ac2e; --gold-bright:#ffc555; --gold-deep:#c47f0e; --gold-soft:rgba(243,172,46,.13);
@@ -38,6 +39,11 @@
   --shadow-sm:0 2px 10px rgba(16,28,51,.07);
   --shadow-md:0 10px 30px rgba(16,28,51,.12);
   --shadow-lg:0 22px 56px rgba(16,28,51,.18);
+}
+/* บังคับ light mode — กัน iOS Safari auto-darken เมื่อผู้ใช้เปิด Dark Mode */
+html{color-scheme: light only !important;}
+@media (prefers-color-scheme: dark){
+  html, body{background:#faf7f1 !important;color:#101c33 !important;}
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{overflow-x:hidden;background:#101c33;}
@@ -1005,6 +1011,7 @@ async function submitComment(articleId) {
 // ── APPS PAGE ────────────────────────────────────────────
 let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
 let _appView = 'block', _pageFree = 1, _pageLocked = 1, _pageVip = 1, _pageOther = 1, _pageTable = 1;
+let _popularDays = 30;  // ช่วงเวลานับยอดนิยม: 30/7/0(ทั้งหมด)
 
 // อ่าน preferences จาก localStorage (จำ view + filter ของผู้ใช้)
 try {
@@ -1012,10 +1019,11 @@ try {
   if (pref.view === 'block' || pref.view === 'table') _appView = pref.view;
   if (pref.filter) _appFilter = pref.filter;
   if (pref.sort) _appSort = pref.sort;
+  if (pref.popularDays !== undefined) _popularDays = pref.popularDays;
 } catch(e) {}
 
 function saveAppsPref() {
-  try { localStorage.setItem('appsPref', JSON.stringify({ view:_appView, filter:_appFilter, sort:_appSort })); } catch(e) {}
+  try { localStorage.setItem('appsPref', JSON.stringify({ view:_appView, filter:_appFilter, sort:_appSort, popularDays:_popularDays })); } catch(e) {}
 }
 
 // คำนวณจำนวนแอปต่อหน้าตาม viewport (block view: 3 rows × N cols)
@@ -1030,7 +1038,9 @@ function calcPageSize() {
 async function renderApps(openId) {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
-  const data = await get('/apps');
+  // ถ้า sort=popular ต้องดึง view_count มาด้วย (ส่ง popular_days)
+  const url = _appSort === 'popular' ? `/apps?popular_days=${_popularDays}` : '/apps';
+  const data = await get(url);
   _allApps = data.apps || [];
   // ไม่ reset _appFilter, _appSort, _appView — โหลดจาก localStorage แล้ว
   _appQ = '';
@@ -1056,7 +1066,16 @@ async function renderApps(openId) {
       <option value="newest" ${_appSort==='newest'?'selected':''}>🕐 ล่าสุด</option>
       <option value="oldest" ${_appSort==='oldest'?'selected':''}>🕐 เก่าสุด</option>
       <option value="name" ${_appSort==='name'?'selected':''}>🔤 ชื่อ A-Z</option>
-    </select>`;
+      <option value="popular" ${_appSort==='popular'?'selected':''}>🔥 ยอดนิยม</option>
+    </select>
+    ${_appSort==='popular' ? `
+    <select onchange="setPopularDays(parseInt(this.value))"
+      style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
+             font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;margin-left:6px;">
+      <option value="30" ${_popularDays===30?'selected':''}>30 วันล่าสุด</option>
+      <option value="7" ${_popularDays===7?'selected':''}>7 วันล่าสุด</option>
+      <option value="0" ${_popularDays===0?'selected':''}>ทั้งหมด</option>
+    </select>` : ''}`;
 
   const viewToggleHTML = `
     <div class="view-toggle">
@@ -1138,6 +1157,12 @@ function drawApps() {
   const sorted = [..._allApps].sort((a, b) => {
     if (_appSort === 'oldest') return (a.created_at||'') > (b.created_at||'') ? 1 : -1;
     if (_appSort === 'name')   return (a.title||'').localeCompare(b.title||'', 'th');
+    if (_appSort === 'popular') {
+      // ยอดนิยม: view_count มาก → น้อย, ถ้าเท่ากันใช้ล่าสุด tie-break
+      const va = a.view_count || 0, vb = b.view_count || 0;
+      if (vb !== va) return vb - va;
+      return (a.created_at||'') < (b.created_at||'') ? 1 : -1;
+    }
     return (a.created_at||'') < (b.created_at||'') ? 1 : -1;
   });
 
@@ -1283,7 +1308,19 @@ async function redeemAll() {
 
 function filterApps(q)   { _appQ      = q; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; drawApps(); }
 function setAppFilter(f) { _appFilter = f; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; saveAppsPref(); drawApps(); }
-function setAppSort(s)   { _appSort   = s; saveAppsPref(); drawApps(); }
+function setAppSort(s)   {
+  const wasPopular = _appSort === 'popular';
+  _appSort = s;
+  saveAppsPref();
+  // ถ้าเข้า/ออกจาก popular → ต้อง re-fetch จาก backend
+  if (s === 'popular' || wasPopular) renderApps();
+  else drawApps();
+}
+function setPopularDays(d) {
+  _popularDays = d;
+  saveAppsPref();
+  renderApps();  // re-fetch ด้วยช่วงเวลาใหม่
+}
 function setAppView(v)   { _appView   = v; saveAppsPref(); renderApps(); }
 function gotoPage(group, p) {
   if (group === 'free') _pageFree = p;
