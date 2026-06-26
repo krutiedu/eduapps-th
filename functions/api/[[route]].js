@@ -372,9 +372,27 @@ async function apps(req, env, segs, method) {
   }
 
   // GET /apps — สาธารณะ เฉพาะ visible=1, ไม่ส่ง lock_code, locked=1 ไม่ส่ง url
+  // ?popular_days=N → คืน view_count ในช่วง N วันล่าสุด (0 = ทั้งหมด, default ไม่นับ)
   if (!id && method === 'GET') {
-    const { results } = await env.DB
-      .prepare('SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at FROM apps WHERE visible=1 ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC').all();
+    const url = new URL(req.url);
+    const popularDays = parseInt(url.searchParams.get('popular_days'));
+    let sql;
+    if (Number.isFinite(popularDays) && popularDays >= 0) {
+      // นับ view_count จาก page_views โดย LIKE '/apps/{id}'
+      const TZ = "'+7 hours'";
+      const dateFilter = popularDays > 0
+        ? `AND date(pv.created_at, ${TZ}) > date('now', ${TZ}, '-${popularDays} days')`
+        : '';
+      sql = `
+        SELECT a.id, a.icon, a.title, a.category, a.description, a.url, a.prompt, a.locked, a.visible, a.preview_image, a.sort_order, a.is_vip, a.pinned, a.created_at,
+               COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id ${dateFilter}), 0) AS view_count
+        FROM apps a
+        WHERE a.visible=1
+        ORDER BY (a.pinned > 0) DESC, a.pinned ASC, a.sort_order ASC, a.created_at ASC`;
+    } else {
+      sql = 'SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at FROM apps WHERE visible=1 ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC';
+    }
+    const { results } = await env.DB.prepare(sql).all();
     const safe = results.map(a => ({
       ...a,
       url: a.locked ? null : a.url,   // ซ่อน URL ถ้า locked
