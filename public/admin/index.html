@@ -11,6 +11,11 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Sarabun',sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;}
+/* บังคับ light mode — กัน iOS Safari auto-darken */
+html{color-scheme: light only !important;}
+@media (prefers-color-scheme: dark){
+  html, body{background:#f0f4f8 !important;color:#1e293b !important;}
+}
 
 /* LOGIN */
 .login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f4f8;}
@@ -250,6 +255,7 @@ const PREVIEW_CSS = `
    Display: Pridi | Body: Sarabun | ✦ ใช้เฉพาะ: โลโก้ / ตรา / หัวข้อ
 ════════════════════════════════════════════════════════ */
 :root{
+  color-scheme: light only;
   --ink:#101c33; --ink-2:#18294a; --ink-3:#234070;
   --ink-soft:#3d4c68;
   --gold:#f3ac2e; --gold-bright:#ffc555; --gold-deep:#c47f0e; --gold-soft:rgba(243,172,46,.13);
@@ -1098,7 +1104,8 @@ async function kbDelTeacher(username, name) {
 // ══════════════════════════════════════════════════════════
 async function renderArticles() {
   const data = await api.get('/articles/admin/list');
-  const arts = data.articles || [];
+  window._artsAll = data.articles || [];
+  _pg.articles.page = 1;
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div class="page-title" style="margin:0;">📝 บทความทั้งหมด</div>
@@ -1108,26 +1115,39 @@ async function renderArticles() {
     <div class="table-wrap">
     <table>
       <thead><tr><th>📌</th><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>ยอดวิว</th><th>วันที่</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${arts.length ? arts.map(a=>`<tr${a.pinned?' style="background:#fffbeb"':''}>
-          <td style="text-align:center;width:40px">${pinBadge(a.pinned)}</td>
-          <td><strong>${a.title.length>45?a.title.slice(0,45)+'…':a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td>${a.published?'<span class="badge badge-green">✅ เผยแพร่</span>':'<span class="badge badge-orange">📋 แบบร่าง</span>'}</td>
-          <td style="color:#94a3b8">${a.views||0}</td>
-          <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-outline btn-sm" onclick="openPinModal('article',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
-            <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
-            <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
-          </td>
-        </tr>`).join('')
-        : `<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบทความ</td></tr>`}
-      </tbody>
+      <tbody id="artsBody"></tbody>
     </table>
     </div>
+    <div id="artsPager"></div>
   </div>`;
+  _renderArticlesTable();
+}
+
+function artRowsHtml(arr) {
+  if (!arr.length) return `<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">ยังไม่มีบทความ</td></tr>`;
+  return arr.map(a=>`<tr${a.pinned?' style="background:#fffbeb"':''}>
+    <td style="text-align:center;width:40px">${pinBadge(a.pinned)}</td>
+    <td><strong>${a.title.length>45?a.title.slice(0,45)+'…':a.title}</strong></td>
+    <td><span class="badge badge-gray">${a.category}</span></td>
+    <td>${a.published?'<span class="badge badge-green">✅ เผยแพร่</span>':'<span class="badge badge-orange">📋 แบบร่าง</span>'}</td>
+    <td style="color:#94a3b8">${a.views||0}</td>
+    <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openPinModal('article',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
+      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function _renderArticlesTable() {
+  const all = window._artsAll || [];
+  const pageItems = paginate('articles', all);
+  const body = document.getElementById('artsBody');
+  if (body) body.innerHTML = artRowsHtml(pageItems);
+  const pgEl = document.getElementById('artsPager');
+  if (pgEl) pgEl.innerHTML = pagerControls('articles', all.length);
 }
 
 async function editArticle(id) {
@@ -1148,6 +1168,111 @@ async function delArticle(id, title) {
 // ══════════════════════════════════════════════════════════
 // PIN SYSTEM — pin บทความ/แอป ลงหน้าแรก (สูงสุด 3 ชิ้น/หมวด)
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// PAGINATION — ใช้ร่วมกันทั้งหน้า apps/articles/worksheets
+// ══════════════════════════════════════════════════════════
+// state: เก็บ perPage + หน้าปัจจุบันของแต่ละ section
+const _pg = {
+  apps:       { perPage: 10, page: 1 },
+  articles:   { perPage: 10, page: 1 },
+  worksheets: { perPage: 10, page: 1 },
+};
+// โหลด perPage ที่จำไว้
+try {
+  const saved = JSON.parse(localStorage.getItem('adminPerPage') || '{}');
+  for (const k of ['apps','articles','worksheets']) {
+    if (saved[k]) _pg[k].perPage = saved[k];
+  }
+} catch(e) {}
+
+function savePerPage() {
+  try {
+    localStorage.setItem('adminPerPage', JSON.stringify({
+      apps: _pg.apps.perPage, articles: _pg.articles.perPage, worksheets: _pg.worksheets.perPage
+    }));
+  } catch(e) {}
+}
+
+// แบ่งหน้า: คืน array ที่ slice แล้ว ตาม section
+function paginate(section, items) {
+  const st = _pg[section];
+  if (st.perPage === 0) return items;  // 0 = แสดงทั้งหมด
+  const totalPages = Math.max(1, Math.ceil(items.length / st.perPage));
+  if (st.page > totalPages) st.page = totalPages;
+  const start = (st.page - 1) * st.perPage;
+  return items.slice(start, start + st.perPage);
+}
+
+// สร้าง HTML control: dropdown perPage + ปุ่มเปลี่ยนหน้า
+function pagerControls(section, total) {
+  const st = _pg[section];
+  const perPageOpts = [10, 20, 50, 0];
+  const ddId = `pp_${section}`;
+  const dropdown = `
+    <select id="${ddId}" onchange="setPerPage('${section}', parseInt(this.value))"
+      style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:.85rem;font-weight:600;color:#1e293b;background:#fff;cursor:pointer;outline:none;">
+      ${perPageOpts.map(n => `<option value="${n}" ${st.perPage===n?'selected':''}>${n===0?'ทั้งหมด':n+' แถว'}</option>`).join('')}
+    </select>`;
+
+  // ถ้าแสดงทั้งหมด หรือมีหน้าเดียว → ไม่ต้องมีปุ่มเปลี่ยนหน้า
+  if (st.perPage === 0 || total <= st.perPage) {
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px 4px;flex-wrap:wrap;">
+      <span style="font-size:.82rem;color:#94a3b8;">แสดง ${total} รายการ</span>
+      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.82rem;color:#64748b;">แสดง</span>${dropdown}</div>
+    </div>`;
+  }
+
+  const totalPages = Math.ceil(total / st.perPage);
+  const cur = st.page;
+  // เลขหน้า: 1 ... cur-1 cur cur+1 ... last
+  const pages = new Set([1, totalPages, cur, cur-1, cur+1]);
+  const sortedPages = [...pages].filter(p => p>=1 && p<=totalPages).sort((a,b)=>a-b);
+  let btns = `<button onclick="gotoAdminPage('${section}',${cur-1})" ${cur===1?'disabled':''} style="${_pgBtnStyle(cur===1)}">‹</button>`;
+  let prev = 0;
+  for (const p of sortedPages) {
+    if (p - prev > 1) btns += `<span style="color:#cbd5e1;padding:0 2px;">…</span>`;
+    btns += `<button onclick="gotoAdminPage('${section}',${p})" style="${_pgBtnStyle(false, p===cur)}">${p}</button>`;
+    prev = p;
+  }
+  btns += `<button onclick="gotoAdminPage('${section}',${cur+1})" ${cur===totalPages?'disabled':''} style="${_pgBtnStyle(cur===totalPages)}">›</button>`;
+
+  const from = (cur-1)*st.perPage + 1;
+  const to = Math.min(cur*st.perPage, total);
+  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px 4px;flex-wrap:wrap;">
+    <span style="font-size:.82rem;color:#94a3b8;">${from}–${to} จาก ${total} รายการ</span>
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${btns}</div>
+    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.82rem;color:#64748b;">แสดง</span>${dropdown}</div>
+  </div>`;
+}
+
+function _pgBtnStyle(disabled, active) {
+  let s = 'min-width:34px;height:34px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-family:inherit;font-weight:600;color:#1e293b;cursor:pointer;padding:0 9px;transition:.15s;';
+  if (active) s += 'background:#101c33;color:#fff;border-color:#101c33;';
+  if (disabled) s += 'opacity:.4;cursor:not-allowed;';
+  return s;
+}
+
+function setPerPage(section, n) {
+  _pg[section].perPage = n;
+  _pg[section].page = 1;
+  savePerPage();
+  _rerenderSection(section);
+}
+
+function gotoAdminPage(section, p) {
+  _pg[section].page = p;
+  _rerenderSection(section);
+  // scroll ขึ้นบนตาราง
+  document.getElementById('content')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// เรียก re-render ของ section ที่เกี่ยวข้อง
+function _rerenderSection(section) {
+  if (section === 'apps') filterApps();
+  else if (section === 'worksheets') filterWorksheets();
+  else if (section === 'articles') _renderArticlesTable();
+}
+
 function pinBadge(n) {
   if (!n || n < 1 || n > 3) return '<span style="color:#cbd5e1;font-size:.95rem;">·</span>';
   const colors = { 1:'#dc2626', 2:'#ea580c', 3:'#ca8a04' };
@@ -1820,6 +1945,7 @@ async function renderApps() {
       <tbody id="appsBody"></tbody>
     </table>
     </div>
+    <div id="appsPager"></div>
   </div>`;
   filterApps();
 }
@@ -1865,7 +1991,10 @@ function filterApps() {
     if (st==='vip'     && !a.is_vip)  return false;
     return true;
   });
-  document.getElementById('appsBody').innerHTML = appRowsHtml(out);
+  const pageItems = paginate('apps', out);
+  document.getElementById('appsBody').innerHTML = appRowsHtml(pageItems);
+  const pgEl = document.getElementById('appsPager');
+  if (pgEl) pgEl.innerHTML = pagerControls('apps', out.length);
   const cnt = document.getElementById('appCount');
   if (cnt) cnt.textContent = `${out.length} / ${(window._appsAll||[]).length} แอป`;
 }
@@ -1998,6 +2127,7 @@ async function renderWorksheets() {
       <tbody id="wsBody"></tbody>
     </table>
     </div>
+    <div id="wsPager"></div>
   </div>`;
   filterWorksheets();
 }
@@ -2045,7 +2175,10 @@ function filterWorksheets() {
     if (st==='free'    &&  w.locked)  return false;
     return true;
   });
-  document.getElementById('wsBody').innerHTML = wsRowsHtml(out);
+  const pageItems = paginate('worksheets', out);
+  document.getElementById('wsBody').innerHTML = wsRowsHtml(pageItems);
+  const pgEl = document.getElementById('wsPager');
+  if (pgEl) pgEl.innerHTML = pagerControls('worksheets', out.length);
   const cnt = document.getElementById('wsCount');
   if (cnt) cnt.textContent = `${out.length} / ${(window._wsAll||[]).length} ใบงาน`;
 }
