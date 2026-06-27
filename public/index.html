@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#101c33">
+<meta name="application-name" content="Kru-ti ครูติ">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ครูติ">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="description" id="metaDesc" content="">
 <link rel="canonical" id="canonical" href="https://kru-ti.com/">
 <script type="application/ld+json" id="jsonld">{}</script>
@@ -749,6 +755,9 @@ function goSearch() {
   }
 }
 window.addEventListener('hashchange', route);
+
+// ── PWA: ป้องกัน auto-prompt ของ browser (ถ้าผู้ใช้อยากติดตั้ง ใช้ menu ของ browser เอง) ──
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); });
 
 // เมื่อ viewport เปลี่ยน (resize) — redraw apps page ถ้าอยู่ในนั้น (กัน pagination แตก)
 let _appRz;
