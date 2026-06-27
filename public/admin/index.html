@@ -771,16 +771,15 @@ function nav(page) {
 const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
 
 // ล้าง cache dashboard — เรียกหลังบันทึก/ลบ ข้อมูลใดๆ ที่กระทบ stats
+// Cache 5 นาที — ลด API calls ลง ~80% ตอนเปิด dashboard ซ้ำ
+const DASH_CACHE_MS = 5 * 60 * 1000;
+let _dashCache = null;
+let _dashCachedAt = 0;
 function invalidateDashCache() { _dashCache = null; _dashCachedAt = 0; }
 
 // ══════════════════════════════════════════════════════════
 // DASHBOARD — Action Dashboard with cache + lazy analytics
 // ══════════════════════════════════════════════════════════
-// Cache 5 นาที — ลด API calls ลง ~80% ตอนเปิด dashboard ซ้ำ
-const DASH_CACHE_MS = 5 * 60 * 1000;
-let _dashCache = null;
-let _dashCachedAt = 0;
-
 async function renderDash(forceRefresh) {
   const now = Date.now();
   const useCache = !forceRefresh && _dashCache && (now - _dashCachedAt) < DASH_CACHE_MS;
@@ -859,7 +858,7 @@ async function renderDash(forceRefresh) {
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
     <div>
-      <div style="font-size:1.6rem;font-weight:700;color:var(--ink);line-height:1.2;">${greeting}, ${esc(name)} 👋</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--ink);line-height:1.2;">${greeting}, ${escapeHtml(name)} 👋</div>
       <div style="color:#64748b;font-size:.92rem;margin-top:4px;">${todayStr} ${cacheNote}</div>
     </div>
     <button class="btn btn-outline btn-sm" onclick="renderDash(true)" title="โหลดข้อมูลใหม่">🔄 รีเฟรช</button>
@@ -894,7 +893,7 @@ async function renderDash(forceRefresh) {
     <div style="display:flex;align-items:center;gap:14px;padding:12px;background:#f8fafc;border-radius:10px;">
       <div style="font-size:1.6rem;">📄</div>
       <div style="flex:1;">
-        <div style="font-weight:600;font-size:.98rem;">${esc(lastDraft.title)}</div>
+        <div style="font-weight:600;font-size:.98rem;">${escapeHtml(lastDraft.title)}</div>
         <div style="font-size:.78rem;color:#94a3b8;margin-top:2px;">แบบร่าง · อัปเดตล่าสุด ${fmtRel(lastDraft.updated_at || lastDraft.created_at)}</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="editArticle(${lastDraft.id})">▶ ทำต่อ</button>
