@@ -638,10 +638,18 @@ const hdr    = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Be
 
 const api = {
   get:    url       => fetch(API+url, { headers: hdr(), cache: 'no-store' }).then(r=>r.json()),
-  post:   (url,b)   => fetch(API+url, { method:'POST',   headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()),
-  put:    (url,b)   => fetch(API+url, { method:'PUT',    headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()),
-  delete: url       => fetch(API+url, { method:'DELETE', headers: hdr() }).then(r=>r.json()),
+  post:   (url,b)   => fetch(API+url, { method:'POST',   headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
+  put:    (url,b)   => fetch(API+url, { method:'PUT',    headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
+  delete: url       => fetch(API+url, { method:'DELETE', headers: hdr() }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
 };
+
+// ล้าง dash cache อัตโนมัติเมื่อมีการแก้ข้อมูลที่กระทบ dashboard
+function _maybeInvalidate(url) {
+  if (!url) return;
+  if (/^\/(articles|apps|worksheets|comments|reports)(\/|$)/.test(url)) {
+    if (typeof invalidateDashCache === 'function') invalidateDashCache();
+  }
+}
 
 // ── AUTH ──────────────────────────────────────────────────
 async function doLogin() {
@@ -659,7 +667,21 @@ async function doLogin() {
     localStorage.setItem('_uid', res.user_id || '0');
     localStorage.setItem('_perms', res.permissions || '[]');
     localStorage.setItem('_roleLabel', res.role_label || '');
-    showAdmin(); applyRole(); nav('dash');
+    showAdmin(); applyRole();
+    // Smart default — เด้งไปหน้าล่าสุดที่ใช้ ถ้าไม่มีหรือเป็นการ login ครั้งแรก → dash
+    let goto = 'dash';
+    try {
+      const last = localStorage.getItem('_lastPage');
+      if (last && REMEMBER_PAGES.has(last)) {
+        // เช็ค permission ด้วย — ถ้าหน้านั้นต้องใช้สิทธิ์ที่ไม่มี → fallback ไป dash
+        const perms = myPerms();
+        const isAdmin = (localStorage.getItem('_role') === 'super_admin');
+        const permMap = { articles:'articles', comments:'comments', apps:'apps', worksheets:'worksheets' };
+        const needed = permMap[last];
+        if (isAdmin || !needed || perms.includes(needed)) goto = last;
+      }
+    } catch(e) {}
+    nav(goto);
   } else {
     document.getElementById('loginAlert').innerHTML =
       `<div class="alert alert-danger">❌ ${res.error||'รหัสผ่านไม่ถูกต้อง'}</div>`;
@@ -714,6 +736,9 @@ function showAdmin() {
 
 // ── NAVIGATION ────────────────────────────────────────────
 let currentPage = '';
+// หน้าที่ "จำ" ได้ — เปิด admin ครั้งหน้าจะเด้งกลับมาที่นี่
+const REMEMBER_PAGES = new Set(['dash','articles','apps','worksheets','comments','reports','kruboard','codes','users','settings']);
+
 function nav(page) {
   // ออกจากหน้าเขียนบทความ → บันทึกร่างทันที (กันข้อมูลหายตอนสลับเมนูเร็วๆ)
   if (currentPage === 'new-article' && window._saveDraftNow) {
@@ -721,6 +746,10 @@ function nav(page) {
     if (page !== 'new-article') window._saveDraftNow = null;
   }
   currentPage = page;
+  // จำหน้าล่าสุด (เฉพาะหน้าที่อยู่ใน list)
+  if (REMEMBER_PAGES.has(page)) {
+    try { localStorage.setItem('_lastPage', page); } catch(e) {}
+  }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page===page));
   document.getElementById('sidebar').classList.remove('open');
   const c = document.getElementById('content');
@@ -741,68 +770,189 @@ function nav(page) {
 
 const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
 
+// ล้าง cache dashboard — เรียกหลังบันทึก/ลบ ข้อมูลใดๆ ที่กระทบ stats
+function invalidateDashCache() { _dashCache = null; _dashCachedAt = 0; }
+
 // ══════════════════════════════════════════════════════════
-// DASHBOARD
+// DASHBOARD — Action Dashboard with cache + lazy analytics
 // ══════════════════════════════════════════════════════════
-async function renderDash() {
-  const [arts, appsData, cmts, wks, analytics] = await Promise.all([
-    api.get('/articles/admin/list'),
-    api.get('/apps'),
-    api.get('/comments/admin/list'),
-    api.get('/worksheets/admin/list').catch(() => ({ worksheets: [] })),
-    api.get('/analytics/summary').catch(() => null),
-  ]);
-  const artList  = arts.articles  || [];
-  const appList  = appsData.apps  || [];
-  const cmtList  = cmts.comments  || [];
-  const wsList   = wks.worksheets || [];
+// Cache 5 นาที — ลด API calls ลง ~80% ตอนเปิด dashboard ซ้ำ
+const DASH_CACHE_MS = 5 * 60 * 1000;
+let _dashCache = null;
+let _dashCachedAt = 0;
+
+async function renderDash(forceRefresh) {
+  const now = Date.now();
+  const useCache = !forceRefresh && _dashCache && (now - _dashCachedAt) < DASH_CACHE_MS;
+
+  let data;
+  if (useCache) {
+    data = _dashCache;
+  } else {
+    // โหลดเฉพาะที่จำเป็น — ตัด analytics ออก (lazy load ด้วยปุ่ม)
+    const perms = myPerms();
+    const isAdmin = myRole() === 'super_admin';
+    const can = p => isAdmin || perms.includes(p);
+
+    // เรียกเฉพาะที่มีสิทธิ์ — ลด calls ตาม permission
+    const [arts, appsData, cmts, wks, reports] = await Promise.all([
+      can('articles')   ? api.get('/articles/admin/list').catch(()=>({articles:[]}))   : Promise.resolve({articles:[]}),
+      can('apps')       ? api.get('/apps').catch(()=>({apps:[]}))                       : Promise.resolve({apps:[]}),
+      can('comments')   ? api.get('/comments/admin/list').catch(()=>({comments:[]}))    : Promise.resolve({comments:[]}),
+      can('worksheets') ? api.get('/worksheets/admin/list').catch(()=>({worksheets:[]})): Promise.resolve({worksheets:[]}),
+      isAdmin           ? api.get('/reports/admin/list').catch(()=>({reports:[]}))      : Promise.resolve({reports:[]}),
+    ]);
+    data = { arts, appsData, cmts, wks, reports };
+    _dashCache = data;
+    _dashCachedAt = now;
+  }
+
+  const artList  = data.arts.articles  || [];
+  const appList  = data.appsData.apps  || [];
+  const cmtList  = data.cmts.comments  || [];
+  const wsList   = data.wks.worksheets || [];
+  const repList  = data.reports.reports || [];
+
   const pub      = artList.filter(a=>a.published).length;
   const draft    = artList.filter(a=>!a.published).length;
   const pending  = cmtList.filter(c=>!c.approved).length;
+  const newReports = repList.filter(r=>r.status==='new').length;
 
-  // map path → ชื่ออ่านง่าย (เก็บทั้ง title และ icon)
+  // หา "งานต่อจากที่ค้าง" — บทความที่เป็นแบบร่าง + แก้ไขล่าสุด
+  const lastDraft = [...artList]
+    .filter(a => !a.published)
+    .sort((a,b) => (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || ''))[0];
+
+  // map path → ชื่ออ่านง่าย (เก็บไว้ใช้ใน analytics ถ้ามีคนกดดู)
   window._artMap = Object.fromEntries(artList.map(a=>[String(a.id), a.title]));
   window._appMap = Object.fromEntries(appList.map(a=>[String(a.id), { title:a.title, icon:a.icon || '🎮' }]));
   window._wsMap  = Object.fromEntries(wsList.map(w=>[String(w.id), w.title]));
 
+  // ทักทายตามช่วงเวลา
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'สวัสดีตอนเช้า' : h < 17 ? 'สวัสดีตอนบ่าย' : h < 20 ? 'สวัสดีตอนเย็น' : 'สวัสดีตอนค่ำ';
+  const name = myName() || 'ครูติ';
+  const todayStr = new Date().toLocaleDateString('th-TH', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // ── To-Do items (รวมทุกสิทธิ์ที่มี) ──
+  const todos = [];
+  if (pending > 0)     todos.push({icon:'💬', text:`คอมเมนต์รออนุมัติ <strong>${pending}</strong> รายการ`, action:`nav('comments')`, btn:'ดูเลย'});
+  if (newReports > 0)  todos.push({icon:'🛠️', text:`รายงานปัญหาใหม่ <strong>${newReports}</strong> รายการ`, action:`nav('reports')`, btn:'ดูเลย'});
+  if (draft > 0)       todos.push({icon:'📝', text:`บทความค้างเป็นแบบร่าง <strong>${draft}</strong> บทความ`, action:`nav('articles')`, btn:'จัดการ'});
+
+  // ── ปุ่มสร้างใหม่ตาม permission ──
+  const createBtns = [];
+  if (myRole()==='super_admin' || myPerms().includes('articles'))   createBtns.push(`<button class="btn btn-primary" onclick="nav('new-article')">✏️ เขียนบทความ</button>`);
+  if (myRole()==='super_admin' || myPerms().includes('apps'))       createBtns.push(`<button class="btn btn-outline" onclick="nav('apps')">🎮 จัดการแอป</button>`);
+  if (myRole()==='super_admin' || myPerms().includes('worksheets')) createBtns.push(`<button class="btn btn-outline" onclick="nav('worksheets')">📄 จัดการใบงาน</button>`);
+  if (myRole()==='super_admin' || myPerms().includes('comments'))   createBtns.push(`<button class="btn btn-outline" onclick="nav('comments')">💬 จัดการคอมเมนต์</button>`);
+
+  // ── stats card เล็ก (เห็นภาพรวม ไม่ต้องโหลด analytics) ──
+  const stats = [];
+  if (myRole()==='super_admin' || myPerms().includes('articles'))   stats.push({n:artList.length, l:'📝 บทความ', sub:`เผยแพร่ ${pub} · ร่าง ${draft}`});
+  if (myRole()==='super_admin' || myPerms().includes('apps'))       stats.push({n:appList.length, l:'🎮 แอป'});
+  if (myRole()==='super_admin' || myPerms().includes('worksheets')) stats.push({n:wsList.length, l:'📄 ใบงาน'});
+
+  // อายุ cache
+  const cacheNote = useCache ? `<span style="font-size:.75rem;color:#94a3b8;">· อัปเดตเมื่อ ${Math.floor((now - _dashCachedAt)/1000)} วินาทีที่แล้ว</span>` : '';
+
   document.getElementById('content').innerHTML = `
-  <div class="page-title">📊 Dashboard</div>
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+    <div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--ink);line-height:1.2;">${greeting}, ${esc(name)} 👋</div>
+      <div style="color:#64748b;font-size:.92rem;margin-top:4px;">${todayStr} ${cacheNote}</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="renderDash(true)" title="โหลดข้อมูลใหม่">🔄 รีเฟรช</button>
+  </div>
+
+  ${todos.length ? `
+  <div class="card" style="border-left:3px solid #f59e0b;">
+    <div class="card-title">⚡ ต้องทำ (${todos.length})</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${todos.map(t => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fffbeb;border-radius:10px;">
+          <div style="font-size:1.3rem;">${t.icon}</div>
+          <div style="flex:1;font-size:.92rem;">${t.text}</div>
+          <button class="btn btn-outline btn-sm" onclick="${t.action}">${t.btn}</button>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+  ` : `
+  <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-size:2rem;">🎉</div>
+      <div><div style="font-weight:700;color:#166534;">เคลียร์งานครบแล้ว!</div>
+      <div style="font-size:.88rem;color:#15803d;">ไม่มีงานค้าง ลองเขียนบทความใหม่ไหม?</div></div>
+    </div>
+  </div>
+  `}
+
+  ${lastDraft ? `
+  <div class="card">
+    <div class="card-title">📝 ทำต่อจากที่ค้าง</div>
+    <div style="display:flex;align-items:center;gap:14px;padding:12px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:1.6rem;">📄</div>
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:.98rem;">${esc(lastDraft.title)}</div>
+        <div style="font-size:.78rem;color:#94a3b8;margin-top:2px;">แบบร่าง · อัปเดตล่าสุด ${fmtRel(lastDraft.updated_at || lastDraft.created_at)}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="editArticle(${lastDraft.id})">▶ ทำต่อ</button>
+    </div>
+  </div>
+  ` : ''}
+
+  ${createBtns.length ? `
+  <div class="card">
+    <div class="card-title">✨ เริ่มใหม่</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">${createBtns.join('')}</div>
+  </div>
+  ` : ''}
+
+  ${stats.length ? `
   <div class="stat-row">
-    <div class="stat"><div class="stat-num">${artList.length}</div><div class="stat-label">📝 บทความทั้งหมด</div></div>
-    <div class="stat"><div class="stat-num" style="color:#059669">${pub}</div><div class="stat-label">✅ เผยแพร่แล้ว</div></div>
-    <div class="stat"><div class="stat-num" style="color:#ea580c">${draft}</div><div class="stat-label">📋 แบบร่าง</div></div>
-    <div class="stat"><div class="stat-num">${appList.length}</div><div class="stat-label">🎮 แอปทั้งหมด</div></div>
-    <div class="stat"><div class="stat-num" style="color:${pending?'#dc2626':'#059669'}">${pending}</div><div class="stat-label">💬 คอมเมนต์รอ</div></div>
+    ${stats.map(s => `<div class="stat"><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div>${s.sub?`<div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${s.sub}</div>`:''}</div>`).join('')}
   </div>
-  ${pending > 0 ? `<div class="alert alert-info">💬 มีความคิดเห็น <strong>${pending} รายการ</strong> รอการอนุมัติ <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="nav('comments')">ดูเลย</button></div>` : ''}
-  ${renderAnalyticsSection(analytics)}
+  ` : ''}
+
+  ${myRole()==='super_admin' ? `
   <div class="card">
-    <div class="card-title">📝 ทางลัด</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="nav('new-article')">✏️ เขียนบทความใหม่</button>
-      <button class="btn btn-success" onclick="nav('apps')">🎮 เพิ่มแอป</button>
-      <button class="btn btn-success" onclick="nav('worksheets')">📄 จัดการใบงาน</button>
-      <button class="btn btn-outline" onclick="nav('comments')">💬 จัดการคอมเมนต์</button>
-      <button class="btn btn-outline" onclick="nav('settings')">⚙️ ตั้งค่า</button>
+    <div class="card-title">📊 สถิติเว็บไซต์</div>
+    <div id="analyticsBox" style="text-align:center;padding:30px 20px;">
+      <p style="color:#64748b;margin-bottom:16px;font-size:.92rem;">ดูยอดผู้เข้าชม หน้ายอดนิยม และแนวโน้ม</p>
+      <button class="btn btn-primary" onclick="loadAnalyticsLazy()">📊 โหลดสถิติ</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">📝 บทความล่าสุด</div>
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>หัวข้อ</th><th>หมวด</th><th>สถานะ</th><th>วันที่</th><th>จัดการ</th></tr></thead>
-      <tbody>
-        ${artList.slice(0,5).map(a=>`<tr>
-          <td><strong>${a.title.length>40?a.title.slice(0,40)+'…':a.title}</strong></td>
-          <td><span class="badge badge-gray">${a.category}</span></td>
-          <td>${a.published?'<span class="badge badge-green">เผยแพร่</span>':'<span class="badge badge-orange">แบบร่าง</span>'}</td>
-          <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
-          <td style="white-space:nowrap;"><a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บ" style="text-decoration:none;">👁</a> <button class="btn btn-outline btn-sm" onclick="editArticle(${a.id})">✏️ แก้ไข</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
+  ` : ''}
+  `;
+}
+
+// Lazy load analytics — โหลดเมื่อกดปุ่มเท่านั้น
+async function loadAnalyticsLazy() {
+  const box = document.getElementById('analyticsBox');
+  if (!box) return;
+  box.innerHTML = `<div style="text-align:center;padding:30px;"><div class="spinner2"></div><div style="margin-top:8px;font-size:.85rem;color:#94a3b8;">กำลังโหลดสถิติ...</div></div>`;
+  try {
+    const analytics = await api.get('/analytics/summary');
+    if (analytics?.error) { box.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;">โหลดสถิติไม่สำเร็จ</div>`; return; }
+    box.innerHTML = renderAnalyticsSection(analytics);
+  } catch (e) {
+    box.innerHTML = `<div style="text-align:center;padding:20px;color:#dc2626;">เกิดข้อผิดพลาด</div>`;
+  }
+}
+
+// แสดงเวลาเป็น "x นาที/ชั่วโมง/วันที่แล้ว"
+function fmtRel(dt) {
+  if (!dt) return '';
+  try {
+    const d = new Date(dt);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return 'เมื่อสักครู่';
+    if (diff < 3600) return `${Math.floor(diff/60)} นาทีที่แล้ว`;
+    if (diff < 86400) return `${Math.floor(diff/3600)} ชั่วโมงที่แล้ว`;
+    if (diff < 86400*7) return `${Math.floor(diff/86400)} วันที่แล้ว`;
+    return d.toLocaleDateString('th-TH');
+  } catch { return ''; }
 }
 
 function prettyPath(p) {
