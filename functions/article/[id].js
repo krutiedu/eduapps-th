@@ -47,6 +47,13 @@ export async function onRequest({ params, env, request }) {
   const esc = s => String(s ?? '').replace(/[&<>"]/g,
     m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
 
+  // เพิ่ม lazy loading ให้รูปในเนื้อหา (cover อยู่ above-fold จึงไม่ lazy)
+  const addLazy = html => String(html || '').replace(/<img\s+([^>]*?)>/gi, (m, a) => {
+    if (!/loading\s*=/i.test(a)) a += ' loading="lazy"';
+    if (!/decoding\s*=/i.test(a)) a += ' decoding="async"';
+    return `<img ${a}>`;
+  });
+
   const title    = esc(art.title);
   const excerpt  = esc(art.excerpt || art.title);
   const author   = esc(art.author_name || 'Kru-ti ครูติ');
@@ -113,7 +120,7 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     <span>✍️ ${author}</span>
   </div>
   ${img ? `<img class="cover" src="${esc(img)}" alt="${title}">` : ''}
-  <div class="art-body">${art.content || ''}</div>
+  <div class="art-body">${addLazy(art.content || '')}</div>
   <div class="share">
     <strong>แชร์:</strong>
     <a href="https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canon)}" target="_blank" rel="noopener">💬 LINE</a>
