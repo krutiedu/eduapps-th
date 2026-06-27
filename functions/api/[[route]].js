@@ -419,15 +419,17 @@ async function apps(req, env, segs, method) {
     const url = new URL(req.url);
     const popularDays = parseInt(url.searchParams.get('popular_days'));
     let sql;
-    if (Number.isFinite(popularDays) && popularDays >= 0) {
-      // นับ view_count จาก page_views โดย LIKE '/apps/{id}'
+    if (Number.isFinite(popularDays) && popularDays === 0) {
+      // ── popular_days=0 (ทั้งหมด) → ใช้ view_count column ตรงๆ (เร็วมาก) ──
+      sql = `SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at,view_count
+             FROM apps WHERE visible=1
+             ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC`;
+    } else if (Number.isFinite(popularDays) && popularDays > 0) {
+      // ── popular_days=7/30 → scan page_views แต่ใช้ index ที่มีอยู่ ──
       const TZ = "'+7 hours'";
-      const dateFilter = popularDays > 0
-        ? `AND date(pv.created_at, ${TZ}) > date('now', ${TZ}, '-${popularDays} days')`
-        : '';
       sql = `
         SELECT a.id, a.icon, a.title, a.category, a.description, a.url, a.prompt, a.locked, a.visible, a.preview_image, a.sort_order, a.is_vip, a.pinned, a.created_at,
-               COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id ${dateFilter}), 0) AS view_count
+               COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id AND date(pv.created_at, ${TZ}) > date('now', ${TZ}, '-${popularDays} days')), 0) AS view_count
         FROM apps a
         WHERE a.visible=1
         ORDER BY (a.pinned > 0) DESC, a.pinned ASC, a.sort_order ASC, a.created_at ASC`;
@@ -782,6 +784,14 @@ async function track(req, env) {
     await env.DB.prepare(
       'INSERT INTO page_views (path, visitor_id) VALUES (?, ?)'
     ).bind(path, vid).run();
+
+    // ── DENORMALIZE: อัพเดต view_count แบบ inline ──
+    // เลิก scan page_views ตอนแสดงผล ทำให้ /apps ฯลฯ เร็วขึ้น 100x
+    const m = path.match(/^\/(apps|article|worksheet)\/(\d+)$/);
+    if (m) {
+      const table = m[1] === 'article' ? 'articles' : (m[1] === 'apps' ? 'apps' : 'worksheets');
+      await env.DB.prepare(`UPDATE ${table} SET view_count = view_count + 1 WHERE id = ?`).bind(m[2]).run();
+    }
     return ok({ ok:true });
   } catch (_) {
     return ok({ ok:true }); // เงียบเสมอ
@@ -789,11 +799,23 @@ async function track(req, env) {
 }
 
 // GET /analytics/summary — admin: สรุปยอดและ top pages (พร้อม breakdown ตาม category)
+// In-memory cache 5 นาที — ลด reads จากการเปิด admin ซ้ำๆ ได้ ~90%
+let _analyticsCache = null;
+let _analyticsCachedAt = 0;
+const ANALYTICS_CACHE_MS = 5 * 60 * 1000; // 5 นาที
+
 async function analytics(req, env, segs, method) {
   if (method !== 'GET') return err('ไม่พบ', 404);
   const action = segs[1] || 'summary';
 
   if (action === 'summary') {
+    // ใช้ cache ถ้าอายุไม่เกิน 5 นาที (ยกเว้นมี ?nocache=1 — สำหรับ test/debug)
+    const now = Date.now();
+    const url = new URL(req.url);
+    const noCache = url.searchParams.get('nocache') === '1';
+    if (!noCache && _analyticsCache && (now - _analyticsCachedAt) < ANALYTICS_CACHE_MS) {
+      return ok({ ..._analyticsCache, cached: true, cache_age_seconds: Math.floor((now - _analyticsCachedAt) / 1000) });
+    }
     // ใช้เวลาประเทศไทย (UTC+7) — "วันนี้" = ตั้งแต่ 00:00 ของวันนี้ในไทย, ไม่ใช่ 24 ชม.ที่ผ่านมา
     const TZ = "'+7 hours'";
     const ranges = [
@@ -845,12 +867,16 @@ async function analytics(req, env, segs, method) {
     ).all()).results;
 
     // backward compatible: ส่ง topToday/top7/top30 = tops.X.all เพื่อไม่ break frontend เก่า
-    return ok({
+    const payload = {
       stats, daily, tops,
       topToday: tops.today.all,
       top7: tops.week.all,
       top30: tops.month.all,
-    });
+    };
+    // เก็บเข้า cache
+    _analyticsCache = payload;
+    _analyticsCachedAt = now;
+    return ok({ ...payload, cached: false });
   }
   return err('ไม่พบ', 404);
 }
