@@ -1,14 +1,68 @@
 {
-  "name": "Kru-ti ครูติ TH",
+  "name": "Kru-ti ครูติ — แอปและสื่อการสอนสำหรับครูไทย",
   "short_name": "ครูติ",
-  "description": "แอปการสอน บทความ และสื่อดิจิทัล เพื่อครูไทย",
+  "description": "แอปการสอน บทความ และใบงานสำหรับครูไทย ใช้ฟรี เปิดในห้องเรียนได้ทันที",
+  "lang": "th",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#101c33",
+  "orientation": "any",
+  "background_color": "#faf7f1",
   "theme_color": "#101c33",
+  "categories": ["education", "productivity"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "บทความ",
+      "short_name": "บทความ",
+      "description": "อ่านบทความล่าสุดสำหรับครู",
+      "url": "/#/blog",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "แอปทั้งหมด",
+      "short_name": "แอป",
+      "description": "เครื่องมือและแอปการสอน",
+      "url": "/#/apps",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ใบงาน",
+      "short_name": "ใบงาน",
+      "description": "ใบงานพร้อมใช้",
+      "url": "/#/worksheets",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }
