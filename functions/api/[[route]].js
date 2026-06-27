@@ -15,6 +15,21 @@ const err = (msg,  s=400) => new Response(JSON.stringify({ error: msg }), { stat
 // public GET ที่ cache ได้ — browser/edge เก็บ 60 วิ ลดภาระ D1
 const okCache = (data) => ok(data, { 'Cache-Control': 'public, max-age=60' });
 
+// คืนเวลาเริ่มต้นของวัน (00:00 เวลาไทย) เมื่อ N วันก่อน เป็น timestamp UTC 'YYYY-MM-DD HH:MM:SS'
+// page_views.created_at เก็บเป็น UTC string → เทียบ string ได้ตรงๆ และทำให้ index ของ created_at ใช้งานได้
+// (เลิกห่อ column ด้วย date(...) ซึ่งทำให้ต้อง full scan)
+function bkkDayStartUTC(daysAgo) {
+  const bkk = new Date(Date.now() + 7 * 3600 * 1000); // เวลาไทยตอนนี้
+  const ms = Date.UTC(bkk.getUTCFullYear(), bkk.getUTCMonth(), bkk.getUTCDate() - daysAgo, 0, 0, 0) - 7 * 3600 * 1000;
+  return new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+// cache ผลลัพธ์ sort "ยอดนิยม" ของหน้าแอป (เปลี่ยนช้า) — ลด reads จากการเปิดหน้าแอปซ้ำๆ
+// key = popular_days, ล้างทั้งหมดเมื่อมีการแก้ไขแอป
+let _appsPopCache = {};
+const APPS_POP_MS = 5 * 60 * 1000; // 5 นาที
+const bustAppsPop = () => { _appsPopCache = {}; };
+
 // ── ENTRY POINT ──────────────────────────────────────────
 export async function onRequest(ctx) {
   const { request, env, params } = ctx;
@@ -418,18 +433,28 @@ async function apps(req, env, segs, method) {
   if (!id && method === 'GET') {
     const url = new URL(req.url);
     const popularDays = parseInt(url.searchParams.get('popular_days'));
+    const isPop = Number.isFinite(popularDays) && popularDays > 0;
+
+    // sort ยอดนิยมเปลี่ยนช้า → ใช้ cache ถ้ายังสด (อ่าน page_views = 0)
+    if (isPop) {
+      const c = _appsPopCache[popularDays];
+      if (c && (Date.now() - c.at) < APPS_POP_MS) return okCache({ apps: c.apps });
+    }
+
     let sql;
     if (Number.isFinite(popularDays) && popularDays === 0) {
       // ── popular_days=0 (ทั้งหมด) → ใช้ view_count column ตรงๆ (เร็วมาก) ──
       sql = `SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at,view_count
              FROM apps WHERE visible=1
              ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC`;
-    } else if (Number.isFinite(popularDays) && popularDays > 0) {
-      // ── popular_days=7/30 → scan page_views แต่ใช้ index ที่มีอยู่ ──
-      const TZ = "'+7 hours'";
+    } else if (isPop) {
+      // ── popular_days=7/30 → เทียบ created_at กับ cutoff timestamp ตรงๆ ──
+      // index (path, created_at) จะ seek ที่ path แล้ว range created_at → อ่านเฉพาะวิวล่าสุดของแต่ละแอป
+      // (เดิมใช้ date(created_at,...) ทำให้ index ใช้ไม่ได้ ต้อง scan วิวเก่าทั้งหมด)
+      const cutoff = bkkDayStartUTC(popularDays - 1);
       sql = `
         SELECT a.id, a.icon, a.title, a.category, a.description, a.url, a.prompt, a.locked, a.visible, a.preview_image, a.sort_order, a.is_vip, a.pinned, a.created_at,
-               COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id AND date(pv.created_at, ${TZ}) > date('now', ${TZ}, '-${popularDays} days')), 0) AS view_count
+               COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id AND pv.created_at >= '${cutoff}'), 0) AS view_count
         FROM apps a
         WHERE a.visible=1
         ORDER BY (a.pinned > 0) DESC, a.pinned ASC, a.sort_order ASC, a.created_at ASC`;
@@ -441,6 +466,7 @@ async function apps(req, env, segs, method) {
       ...a,
       url: a.locked ? null : a.url,   // ซ่อน URL ถ้า locked
     }));
+    if (isPop) _appsPopCache[popularDays] = { apps: safe, at: Date.now() };
     return okCache({ apps: safe });
   }
 
@@ -449,6 +475,7 @@ async function apps(req, env, segs, method) {
     const res = await env.DB.prepare(
       'INSERT INTO apps (icon,title,category,description,url,prompt,sort_order,locked,lock_code,visible,preview_image,is_vip) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
     ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0).run();
+    bustAppsPop();
     return ok({ ok: true, id: res?.meta?.last_row_id || res?.lastInsertRowid });
   }
 
@@ -461,6 +488,7 @@ async function apps(req, env, segs, method) {
       await env.DB.prepare('UPDATE apps SET pinned=0 WHERE pinned=? AND id!=?').bind(pin, id).run();
     }
     await env.DB.prepare('UPDATE apps SET pinned=? WHERE id=?').bind(pin, id).run();
+    bustAppsPop();
     return ok({ ok: true, pin });
   }
 
@@ -469,11 +497,13 @@ async function apps(req, env, segs, method) {
     await env.DB.prepare(
       'UPDATE apps SET icon=?,title=?,category=?,description=?,url=?,prompt=?,sort_order=?,locked=?,lock_code=?,visible=?,preview_image=?,is_vip=? WHERE id=?'
     ).bind(b.icon||'🎮', b.title, b.category||'อื่นๆ', b.description||'', b.url||'', b.prompt||'', b.sort_order||0, b.locked?1:0, b.lock_code||'', b.visible!==false?1:0, b.preview_image||'', b.is_vip?1:0, id).run();
+    bustAppsPop();
     return ok({ ok: true });
   }
 
   if (id && method === 'DELETE') {
     await env.DB.prepare('DELETE FROM apps WHERE id=?').bind(id).run();
+    bustAppsPop();
     return ok({ ok: true });
   }
 
@@ -816,55 +846,77 @@ async function analytics(req, env, segs, method) {
     if (!noCache && _analyticsCache && (now - _analyticsCachedAt) < ANALYTICS_CACHE_MS) {
       return ok({ ..._analyticsCache, cached: true, cache_age_seconds: Math.floor((now - _analyticsCachedAt) / 1000) });
     }
-    // ใช้เวลาประเทศไทย (UTC+7) — "วันนี้" = ตั้งแต่ 00:00 ของวันนี้ในไทย, ไม่ใช่ 24 ชม.ที่ผ่านมา
-    const TZ = "'+7 hours'";
-    const ranges = [
-      { key:'today', sql:`datetime(created_at, ${TZ}) >= date('now', ${TZ})` },
-      { key:'week',  sql:`date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days')` },
-      { key:'month', sql:`date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days')` },
-    ];
-    const stats = {};
-    for (const r of ranges) {
-      const row = await env.DB.prepare(
-        `SELECT COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${r.sql}`
-      ).first();
-      stats[r.key] = { views: row?.views || 0, unique: row?.uniq || 0 };
-    }
+    // ── เวลาไทย (UTC+7): คำนวณ cutoff เป็น timestamp ตรงๆ → ใช้ index ของ created_at (เลิก full scan) ──
+    // "วันนี้" = ตั้งแต่ 00:00 ของวันนี้ในไทย (ไม่ใช่ 24 ชม.ที่ผ่านมา) — ผลลัพธ์เหมือนเดิมทุกอย่าง
+    const cutToday = bkkDayStartUTC(0);   // 00:00 วันนี้
+    const cutWeek  = bkkDayStartUTC(6);   // 7 วัน (วันนี้ + 6 วันก่อน)
+    const cutMonth = bkkDayStartUTC(29);  // 30 วัน
+    const cut14    = bkkDayStartUTC(13);  // 14 วัน (กราฟ)
 
-    // SQL pattern ของแต่ละ category — ใช้ LIKE บน path
-    const cats = {
-      page:      `(path IN ('/','/blog','/apps','/worksheets','/about','/buy','/report','/privacy') OR path='')`,
-      article:   `path LIKE '/article/%'`,
-      app:       `path LIKE '/apps/%'`,
-      worksheet: `path LIKE '/worksheet/%'`,
+    // ── Query A: ยอดต่อ path ของทั้ง 3 ช่วงในครั้งเดียว ──
+    // scan ช่วง 30 วันด้วย index ครั้งเดียว แล้วใช้ CASE แยกช่วง → คืนแค่ ~จำนวน path (ไม่กี่สิบแถว)
+    // (cutoff เป็น timestamp ที่ server คำนวณเอง รูปแบบตายตัว — ใส่ใน SQL ได้ปลอดภัย)
+    const perPath = (await env.DB.prepare(`
+      SELECT path,
+        SUM(CASE WHEN created_at >= '${cutToday}' THEN 1 ELSE 0 END) AS v_today,
+        COUNT(DISTINCT CASE WHEN created_at >= '${cutToday}' THEN visitor_id END) AS u_today,
+        SUM(CASE WHEN created_at >= '${cutWeek}' THEN 1 ELSE 0 END) AS v_week,
+        COUNT(DISTINCT CASE WHEN created_at >= '${cutWeek}' THEN visitor_id END) AS u_week,
+        COUNT(*) AS v_month,
+        COUNT(DISTINCT visitor_id) AS u_month
+      FROM page_views WHERE created_at >= '${cutMonth}'
+      GROUP BY path
+    `).all()).results;
+
+    // ── Query B: ผู้ชมไม่ซ้ำรวมทุก path (รวมจาก per-path ไม่ได้เพราะคนเดียวเข้าหลายหน้า ต้องนับแยก) ──
+    const uq = (await env.DB.prepare(`
+      SELECT
+        COUNT(DISTINCT CASE WHEN created_at >= '${cutToday}' THEN visitor_id END) AS u_today,
+        COUNT(DISTINCT CASE WHEN created_at >= '${cutWeek}'  THEN visitor_id END) AS u_week,
+        COUNT(DISTINCT visitor_id) AS u_month
+      FROM page_views WHERE created_at >= '${cutMonth}'
+    `).first()) || {};
+
+    // ── Query C: กราฟ 14 วันย้อนหลัง (group ตามวันไทย) ──
+    const daily = (await env.DB.prepare(`
+      SELECT date(created_at, '+7 hours') AS d, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq
+      FROM page_views WHERE created_at >= '${cut14}'
+      GROUP BY d ORDER BY d ASC
+    `).all()).results;
+
+    // ── ประกอบผลใน JS (ไม่แตะ DB เพิ่ม) — จัดหมวด + เรียง + ตัด top 10 ──
+    const catOf = (p) => {
+      if (p.startsWith('/article/')) return 'article';
+      if (p.startsWith('/apps/')) return 'app';
+      if (p.startsWith('/worksheet/')) return 'worksheet';
+      if (p === '' || ['/','/blog','/apps','/worksheets','/about','/buy','/report','/privacy'].includes(p)) return 'page';
+      return null; // path อื่นเข้าได้เฉพาะ bucket 'all'
     };
-    const periods = {
-      today: `datetime(created_at, ${TZ}) >= date('now', ${TZ})`,
-      week:  `date(created_at, ${TZ}) > date('now', ${TZ}, '-7 days')`,
-      month: `date(created_at, ${TZ}) > date('now', ${TZ}, '-30 days')`,
+    const blank = () => ({ all: [], page: [], article: [], app: [], worksheet: [] });
+    const tops = { today: blank(), week: blank(), month: blank() };
+    const stats = {
+      today: { views: 0, unique: uq.u_today || 0 },
+      week:  { views: 0, unique: uq.u_week  || 0 },
+      month: { views: 0, unique: uq.u_month || 0 },
     };
-    // คืน top ของแต่ละ category × แต่ละ period
-    const tops = {};
-    for (const [pk, psql] of Object.entries(periods)) {
-      tops[pk] = { all: [], page: [], article: [], app: [], worksheet: [] };
-      // all: ทุก path รวมกัน
-      tops[pk].all = (await env.DB.prepare(
-        `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${psql} GROUP BY path ORDER BY views DESC LIMIT 10`
-      ).all()).results;
-      // แยกตาม category
-      for (const [ck, csql] of Object.entries(cats)) {
-        tops[pk][ck] = (await env.DB.prepare(
-          `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq FROM page_views WHERE ${psql} AND ${csql} GROUP BY path ORDER BY views DESC LIMIT 10`
-        ).all()).results;
+    const add = (period, views, uniq, path) => {
+      if (!views) return;
+      stats[period].views += views;
+      const row = { path, views, uniq };
+      tops[period].all.push(row);
+      const c = catOf(path);
+      if (c) tops[period][c].push(row);
+    };
+    for (const r of perPath) {
+      add('today', r.v_today || 0, r.u_today || 0, r.path);
+      add('week',  r.v_week  || 0, r.u_week  || 0, r.path);
+      add('month', r.v_month || 0, r.u_month || 0, r.path);
+    }
+    for (const period of ['today', 'week', 'month']) {
+      for (const k of Object.keys(tops[period])) {
+        tops[period][k].sort((a, b) => b.views - a.views).splice(10); // เก็บ top 10
       }
     }
-
-    // กราฟ 14 วันย้อนหลัง — group by วันตามปฏิทินไทย
-    const daily = (await env.DB.prepare(
-      `SELECT date(created_at, ${TZ}) AS d, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS uniq
-       FROM page_views WHERE date(created_at, ${TZ}) > date('now', ${TZ}, '-14 days')
-       GROUP BY d ORDER BY d ASC`
-    ).all()).results;
 
     // backward compatible: ส่ง topToday/top7/top30 = tops.X.all เพื่อไม่ break frontend เก่า
     const payload = {
