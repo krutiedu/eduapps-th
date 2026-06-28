@@ -2686,6 +2686,21 @@ function filterCodes() {
   if (cnt) cnt.textContent = `${out.length} / ${(window._codesAll||[]).length} รหัส`;
 }
 
+// ── ช่อง "เลือกทั้งหมด" สำหรับแอป/ใบงานในรหัสปลดล็อก ──
+// ติ๊ก master → ติ๊กช่องย่อยทั้งหมด (ช่องย่อยยังแก้ได้ เอาออกบางช่องได้)
+function cToggleAll(childClass, on) {
+  document.querySelectorAll('.' + childClass).forEach(cb => cb.checked = on);
+}
+// อัปเดต master ตามช่องย่อย: ครบทุกช่อง=ติ๊ก, บางช่อง=ขีดกลาง (indeterminate), ไม่มี=ไม่ติ๊ก
+function cSyncMaster(childClass, masterId) {
+  const kids = [...document.querySelectorAll('.' + childClass)];
+  const master = document.getElementById(masterId);
+  if (!master) return;
+  const n = kids.filter(k => k.checked).length;
+  master.checked = kids.length > 0 && n === kids.length;
+  master.indeterminate = n > 0 && n < kids.length;
+}
+
 function openCodeModal(id) {
   Promise.all([api.get('/codes'), api.get('/worksheets/admin/list').catch(()=>({worksheets:[]}))]).then(([d, wd]) => {
     const c = id ? (d.codes||[]).find(x=>x.id===id) : null;
@@ -2735,16 +2750,15 @@ function openCodeModal(id) {
           <label class="form-label">แอปที่ปลดล็อก</label>
           <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
-              <input type="checkbox" id="cAll" ${appIds.includes('all')?'checked':''}
-                onchange="document.getElementById('cAppList').style.opacity=this.checked?.3:1;document.querySelectorAll('.cAppCb').forEach(cb=>cb.disabled=this.checked)">
-              🌟 ปลดทุกแอปที่ล็อก (VIP)
+              <input type="checkbox" id="cAll" onchange="cToggleAll('cAppCb', this.checked)">
+              🌟 เลือกทุกแอปที่ล็อก (VIP)
             </label>
-            <div id="cAppList" style="opacity:${appIds.includes('all')?.3:1};display:flex;flex-direction:column;gap:6px;">
+            <div id="cAppList" style="display:flex;flex-direction:column;gap:6px;">
               ${lockedApps.length
                 ? lockedApps.map(a=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
                     <input type="checkbox" class="cAppCb" value="${a.id}"
-                      ${(appIds.includes(a.id)||appIds.includes(String(a.id)))?'checked':''}
-                      ${appIds.includes('all')?'disabled':''}>
+                      ${(appIds.includes('all')||appIds.includes(a.id)||appIds.includes(String(a.id)))?'checked':''}
+                      onchange="cSyncMaster('cAppCb','cAll')">
                     ${a.icon} ${a.title}
                   </label>`).join('')
                 : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีแอปที่ล็อก</span>'
@@ -2756,16 +2770,15 @@ function openCodeModal(id) {
           <label class="form-label">ใบงานที่ปลดล็อก</label>
           <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
-              <input type="checkbox" id="cWsAll" ${wsIds.includes('all')?'checked':''}
-                onchange="document.getElementById('cWsList').style.opacity=this.checked?.3:1;document.querySelectorAll('.cWsCb').forEach(cb=>cb.disabled=this.checked)">
-              📄 ปลดทุกใบงานที่ล็อก
+              <input type="checkbox" id="cWsAll" onchange="cToggleAll('cWsCb', this.checked)">
+              📄 เลือกทุกใบงานที่ล็อก
             </label>
-            <div id="cWsList" style="opacity:${wsIds.includes('all')?.3:1};display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
+            <div id="cWsList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
               ${lockedWs.length
                 ? lockedWs.map(w=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
                     <input type="checkbox" class="cWsCb" value="${w.id}"
-                      ${(wsIds.includes(w.id)||wsIds.includes(String(w.id)))?'checked':''}
-                      ${wsIds.includes('all')?'disabled':''}>
+                      ${(wsIds.includes('all')||wsIds.includes(w.id)||wsIds.includes(String(w.id)))?'checked':''}
+                      onchange="cSyncMaster('cWsCb','cWsAll')">
                     📄 ${w.title}
                   </label>`).join('')
                 : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีใบงานที่ล็อก</span>'
@@ -2783,6 +2796,10 @@ function openCodeModal(id) {
         </div>
       </div>
     </div>`;
+
+    // ตั้งสถานะ master "เลือกทั้งหมด" ให้ตรงกับช่องย่อยตอนเปิด (ติ๊กครบ=ติ๊ก, บางส่วน=ขีดกลาง)
+    cSyncMaster('cAppCb', 'cAll');
+    cSyncMaster('cWsCb', 'cWsAll');
   });
 }
 
@@ -2806,16 +2823,15 @@ async function saveCode(id) {
   const code  = document.getElementById('cCode').value.trim();
   const label = document.getElementById('cLabel').value.trim();
   if (!code || !label) { alert('กรุณาใส่รหัสและชื่อแพ็กเกจ'); return; }
-  const allChecked = document.getElementById('cAll').checked;
-  let appIds = allChecked ? ['all'] : [];
-  if (!allChecked) {
-    document.querySelectorAll('.cAppCb:checked').forEach(cb => appIds.push(parseInt(cb.value)));
-  }
-  const wsAllChecked = document.getElementById('cWsAll').checked;
-  let wsIds = wsAllChecked ? ['all'] : [];
-  if (!wsAllChecked) {
-    document.querySelectorAll('.cWsCb:checked').forEach(cb => wsIds.push(parseInt(cb.value)));
-  }
+  // ติ๊กครบทุกช่อง → เก็บเป็น 'all' (VIP: แอป/ใบงานที่เพิ่มใหม่ทีหลังก็ปลดให้ด้วย)
+  // เอาออกบางช่อง → เก็บเป็นรายการ id ที่เลือก
+  const appBoxes = [...document.querySelectorAll('.cAppCb')];
+  const appChecked = appBoxes.filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  const appIds = (appBoxes.length > 0 && appChecked.length === appBoxes.length) ? ['all'] : appChecked;
+
+  const wsBoxes = [...document.querySelectorAll('.cWsCb')];
+  const wsChecked = wsBoxes.filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  const wsIds = (wsBoxes.length > 0 && wsChecked.length === wsBoxes.length) ? ['all'] : wsChecked;
   // คำนวณวันหมดอายุจาก dropdown อายุ หรือกำหนดเอง
   const dur = document.getElementById('cDuration').value;
   let expires_at = null;
@@ -3602,6 +3618,8 @@ window.uploadCoverImg = uploadCoverImg;
 window.addCat = addCat;
 window.removeCat = removeCat;
 window.openCodeModal = openCodeModal;
+window.cToggleAll = cToggleAll;
+window.cSyncMaster = cSyncMaster;
 window.openEmailModal = openEmailModal;
 window.filterCodes = filterCodes;
 window.setCodeStatus = setCodeStatus;
