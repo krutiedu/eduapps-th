@@ -2656,6 +2656,7 @@ function codeRowsHtml(arr) {
       : '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>'}</td>
     <td style="white-space:nowrap;">
       <button class="btn btn-outline btn-sm" title="สร้างอีเมลส่งรหัสให้ลูกค้า" onclick="openEmailModal(${c.id})">📧</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:4px;" title="ร่างข้อความ Messenger ส่งรหัสให้ลูกค้า" onclick="openMsgrModal(${c.id})">💬</button>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})">✏️</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${String(c.code).replace(/'/g,"\\'")}')">🗑</button>
     </td>
@@ -3023,6 +3024,96 @@ function previewEmail() {
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ตัวอย่างอีเมล</title></head><body style="margin:0;">'
     + buildEmailHTML() + '</body></html>');
   w.document.close();
+}
+
+// ══════════════════════════════════════════════════════════
+// MESSENGER — ร่างข้อความส่งรหัสให้ลูกค้า (คัดลอกวางใน Messenger ได้เลย)
+// ══════════════════════════════════════════════════════════
+function openMsgrModal(id) {
+  const c = (window._codesData?.codes || []).find(x => x.id === id);
+  if (!c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
+
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-ov" onclick="closeModalSafe(event, this)">
+    <div class="modal" style="max-width:520px;">
+      <h3>💬 ร่างข้อความ Messenger</h3>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:14px;">
+        กรอกชื่อลูกค้า → กดคัดลอก → วางใน Messenger ได้เลย (ลิงก์ kru-ti.com จะคลิกได้เอง)
+      </p>
+      <div class="form-group">
+        <label class="form-label">ชื่อลูกค้า</label>
+        <input type="text" class="form-input" id="mgName" placeholder="เช่น คุณครูสมหญิง" autofocus oninput="refreshMsgr()">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">รหัส</label>
+          <input type="text" class="form-input" id="mgCode" value="${c.code}" readonly
+            style="background:#f8fafc;font-weight:700;letter-spacing:1px;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อแพ็กเกจ (แก้ได้)</label>
+          <input type="text" class="form-input" id="mgPkg" value="${(c.label||'').replace(/"/g,'&quot;')}" oninput="refreshMsgr()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ตัวอย่างข้อความ (นี่คือสิ่งที่จะถูกคัดลอก)</label>
+        <textarea class="form-input" id="mgPreview" rows="11" readonly
+          style="background:#f8fafc;font-size:.9rem;line-height:1.7;resize:vertical;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">ปิด</button>
+        <button class="btn btn-primary" id="mgCopyBtn" onclick="copyMsgr()">📋 คัดลอกข้อความ</button>
+      </div>
+    </div>
+  </div>`;
+  refreshMsgr();
+}
+
+// ประกอบข้อความ (ข้อความล้วน — Messenger ทำลิงก์ kru-ti.com ให้เอง)
+function buildMsgrText() {
+  const name = (document.getElementById('mgName')?.value || '').trim() || 'คุณครู';
+  const code = (document.getElementById('mgCode')?.value || '').trim();
+  const pkg  = (document.getElementById('mgPkg')?.value || '').trim() || 'แพ็กเกจของคุณ';
+  const site = location.hostname || 'kru-ti.com';
+  return `สวัสดีครับ ${name} 🙏
+
+ขอบคุณที่อุดหนุนครูติครับ 🌟 รหัสปลดล็อก "${pkg}" พร้อมใช้แล้วน้า
+
+🎟️ รหัสของคุณ
+👉 ${code}
+
+วิธีใช้ (ไม่ถึงนาที)
+1️⃣ เข้า ${site} → หน้า "แอปทั้งหมด"
+2️⃣ กดช่อง 🎟️ "มีรหัสปลดล็อก?" ใส่รหัส แล้วกดปลดล็อก
+3️⃣ ใช้ได้เลยทุกแอปในชุด 🚀
+
+ติดตรงไหนทักมาได้เลยครับ ยินดีช่วยเสมอ 😊`;
+}
+
+// อัปเดตช่องตัวอย่างตามที่พิมพ์ (ใช้ .value → ปลอดภัย ไม่ใช่ innerHTML)
+function refreshMsgr() {
+  const ta = document.getElementById('mgPreview');
+  if (ta) ta.value = buildMsgrText();
+}
+
+async function copyMsgr() {
+  const btn = document.getElementById('mgCopyBtn');
+  const text = buildMsgrText();
+  const done = () => { btn.textContent = '✅ คัดลอกแล้ว — วางใน Messenger ได้เลย'; setTimeout(() => btn.textContent = '📋 คัดลอกข้อความ', 2500); };
+  try {
+    await navigator.clipboard.writeText(text);
+    done();
+  } catch (e) {
+    // fallback: เลือกข้อความในกล่องตัวอย่างแล้ว execCommand (เบราว์เซอร์เก่า/สิทธิ์ clipboard ไม่ผ่าน)
+    const ta = document.getElementById('mgPreview');
+    if (ta) {
+      ta.removeAttribute('readonly'); ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      ta.setAttribute('readonly', ''); ta.blur();
+      if (ok) { done(); return; }
+    }
+    toast('❌ คัดลอกไม่สำเร็จ — เลือกข้อความในกล่องแล้วคัดลอกเอง');
+  }
 }
 
 
@@ -3517,6 +3608,10 @@ window.setCodeStatus = setCodeStatus;
 window.buildEmailHTML = buildEmailHTML;
 window.copyEmail = copyEmail;
 window.previewEmail = previewEmail;
+window.openMsgrModal = openMsgrModal;
+window.buildMsgrText = buildMsgrText;
+window.refreshMsgr = refreshMsgr;
+window.copyMsgr = copyMsgr;
 window.previewArticle = previewArticle;
 window.insertHTML = insertHTML;
 window.doInsertHTML = doInsertHTML;
