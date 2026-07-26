@@ -662,7 +662,18 @@ function get(url, ttl = 30000) {
     if (hit.p) return hit.p;                       // มี request ค้างอยู่ → ใช้ตัวเดิม
     if (Date.now() - hit.t < ttl) return Promise.resolve(hit.v);
   }
-  const p = fetch(API + url).then(r => r.json()).then(v => {
+  // เช็ค r.ok ด้วย — เดิมไม่เช็ค ทำให้ HTTP 500 ถูกมองว่าเป็น "ข้อมูลว่าง"
+  // หน้าเว็บจึงขึ้น "ไม่พบบทความ" ทั้งที่เซิร์ฟเวอร์พัง ผู้ใช้เข้าใจผิดว่าเว็บไม่มีเนื้อหา
+  const p = fetch(API + url).then(async r => {
+    let v = null;
+    try { v = await r.json(); } catch (_) { v = null; }
+    if (!r.ok) {
+      const e = new Error((v && v.error) || `เซิร์ฟเวอร์ตอบกลับผิดพลาด (${r.status})`);
+      e.status = r.status;
+      throw e;
+    }
+    return v || {};
+  }).then(v => {
     _cache.set(url, { t: Date.now(), v });
     return v;
   }).catch(e => { _cache.delete(url); throw e; }); // พลาด → ล้างทิ้ง ให้ลองใหม่ได้
@@ -728,17 +739,36 @@ function route() {
     setPageMeta({ url: location.origin + location.pathname + location.hash });
   }
   window.scrollTo(0,0);
-  if (h === '/' || h === '')         renderHome();
-  else if (h === '/blog')            renderBlog();
-  else if (h.startsWith('/article/'))renderArticle(h.slice(9));
-  else if (h === '/apps')            renderApps(query.get('open'));
-  else if (h === '/worksheets')      renderWorksheets();
-  else if (h.startsWith('/worksheet/')) renderWorksheetDetail(h.slice(11));
-  else if (h === '/about')           renderAbout();
-  else if (h === '/buy')             renderBuy();
-  else if (h === '/privacy')         renderPrivacy();
-  else if (h === '/report')          renderReport();
-  else                               render404();
+  let view;
+  if (h === '/' || h === '')         view = renderHome;
+  else if (h === '/blog')            view = renderBlog;
+  else if (h.startsWith('/article/'))view = () => renderArticle(h.slice(9));
+  else if (h === '/apps')            view = () => renderApps(query.get('open'));
+  else if (h === '/worksheets')      view = renderWorksheets;
+  else if (h.startsWith('/worksheet/')) view = () => renderWorksheetDetail(h.slice(11));
+  else if (h === '/about')           view = renderAbout;
+  else if (h === '/buy')             view = renderBuy;
+  else if (h === '/privacy')         view = renderPrivacy;
+  else if (h === '/report')          view = renderReport;
+  else                               view = render404;
+  safeView(view);
+}
+
+// ห่อการ render ทุกหน้า — ถ้า API พลาดต้องเห็นข้อความ + ปุ่มลองใหม่
+// (เดิมถ้าโหลดข้อมูลไม่สำเร็จ หน้าจะค้างที่ skeleton ตลอดกาล ไม่มีอะไรบอกผู้ใช้)
+function safeView(fn) {
+  Promise.resolve().then(fn).catch(e => {
+    console.error('[view]', e);
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+    <div style="max-width:460px;margin:60px auto;text-align:center;padding:0 20px;">
+      <div style="font-size:2.4rem;margin-bottom:12px;">⚠️</div>
+      <h2 style="font-family:'Pridi',serif;font-size:1.25rem;color:var(--ink);margin-bottom:8px;">โหลดข้อมูลไม่สำเร็จ</h2>
+      <p style="font-size:.9rem;color:#6d7588;margin-bottom:20px;">อาจเป็นเพราะสัญญาณอินเทอร์เน็ตขาดช่วง ลองกดปุ่มด้านล่างอีกครั้ง</p>
+      <button onclick="route()" style="background:var(--gold);color:var(--ink);border:none;padding:12px 26px;border-radius:11px;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.92rem;cursor:pointer;">🔄 ลองใหม่</button>
+    </div>`;
+  });
 }
 
 const go = hash => { location.hash = hash; };
@@ -901,7 +931,14 @@ function loadBlogCats() {
 async function renderArticle(slugOrId) {
   const app = document.getElementById('app');
   app.innerHTML = skArticle();
-  const art = await get('/articles/' + slugOrId);
+  let art;
+  try {
+    art = await get('/articles/' + slugOrId);
+  } catch (e) {
+    // 404 = ไม่มีบทความนี้จริงๆ → โชว์หน้า 404 ที่อ่านง่าย; error อื่น (เน็ต/เซิร์ฟเวอร์) ปล่อยให้ safeView จัดการ
+    if (e && e.status === 404) { render404('ไม่พบบทความนี้ — อาจถูกลบหรือยังไม่เผยแพร่'); return; }
+    throw e;
+  }
   if (art.error) { render404('ไม่พบบทความนี้ — อาจถูกลบหรือยังไม่เผยแพร่'); return; }
   // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
   const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));

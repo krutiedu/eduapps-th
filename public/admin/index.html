@@ -241,7 +241,7 @@ tr:hover td{background:#fafafa;}
       <input type="password" class="form-input" id="pwdInput" placeholder="กรอกรหัสผ่าน"
              onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">
+    <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center;" onclick="doLogin()">
       🔐 เข้าสู่ระบบ
     </button>
   </div>
@@ -636,12 +636,55 @@ const myName = () => localStorage.getItem('_display_name') || 'Admin';
 const myUid  = () => localStorage.getItem('_uid') || '0';
 const hdr    = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok() });
 
+// ── API CLIENT ────────────────────────────────────────────
+// สัญญาการใช้งาน:
+//   api.get   → throw ApiError เมื่อพลาด (ให้ safeRender จับ แล้วโชว์การ์ด "ลองใหม่")
+//   api.post/put/delete → คืน { error } เสมอ ไม่ throw (call site เดิมเช็ค res.error อยู่แล้ว)
+// เดิมไม่มีการจับ error เลย เน็ตกระตุกครั้งเดียว = หน้าค้างที่ spinner ถาวร ไม่มีข้อความบอก
+class ApiError extends Error {
+  constructor(message, status) { super(message); this.name = 'ApiError'; this.status = status; }
+}
+
+async function apiFetch(method, url, body) {
+  let res;
+  try {
+    const opt = { method, headers: hdr(), cache: 'no-store' };
+    if (body !== undefined) opt.body = JSON.stringify(body);
+    res = await fetch(API + url, opt);
+  } catch (e) {
+    throw new ApiError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่', 0);
+  }
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new ApiError('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 401);
+  }
+  let data = null;
+  try { data = await res.json(); } catch (e) { data = null; }
+  if (!res.ok) throw new ApiError(data?.error || `เซิร์ฟเวอร์ตอบกลับผิดพลาด (${res.status})`, res.status);
+  return data || {};
+}
+
+// mutation: แปลง throw กลับเป็น { error } เพื่อให้ call site เดิมทำงานได้เหมือนเดิม
+const apiMutate = (method, url, body) =>
+  apiFetch(method, url, body)
+    .then(r => { _maybeInvalidate(url); return r; })
+    .catch(e => ({ error: e.message }));
+
 const api = {
-  get:    url       => fetch(API+url, { headers: hdr(), cache: 'no-store' }).then(r=>r.json()),
-  post:   (url,b)   => fetch(API+url, { method:'POST',   headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
-  put:    (url,b)   => fetch(API+url, { method:'PUT',    headers: hdr(), body: JSON.stringify(b) }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
-  delete: url       => fetch(API+url, { method:'DELETE', headers: hdr() }).then(r=>r.json()).then(r => { _maybeInvalidate(url); return r; }),
+  get:    url       => apiFetch('GET', url),
+  post:   (url,b)   => apiMutate('POST',   url, b),
+  put:    (url,b)   => apiMutate('PUT',    url, b),
+  delete: url       => apiMutate('DELETE', url),
 };
+
+// session หมดอายุ/ถูกเพิกถอน → เคลียร์แล้วกลับไปหน้า login
+// (เดิมไม่มีการจัดการ 401 เลย token หมดอายุกลางทาง = ทุกหน้าค้างหรือขึ้นตารางว่างเปล่า)
+function handleUnauthorized() {
+  ['_admtok','_role','_display_name','_username','_uid','_perms','_roleLabel'].forEach(k => localStorage.removeItem(k));
+  showLogin();
+  const box = document.getElementById('loginAlert');
+  if (box) box.innerHTML = `<div class="alert alert-danger">⚠️ เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่</div>`;
+}
 
 // ล้าง dash cache อัตโนมัติเมื่อมีการแก้ข้อมูลที่กระทบ dashboard
 function _maybeInvalidate(url) {
@@ -656,9 +699,21 @@ async function doLogin() {
   const username = document.getElementById('usernameInput').value.trim();
   const pw       = document.getElementById('pwdInput').value;
   const body     = username ? { username, password: pw } : { password: pw };
-  const res = await fetch(API+'/auth/login', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-  }).then(r=>r.json());
+  const btn      = document.getElementById('loginBtn');
+  document.getElementById('loginAlert').innerHTML = '';
+  // กันกดซ้ำ + บอกว่ากำลังทำงาน (เดิมเน็ตช้าแล้วกด = เหมือนปุ่มเสีย เน็ตหลุด = ไม่มีอะไรเกิดขึ้นเลย)
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังเข้าสู่ระบบ...'; }
+  let res;
+  try {
+    const r = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    res = await r.json();
+  } catch (e) {
+    res = { error: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่' };
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔐 เข้าสู่ระบบ'; }
+  }
   if (res.token) {
     localStorage.setItem('_admtok', res.token);
     localStorage.setItem('_role', res.role || 'super_admin');
@@ -754,18 +809,45 @@ function nav(page) {
   document.getElementById('sidebar').classList.remove('open');
   const c = document.getElementById('content');
   c.innerHTML = `<div class="empty-state"><div class="spinner2"></div></div>`;
-  if (page==='dash')         renderDash();
-  if (page==='articles')     renderArticles();
-  if (page==='new-article')  renderArticleEditor(null);
-  if (page==='apps')         renderApps();
-  if (page==='worksheets')   renderWorksheets();
-  if (page==='comments')     renderComments();
-  if (page==='reports')      renderReports();
-  if (page==='codes')        renderCodes();
-  if (page==='kruboard')     renderKruboard();
-  if (page==='users')        renderUsers();
-  if (page==='profile')      renderProfile();
-  if (page==='settings')     renderSettings();
+  const views = {
+    dash:          renderDash,
+    articles:      renderArticles,
+    'new-article': () => renderArticleEditor(null),
+    apps:          renderApps,
+    worksheets:    renderWorksheets,
+    comments:      renderComments,
+    reports:       renderReports,
+    codes:         renderCodes,
+    kruboard:      renderKruboard,
+    users:         renderUsers,
+    profile:       renderProfile,
+    settings:      renderSettings,
+  };
+  if (views[page]) safeRender(views[page], page);
+}
+
+// ห่อการ render ทุกหน้า — error ใดๆ กลายเป็นการ์ดแจ้งเตือน + ปุ่มลองใหม่
+// (เดิมถ้า API พลาด ฟังก์ชัน render จะ throw ทิ้งไว้เฉยๆ หน้าค้างที่ spinner ตลอดกาล)
+async function safeRender(fn, page) {
+  try {
+    await fn();
+  } catch (e) {
+    if (e && e.status === 401) return;   // handleUnauthorized พาไปหน้า login แล้ว
+    console.error('[render ' + page + ']', e);
+    renderPageError(e && e.message, page);
+  }
+}
+
+function renderPageError(msg, page) {
+  const c = document.getElementById('content');
+  if (!c) return;
+  c.innerHTML = `
+  <div class="card" style="max-width:520px;margin:44px auto;text-align:center;">
+    <div style="font-size:2.2rem;margin-bottom:10px;">⚠️</div>
+    <div style="font-weight:700;color:#0f172a;margin-bottom:6px;">โหลดหน้านี้ไม่สำเร็จ</div>
+    <div style="font-size:.88rem;color:#64748b;margin-bottom:18px;">${escapeHtml(msg || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ')}</div>
+    <button class="btn btn-primary" onclick="nav('${page}')">🔄 ลองใหม่</button>
+  </div>`;
 }
 
 const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
@@ -1096,9 +1178,10 @@ function switchCatTab(btn, cat) {
 // KRUBOARD — จัดการบัญชีครู (ใช้ Bearer token ของครูติเดิม ผ่าน /api/kb/admin)
 const kbApi = {
   get:    p     => fetch('/api/kb'+p, { headers:{ Authorization:'Bearer '+tok() }, cache:'no-store' }).then(r=>r.json()),
-  post:   (p,b) => fetch('/api/kb'+p, { method:'POST',   headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()),
-  put:    (p,b) => fetch('/api/kb'+p, { method:'PUT',    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()),
-  delete: p     => fetch('/api/kb'+p, { method:'DELETE', headers:{ Authorization:'Bearer '+tok() } }).then(r=>r.json()),
+  // mutation คืน { error } เมื่อเน็ตหลุด — เดิม throw ทิ้งไว้เฉยๆ กดปุ่มแล้วไม่มีอะไรเกิดขึ้น
+  post:   (p,b) => fetch('/api/kb'+p, { method:'POST',   headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()).catch(() => ({ error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง' })),
+  put:    (p,b) => fetch('/api/kb'+p, { method:'PUT',    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+tok() }, body:JSON.stringify(b) }).then(r=>r.json()).catch(() => ({ error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง' })),
+  delete: p     => fetch('/api/kb'+p, { method:'DELETE', headers:{ Authorization:'Bearer '+tok() } }).then(r=>r.json()).catch(() => ({ error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง' })),
 };
 
 function kbFmtDate(ms) { if (!ms) return '–'; return new Date(ms).toLocaleDateString('th-TH', { day:'numeric', month:'short' }); }
@@ -2023,7 +2106,8 @@ function insertDownload() {
 let _imgbbKey = null;  // cache key ใน session
 async function getImgbbKey() {
   if (_imgbbKey) return _imgbbKey;
-  const s = await api.get('/settings');
+  // ต้องดึงจาก /settings/admin — GET /settings สาธารณะไม่ส่ง key ที่เป็นความลับแล้ว
+  const s = await api.get('/settings/admin');
   _imgbbKey = s.imgbb_key || '';
   return _imgbbKey;
 }
@@ -3383,7 +3467,7 @@ async function downloadBackup() {
 }
 
 async function renderSettings() {
-  const s = await api.get('/settings');
+  const s = await api.get('/settings/admin');
   let cats = [];
   try { cats = JSON.parse(s.article_categories || '[]'); } catch {}
   if (!cats.length) cats = ['เทคนิค','วิชาการ','AI & เครื่องมือ','ข่าวการศึกษา','เคล็ดลับครู'];
