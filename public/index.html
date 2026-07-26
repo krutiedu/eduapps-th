@@ -652,6 +652,11 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 <script>
 'use strict';
 const API = '/api';
+// โดเมนหลักของเว็บ — ใช้กับ canonical, og:url, og:image, JSON-LD และลิงก์แชร์ทุกที่
+// ห้ามใช้ location.origin กับพวกนี้: Cloudflare เปิด eduapps-th.pages.dev ทิ้งไว้ตลอด
+// (บวก URL preview ของทุก deploy) ถ้า canonical ชี้กลับ origin ที่ผู้ใช้เข้ามา
+// pages.dev จะกลายเป็นสำเนาที่แข่ง SEO กับ kru-ti.com เอง แทนที่จะรวมน้ำหนักมาที่โดเมนหลัก
+const SITE = 'https://kru-ti.com';
 let S = {}; // site settings
 
 // ── FETCH HELPERS (cache 30 วิ + กันยิงซ้ำขณะ request แรกยังไม่กลับ) ──
@@ -736,7 +741,7 @@ function route() {
   if (_cs && h !== '/' && h !== '') _cs.innerHTML = '';
   // reset meta ให้ site default ก่อน render ทุกหน้า (บทความจะ set ทับอีกครั้ง)
   if (h !== location.hash?.slice(1) || !h.startsWith('/article/')) {
-    setPageMeta({ url: location.origin + location.pathname + location.hash });
+    setPageMeta({ url: SITE + location.pathname + location.hash });
   }
   window.scrollTo(0,0);
   let view;
@@ -943,7 +948,7 @@ async function renderArticle(slugOrId) {
   // comments ผูกกับ article_id (ตัวเลข) — ใช้ id จริงจากบทความ
   const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
   // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
-  const shareUrl = `${location.origin}/article/${art.id}`;  // URL จริง — crawler เห็น OG tags
+  const shareUrl = `${SITE}/article/${art.id}`;  // URL จริง — crawler เห็น OG tags
 
   app.innerHTML = `
   <div class="art-wrap rv">
@@ -991,7 +996,7 @@ async function renderArticle(slugOrId) {
 
   // ── SEO: meta + JSON-LD สำหรับบทความนี้ ──
   const siteTitle = S.site_title || 'Kru-ti ครูติ TH';
-  const artUrl = `${location.origin}/article/${art.id}`;
+  const artUrl = `${SITE}/article/${art.id}`;
   setPageMeta({
     title: art.title,
     desc:  art.excerpt || art.title,
@@ -1009,14 +1014,14 @@ async function renderArticle(slugOrId) {
       author: {
         '@type': 'Person',
         name:    art.author_name || S.author_name || 'Kru-ti ครูติ',
-        url:     location.origin + '/#/about',
+        url:     SITE + '/#/about',
       },
       publisher: {
         '@type': 'Organization',
         name:    siteTitle,
         logo: {
           '@type': 'ImageObject',
-          url: `${location.origin}/icon-512.png`,
+          url: `${SITE}/icon-512.png`,
         },
       },
       mainEntityOfPage: {
@@ -1453,7 +1458,7 @@ function renderAbout() {
   setPageMeta({
     title: 'เกี่ยวกับเรา · ' + title,
     description: title + ' — แพลตฟอร์มสื่อการสอน Interactive สำหรับครูและนักเรียนไทย ฟรี เปิดให้ใช้ได้ทันที',
-    url: location.origin + location.pathname + '#/about',
+    url: SITE + location.pathname + '#/about',
   });
 }
 
@@ -1589,12 +1594,12 @@ async function renderWorksheetDetail(id) {
     title: w.title,
     desc: w.description || `ใบงาน ${w.category||''} — ดาวน์โหลดได้ที่ Kru-ti ครูติ`,
     image: w.cover_image || undefined,
-    url: location.origin + '/#/worksheet/' + w.id,
+    url: SITE + '/#/worksheet/' + w.id,
   });
 
   const unlocked = sessionStorage.getItem('ws_url_' + w.id);
   const fileUrl = (!w.locked && w.file_url) ? w.file_url : unlocked;
-  const shareUrl = location.origin + '/#/worksheet/' + w.id;
+  const shareUrl = SITE + '/#/worksheet/' + w.id;
   const descIsDup = (w.description||'').trim() === (w.title||'').trim();
 
   app.innerHTML = `
@@ -1833,7 +1838,7 @@ function renderBuy() {
   setPageMeta({
     title: 'วิธีซื้อรหัสปลดล็อก',
     desc: 'ปลดล็อกแอปพรีเมียมของครูติ — ติดต่อซื้อรหัสและดูโปรโมชั่นได้ที่เพจ Facebook ครูติ',
-    url: location.origin + '/#/buy',
+    url: SITE + '/#/buy',
   });
 }
 
@@ -2026,7 +2031,7 @@ function toast(msg) {
 
 // แชร์แอป: สร้างลิงก์กลับมา kru-ti.com แล้วเปิด viewer อัตโนมัติ (เก็บสถิติ + เห็นแบรนด์)
 async function shareApp(id, title) {
-  const url = `${location.origin}/#/apps?open=${id}`;
+  const url = `${SITE}/#/apps?open=${id}`;
   // มือถือ: ใช้ native share sheet ถ้ามี — ส่ง url อย่างเดียว
   if (navigator.share) {
     try { await navigator.share({ url }); return; } catch (e) { if (e.name === 'AbortError') return; }
@@ -2279,7 +2284,7 @@ async function init() {
     setPageMeta({
       title: '',
       desc:  S.site_desc || '',
-      url:   location.origin + '/',
+      url:   SITE + '/',
     });
 
     if (S.adsense_id) {
@@ -2331,7 +2336,7 @@ function startTicker(el) {
 function setPageMeta({ title, desc, image, url, type = 'website', ld = null } = {}) {
   const siteTitle = S.site_title || 'Kru-ti ครูติ TH';
   const fullTitle = title ? `${title} — ${siteTitle}` : siteTitle;
-  const canon = url || location.origin + location.pathname + location.hash;
+  const canon = url || SITE + location.pathname + location.hash;
 
   document.getElementById('pageTitle').textContent = fullTitle;
   document.getElementById('metaDesc').content       = desc || S.site_desc || '';
@@ -2341,7 +2346,7 @@ function setPageMeta({ title, desc, image, url, type = 'website', ld = null } = 
   setMeta('og:description', desc || S.site_desc || '');
   setMeta('og:url',         canon);
   setMeta('og:type',        type);
-  setMeta('og:image', image || (location.origin + '/og-image.png'));
+  setMeta('og:image', image || (SITE + '/og-image.png'));
   setMeta('twitter:card',  'summary_large_image');
   setMeta('twitter:title', fullTitle);
 

@@ -3,9 +3,14 @@
 // URL: https://kru-ti.com/article/1 (รับทั้ง id ตัวเลข และ slug)
 // ผู้ใช้จริงอ่านหน้านี้ได้เลย หรือกดกลับไปเว็บหลัก (SPA) ก็ได้
 
+// โดเมนหลัก — ใช้กับ canonical/og/JSON-LD เท่านั้น ห้ามใช้ origin ของ request
+// ไม่งั้นถ้า crawler เจอหน้านี้ผ่าน eduapps-th.pages.dev มันจะเห็น canonical ชี้กลับ
+// pages.dev เอง กลายเป็นสำเนาที่แข่ง SEO กับ kru-ti.com
+const SITE = 'https://kru-ti.com';
+
 export async function onRequest({ params, env, request }) {
   const idOrSlug = decodeURIComponent(params.id || '');
-  const BASE = new URL(request.url).origin;
+  const BASE = new URL(request.url).origin;   // ใช้กับลิงก์นำทางในหน้า (คงโดเมนที่ผู้ใช้เปิดอยู่)
 
   // ── lookup: id ตัวเลข หรือ slug ──
   const isNumeric = /^\d+$/.test(idOrSlug);
@@ -57,8 +62,8 @@ export async function onRequest({ params, env, request }) {
   const title    = esc(art.title);
   const excerpt  = esc(art.excerpt || art.title);
   const author   = esc(art.author_name || 'Kru-ti ครูติ');
-  const canon    = `${BASE}/article/${art.id}`;
-  const img      = art.image_url || `${BASE}/og-image.png`; // ไม่มีรูปปก → ใช้รูปแบรนด์
+  const canon    = `${SITE}/article/${art.id}`;
+  const img      = art.image_url || `${SITE}/og-image.png`; // ไม่มีรูปปก → ใช้รูปแบรนด์
   const dateISO  = (art.created_at || '').replace(' ', 'T');
   const dateThai = fmtThai(art.created_at);
 
@@ -70,11 +75,11 @@ export async function onRequest({ params, env, request }) {
     image: img ? [img] : [],
     datePublished: dateISO,
     dateModified: (art.updated_at || art.created_at || '').replace(' ', 'T'),
-    author: { '@type': 'Person', name: art.author_name || 'Kru-ti ครูติ', url: `${BASE}/#/about` },
+    author: { '@type': 'Person', name: art.author_name || 'Kru-ti ครูติ', url: `${SITE}/#/about` },
     publisher: {
       '@type': 'Organization',
       name: 'Kru-ti ครูติ TH',
-      logo: { '@type': 'ImageObject', url: `${BASE}/icon-512.png` },
+      logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': canon },
   }).replace(/</g, '\\u003c'); // กัน </script> breakout ใน JSON-LD

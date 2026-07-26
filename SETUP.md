@@ -1,12 +1,42 @@
-# คู่มือตั้งค่า EduApps TH
-## ทำตามทีละขั้น ไม่มีโค้ด — ใช้เวลาประมาณ 1 ชั่วโมง
+# คู่มือตั้งค่า Kru-ti ครูติ TH
+## สำหรับสร้างเว็บนี้ขึ้นใหม่จากศูนย์ — ทำตามทีละขั้น ไม่ต้องเขียนโค้ด
+
+> เว็บจริงอยู่ที่ **kru-ti.com** — คู่มือนี้ใช้ตอนย้ายเครื่อง สร้างเว็บทดสอบ (staging)
+> หรือกู้ระบบกลับมาถ้าเกิดปัญหา ใช้เวลาประมาณ 1 ชั่วโมง
 
 ---
 
-## สิ่งที่ต้องเตรียม (ทั้งหมดฟรี)
+## สิ่งที่ต้องเตรียม (ฟรีทั้งหมด)
+
 - บัญชี **GitHub** → github.com
 - บัญชี **Cloudflare** → cloudflare.com
-- บัญชี **imgbb.com** → imgbb.com (สำหรับอัปโหลดรูปภาพ)
+- บัญชี **imgbb.com** → สำหรับอัปโหลดรูปในบทความและแอป
+
+---
+
+## โครงสร้างไฟล์ในโปรเจกต์
+
+```
+eduapps-th/
+├── public/                  ← Cloudflare เสิร์ฟโฟลเดอร์นี้
+│   ├── index.html           ← หน้าเว็บสาธารณะทั้งเว็บ (SPA ไฟล์เดียว)
+│   ├── admin/index.html     ← หน้าจัดการเว็บทั้งหมด
+│   ├── board/index.html     ← KruBoard (กระดานส่งงานนักเรียน)
+│   ├── _headers             ← ตั้งค่า cache + security header
+│   ├── robots.txt
+│   ├── site.webmanifest
+│   └── (ไอคอน / og-image)
+├── functions/               ← Cloudflare Pages Functions (backend)
+│   ├── api/[[route]].js     ← API หลัก
+│   ├── api/kb/[[route]].js  ← API ของ KruBoard
+│   ├── article/[id].js      ← หน้าบทความแบบ SSR (ให้ Google/LINE/Facebook อ่าน)
+│   └── sitemap.xml.js       ← sitemap สร้างอัตโนมัติจากฐานข้อมูล
+├── schema.sql               ← โครงสร้างฐานข้อมูลครบทุกตาราง
+└── SETUP.md                 ← ไฟล์นี้
+```
+
+**ไม่มี build step และไม่มี `wrangler.toml`** — การผูกฐานข้อมูลกับ storage ทำในหน้า
+Cloudflare Dashboard ทั้งหมด (ดูขั้นที่ 5)
 
 ---
 
@@ -15,151 +45,198 @@
 1. เข้า github.com → Sign in
 2. คลิก **New** (ปุ่มสีเขียว)
 3. ตั้งชื่อ repository: `eduapps-th`
-4. เลือก **Public** (สำคัญ — Cloudflare ฟรีต้องใช้ Public)
+4. เลือก **Public** (สำคัญ — Cloudflare Pages แบบฟรีเชื่อมกับ repo ส่วนตัวได้ แต่ public ง่ายกว่า)
 5. คลิก **Create repository**
+6. อัปโหลดไฟล์ทั้งหมดขึ้นไป (ลากโฟลเดอร์มาวางในหน้า upload ได้เลย) → **Commit changes**
 
 ---
 
-## ขั้นที่ 2 — อัปโหลดไฟล์ขึ้น GitHub
+## ขั้นที่ 2 — สร้างฐานข้อมูล D1
 
-### โครงสร้างโฟลเดอร์ที่ต้องอัปโหลด
-```
-eduapps-th/
-├── public/
-│   ├── index.html
-│   └── admin/
-│       └── index.html
-├── functions/
-│   └── api/
-│       └── [[route]].js
-├── schema.sql
-└── wrangler.toml
-```
+1. เข้า [dash.cloudflare.com](https://dash.cloudflare.com) → **Storage & Databases** → **D1**
+2. คลิก **Create database** → ตั้งชื่อ `eduapps-db` → **Create**
+3. เข้าไปใน database ที่สร้าง → แท็บ **Console**
+4. เปิดไฟล์ `schema.sql` คัดลอก**ทั้งไฟล์**มาวางในช่อง Console → **Execute**
+5. ตรวจว่าสำเร็จ: พิมพ์ `/tables` แล้ว Execute ต้องเห็น 13 ตาราง
+   (`articles`, `apps`, `worksheets`, `access_codes`, `comments`, `reports`,
+   `users`, `settings`, `sessions`, `page_views`, `kb_boards`, `kb_subs`, `kb_teachers`)
 
-### วิธีอัปโหลด
-1. ใน repository ที่สร้าง คลิก **uploading an existing file**
-2. ลากโฟลเดอร์ทั้งหมดมาวาง (หรืออัปโหลดทีละไฟล์)
-3. คลิก **Commit changes**
+> `schema.sql` ทุกคำสั่งเป็น `IF NOT EXISTS` — รันซ้ำกับฐานข้อมูลที่มีข้อมูลอยู่แล้วได้
+> ไม่ทำข้อมูลหาย ใช้ตอนอัปเดตโครงสร้างได้ด้วย
 
 ---
 
-## ขั้นที่ 3 — ตั้งค่า Cloudflare D1 (ฐานข้อมูล)
+## ขั้นที่ 3 — สร้าง R2 bucket (สำหรับ KruBoard)
 
-1. เข้า [dash.cloudflare.com](https://dash.cloudflare.com)
-2. คลิก **Workers & Pages** ในเมนูซ้าย
-3. คลิก **D1 SQL Database** → **Create database**
-4. ตั้งชื่อ: `eduapps-db`
-5. คลิก **Create**
-6. หลังสร้างเสร็จ คลิกเข้าไปใน database
-7. คลิก **Console**
-8. คัดลอกเนื้อหาจากไฟล์ `schema.sql` มาวางใน Console
-9. คลิก **Execute**
-10. **จด Database ID ไว้** (เห็นที่หน้า database settings — รูปแบบ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+R2 ใช้เก็บรูปที่นักเรียนส่งเข้ามาใน KruBoard **ถ้าไม่ใช้ KruBoard ข้ามขั้นนี้ได้**
+(ส่วนอื่นของเว็บใช้ imgbb ไม่ได้ใช้ R2)
+
+1. ใน Cloudflare Dashboard → **R2 Object Storage** → **Create bucket**
+2. ตั้งชื่อ bucket อะไรก็ได้ เช่น `kruti-board` → **Create**
+3. ไม่ต้องเปิด public access — รูปถูกเสิร์ฟผ่าน API ของเว็บเอง (`/api/kb/img/...`)
 
 ---
 
-## ขั้นที่ 4 — แก้ไข wrangler.toml
+## ขั้นที่ 4 — Deploy บน Cloudflare Pages
 
-เปิดไฟล์ `wrangler.toml` แล้วแก้บรรทัดนี้:
-```
-database_id = "REPLACE_WITH_YOUR_D1_ID"
-```
-เปลี่ยนเป็น Database ID ที่จดไว้ในขั้นที่ 3
-
----
-
-## ขั้นที่ 5 — Deploy บน Cloudflare Pages
-
-1. ใน Cloudflare Dashboard คลิก **Workers & Pages**
-2. คลิก **Create application** → **Pages**
-3. คลิก **Connect to Git**
-4. เลือก GitHub → authorize → เลือก repository `eduapps-th`
-5. ตั้งค่า Build:
-   - **Framework preset**: None
+1. Cloudflare Dashboard → **Workers & Pages** → **Create application** → แท็บ **Pages**
+2. **Connect to Git** → เลือก GitHub → authorize → เลือก repository `eduapps-th`
+3. ตั้งค่า Build:
+   - **Framework preset**: `None`
    - **Build command**: เว้นว่าง
    - **Build output directory**: `public`
-6. คลิก **Save and Deploy**
-7. รอสักครู่ — Cloudflare จะ deploy ให้อัตโนมัติ
+4. คลิก **Save and Deploy** แล้วรอ deploy เสร็จ
+
+> ครั้งแรกเว็บจะยังพัง 500 เพราะยังไม่ได้ผูกฐานข้อมูล — ทำขั้นที่ 5 ต่อ
 
 ---
 
-## ขั้นที่ 6 — เชื่อม D1 Database กับ Pages
+## ขั้นที่ 5 — ผูก D1, R2 และตัวแปรลับ (ขั้นสำคัญที่สุด)
 
-1. ไปที่ Pages project ที่เพิ่ง deploy
-2. คลิก **Settings** → **Functions**
-3. เลื่อนลงไปหา **D1 database bindings**
-4. คลิก **Add binding**:
-   - Variable name: `DB`
-   - D1 database: เลือก `eduapps-db`
-5. คลิก **Save**
-6. **Redeploy** — คลิก **Deployments** → **Retry deployment**
+ไปที่ Pages project → **Settings**
+
+### 5.1 ผูกฐานข้อมูล D1
+**Bindings** → **Add** → **D1 database**
+- Variable name: `DB`  ← ต้องชื่อนี้เท่านั้น
+- D1 database: `eduapps-db`
+
+### 5.2 ผูก R2 (ถ้าใช้ KruBoard)
+**Bindings** → **Add** → **R2 bucket**
+- Variable name: `BUCKET`  ← ต้องชื่อนี้เท่านั้น
+- R2 bucket: bucket ที่สร้างไว้ในขั้นที่ 3
+
+### 5.3 ตั้งตัวแปรลับ
+**Variables and Secrets** → **Add**
+
+| ชื่อตัวแปร | ประเภท | ค่า | จำเป็นไหม |
+|---|---|---|---|
+| `AUTH_SECRET` | Secret | ข้อความสุ่มยาว ๆ อย่างน้อย 32 ตัวอักษร | **จำเป็นถ้าใช้ KruBoard** |
+| `ALLOW_SIGNUP` | Text | `1` = เปิดให้ครูสมัครเอง / ไม่ต้องใส่ = ปิด | ไม่จำเป็น |
+
+**`AUTH_SECRET` คืออะไร:** ตอนครูล็อกอินเข้า KruBoard ระบบจะออก "บัตรผ่าน" (token) ให้
+แล้วเซ็นกำกับด้วยค่านี้ เซิร์ฟเวอร์ใช้ลายเซ็นนั้นตรวจว่าบัตรเป็นของจริงหรือปลอม
+**ถ้าไม่ตั้งตัวแปรนี้ ระบบยังทำงานได้แต่จะใช้ค่าสำรองที่เขียนไว้ในโค้ด** — ซึ่งอยู่ใน
+repo ที่เป็น public ใครอ่านโค้ดก็ปลอมบัตรเป็นครูคนไหนก็ได้ (เข้าไปดู/ลบกระดานและรูปงาน
+ของนักเรียนได้) **จึงควรตั้งเสมอ**
+
+วิธีสร้างค่าสุ่ม — เปิด Terminal/PowerShell ในเครื่องแล้วรันคำสั่งนี้ คัดลอกผลไปวาง:
+```
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+> ⚠️ เปลี่ยน `AUTH_SECRET` เมื่อไหร่ ครูที่ล็อกอินอยู่จะถูกเด้งออกทั้งหมด ต้องล็อกอินใหม่ 1 ครั้ง
+> (ของนักเรียนที่ส่งงานไว้ไม่หาย)
+
+### 5.4 Redeploy
+**Deployments** → deploy ล่าสุด → **Retry deployment**
+(การผูก binding มีผลกับ deploy ครั้งถัดไปเท่านั้น ต้อง redeploy ทุกครั้งที่เพิ่ม binding)
 
 ---
 
-## ขั้นที่ 7 — เข้า Admin ครั้งแรก แล้วเปลี่ยนรหัสผ่าน
+## ขั้นที่ 6 — ตั้งโดเมนของตัวเอง
 
-ระบบตั้งรหัสผ่านเริ่มต้นให้แล้ว:
+1. Pages project → **Custom domains** → **Set up a domain**
+2. ใส่ `kru-ti.com` แล้วทำตามที่ Cloudflare บอก
 
-- **รหัสผ่านเริ่มต้น: `admin1234`**
-
-1. เข้า `https://eduapps-th.pages.dev/admin/`
-2. ใส่รหัส `admin1234` → เข้าสู่ระบบ
-3. ⚠️ **เปลี่ยนรหัสผ่านทันที** ที่ **ตั้งค่า → เปลี่ยนรหัสผ่าน Admin**
-
----
-
-## ขั้นที่ 8 — ตั้งค่า imgbb (สำหรับอัปโหลดรูป)
-
-1. สมัครที่ [imgbb.com](https://imgbb.com)
-2. คลิกรูปโปรไฟล์ → **About** → **API**
-3. คลิก **Get API Key**
-4. คัดลอก API Key
-5. เข้า Admin Panel ของเว็บ → **ตั้งค่า** → ใส่ API Key → บันทึก
+> โค้ดฝัง `https://kru-ti.com` ไว้เป็นโดเมนหลักสำหรับ canonical / ลิงก์แชร์ / sitemap
+> **ถ้าใช้โดเมนอื่น** ต้องแก้ค่า `SITE` ใน 2 ไฟล์ (`public/index.html`,
+> `functions/article/[id].js`), `BASE` ใน `functions/sitemap.xml.js` และบรรทัด Sitemap
+> ใน `public/robots.txt` ไม่งั้น Google จะสับสนว่าหน้าจริงอยู่โดเมนไหน
 
 ---
 
-## ขั้นที่ 9 — เข้าใช้งาน Admin Panel
+## ขั้นที่ 7 — เข้า Admin ครั้งแรกแล้วเปลี่ยนรหัสผ่านทันที
 
-เว็บของคุณจะอยู่ที่: `https://eduapps-th.pages.dev`
-Admin Panel: `https://eduapps-th.pages.dev/admin/`
+1. เข้า `https://kru-ti.com/admin/`
+2. **ชื่อผู้ใช้เว้นว่าง** (เว้นว่าง = admin หลัก) → รหัสผ่าน `admin1234`
+3. ⚠️ **เปลี่ยนรหัสทันที** ที่ **ตั้งค่าเว็บ → เปลี่ยนรหัสผ่าน Admin**
+   รหัส `admin1234` เป็นค่าตั้งต้นที่เขียนไว้ใน `schema.sql` ซึ่งอยู่ใน repo public
+   ถ้าไม่เปลี่ยน = ใครก็เข้าหลังบ้านได้
 
 ---
 
-## การอัปเดตเนื้อหาในอนาคต
+## ขั้นที่ 8 — ตั้งค่า imgbb (อัปโหลดรูป)
 
-### เพิ่มบทความ
-เข้า Admin Panel → **เขียนบทความใหม่** → เขียน → เผยแพร่
+1. สมัครที่ [imgbb.com](https://imgbb.com) → คลิกรูปโปรไฟล์ → **About** → **API** → **Get API Key**
+2. คัดลอก API Key
+3. เข้า Admin Panel → **ตั้งค่าเว็บ** → ช่อง **imgbb API Key** → วาง → **บันทึก**
 
-### เพิ่มแอป
-เข้า Admin Panel → **จัดการแอป** → เพิ่มแอปใหม่
+> API Key นี้ถูกเก็บในตาราง `settings` และ **ไม่ถูกส่งออกหน้าเว็บสาธารณะ**
+> (`GET /api/settings` กรอง key ที่ลงท้ายด้วย `_key` / `_secret` / `_token` / `_password` ออก)
+> หน้า admin ดึงผ่าน `GET /api/settings/admin` ที่ต้องล็อกอินก่อน
+
+---
+
+## เมนูในหน้า Admin มีอะไร
+
+| เมนู | ใช้ทำอะไร | ใครเห็น |
+|---|---|---|
+| Dashboard | สรุปงานค้าง + สถิติผู้เข้าชม (กดโหลดสถิติเอง) | ทุกคน |
+| บทความทั้งหมด / เขียนบทความใหม่ | จัดการบทความ ปักหมุดได้ 3 อันดับ | ตามสิทธิ์ |
+| จัดการแอป | เพิ่ม/แก้แอป ตั้งล็อกด้วยรหัส ซ่อน ปักหมุด ตั้งเป็น VIP | ตามสิทธิ์ |
+| จัดการใบงาน | เพิ่ม/แก้ใบงาน ตั้งล็อก นับยอดดาวน์โหลด | ตามสิทธิ์ |
+| ความคิดเห็น | อนุมัติ/ลบคอมเมนต์ (คอมเมนต์ใหม่ยังไม่แสดงจนอนุมัติ) | ตามสิทธิ์ |
+| แจ้งปัญหา | เรื่องที่ผู้ใช้แจ้งเข้ามา (new / doing / done) | admin |
+| รหัสปลดล็อก | สร้างรหัสขาย เลือกได้ว่ารหัสนี้เปิดแอป/ใบงานอะไร ตั้งวันหมดอายุ + มีตัวช่วยร่างอีเมล/ข้อความส่งลูกค้า | admin |
+| KruBoard | จัดการบัญชีครูที่ใช้กระดานส่งงาน | admin |
+| จัดการผู้ใช้ | เพิ่มผู้ช่วย กำหนดสิทธิ์เป็นหมวด (บทความ / คอมเมนต์ / แอป / ใบงาน) | admin |
+| ตั้งค่าเว็บ | ชื่อเว็บ, tagline, คำอธิบาย SEO, หมวดบทความ, imgbb key, AdSense, ดาวน์โหลดข้อมูลสำรอง | admin |
+| โปรไฟล์ | เปลี่ยนชื่อที่แสดงและรหัสผ่านของตัวเอง | ทุกคน |
+
+---
+
+## การดูแลรักษา
+
+### สำรองข้อมูล (ควรทำสม่ำเสมอ)
+Admin → **ตั้งค่าเว็บ** → **ดาวน์โหลดข้อมูลสำรอง** → ได้ไฟล์ JSON ครบทุกตาราง
+เก็บไฟล์นี้ไว้ในที่ปลอดภัย — ในไฟล์มี hash รหัสผ่านของผู้ใช้ทุกคน อย่าแชร์ให้ใคร
+
+**การกู้คืน:** สร้าง D1 ใหม่ → รัน `schema.sql` → นำข้อมูลจากไฟล์ JSON ใส่กลับ
 
 ### แก้ไขโค้ด
-เข้า GitHub → คลิกไฟล์ → คลิกดินสอ ✏️ → แก้ไข → Commit
-Cloudflare จะ deploy ใหม่อัตโนมัติภายใน 1-2 นาที
+เข้า GitHub → คลิกไฟล์ → คลิกดินสอ ✏️ → แก้ → Commit
+Cloudflare จะ deploy ใหม่อัตโนมัติภายใน 1–2 นาที
+
+### ล้างเซสชันเก่า (ทำปีละครั้งก็พอ)
+ตาราง `sessions` ไม่มีการลบแถวหมดอายุอัตโนมัติ รันใน D1 Console:
+```sql
+DELETE FROM sessions WHERE expires_at < datetime('now');
+```
 
 ---
 
 ## ปัญหาที่พบบ่อย
 
-**Q: เว็บแสดงข้อผิดพลาด 500**
-A: ตรวจสอบว่า D1 binding ชื่อ `DB` ถูกต้อง และ schema.sql ถูก execute แล้ว
+**Q: เว็บขึ้น error 500 ทุกหน้า**
+A: ยังไม่ได้ผูก D1 หรือผูกแล้วแต่ยังไม่ redeploy — ตรวจว่า binding ชื่อ `DB` ตรงตัวพิมพ์
+และรัน `schema.sql` ครบแล้ว จากนั้น Deployments → Retry deployment
 
-**Q: Admin login ไม่ได้**
-A: รหัสผ่านเริ่มต้นคือ `admin1234` — ถ้าเปลี่ยนแล้วลืม ให้รัน SQL นี้ใน D1 Console เพื่อรีเซ็ตกลับเป็น admin1234:
+**Q: หน้า KruBoard ในแอดมินขึ้นข้อความเตือน**
+A: ยังไม่ได้ผูก R2 binding ชื่อ `BUCKET` หรือยังไม่ได้รัน `schema.sql` (ตาราง `kb_*`)
+หรือยังไม่ redeploy หลังเพิ่ม binding
+
+**Q: Admin login ไม่ได้ / ลืมรหัส**
+A: รีเซ็ตกลับเป็น `admin1234` โดยรันใน D1 Console แล้วเปลี่ยนรหัสใหม่ทันทีหลังเข้าได้:
 ```sql
 UPDATE settings SET value = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270' WHERE key = 'admin_password';
 ```
+(ถ้าเป็นบัญชีผู้ช่วยที่ลืมรหัส ให้ admin หลักเข้าไปตั้งใหม่ที่ **จัดการผู้ใช้**)
+
+**Q: ผู้ช่วยล็อกอินได้แต่ไม่เห็นเมนู**
+A: ยังไม่ได้ให้สิทธิ์ — admin หลักเข้า **จัดการผู้ใช้** → แก้ผู้ใช้นั้น → ติ๊กหมวดที่ให้ดูแล
 
 **Q: อัปโหลดรูปไม่ได้**
-A: ตรวจสอบ imgbb API Key ใน Settings
+A: ตรวจ imgbb API Key ที่ **ตั้งค่าเว็บ** (ขั้นที่ 8)
 
-**Q: อยากเปลี่ยนชื่อเว็บ**
-A: เข้า Admin Panel → ตั้งค่า → เปลี่ยนชื่อเว็บ → บันทึก
+**Q: อยากเปลี่ยนชื่อเว็บที่แสดง**
+A: **ตั้งค่าเว็บ** → ช่องชื่อเว็บ → บันทึก (ไม่ต้องแก้โค้ด — ชื่อดึงจากฐานข้อมูล)
+
+**Q: หน้าเว็บขึ้น "โหลดข้อมูลไม่สำเร็จ" พร้อมปุ่มลองใหม่**
+A: เชื่อมต่อ API ไม่ได้ชั่วคราว กดลองใหม่ได้เลย ถ้ากดแล้วยังไม่หายให้ดู error 500 ข้างบน
 
 ---
 
-## ติดต่อขอความช่วยเหลือ
+## ขอความช่วยเหลือ
 
-ถ้าติดปัญหาใด ให้บอก Claude ว่า:
+ถ้าติดปัญหา ให้บอก Claude ว่า:
 "ช่วยดู error นี้หน่อย: [วาง error message]"
-Claude จะช่วยแก้ให้ได้ครับ
