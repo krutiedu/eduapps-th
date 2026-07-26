@@ -45,7 +45,9 @@ export async function onRequest(ctx) {
     (path.startsWith('/articles') && method !== 'GET') ||
     path.startsWith('/apps/admin') ||
     (path.startsWith('/apps') && method !== 'GET' && !path.includes('/unlock')) ||
+    path.startsWith('/worksheets/admin') ||
     (path.startsWith('/worksheets') && method !== 'GET' && !path.includes('/unlock') && !path.includes('/download')) ||
+    path.startsWith('/settings/admin') ||
     (path.startsWith('/settings') && method !== 'GET') ||
     path.startsWith('/comments/admin') ||
     (path.startsWith('/reports/admin')) ||
@@ -67,11 +69,13 @@ export async function onRequest(ctx) {
     let neededPerm = null;
     if (path.startsWith('/articles') && (method !== 'GET' || path.startsWith('/articles/admin'))) neededPerm = 'articles';
     else if (path.startsWith('/apps') && (path.startsWith('/apps/admin') || (method !== 'GET' && !path.includes('/unlock')))) neededPerm = 'apps';
-    else if (path.startsWith('/worksheets') && (method !== 'GET' && !path.includes('/unlock') && !path.includes('/download'))) neededPerm = 'worksheets';
+    else if (path.startsWith('/worksheets') && (path.startsWith('/worksheets/admin') || (method !== 'GET' && !path.includes('/unlock') && !path.includes('/download')))) neededPerm = 'worksheets';
     else if (path.startsWith('/comments/admin') || (path.startsWith('/comments') && (method === 'PUT' || method === 'DELETE'))) neededPerm = 'comments';
-    // หมวดที่สงวนให้ super_admin เท่านั้น (codes/users/settings/reports/backup/analytics)
+    // หมวดที่สงวนให้ super_admin เท่านั้น (codes/settings/reports/backup/analytics)
+    // หมายเหตุ: /users ไม่อยู่ในนี้ เพราะ usersHandler เช็คสิทธิ์เองรายเส้นทาง
+    // (list/create/delete = super_admin, แต่ PUT ตัวเองได้ทุก role — ไม่งั้นหน้าโปรไฟล์ของ editor พัง)
     const superOnly = (
-      path.startsWith('/codes') || path.startsWith('/users') ||
+      path.startsWith('/codes') ||
       (path.startsWith('/settings') && method !== 'GET') ||
       path.startsWith('/reports') || path === '/backup' || path.startsWith('/analytics')
     );
@@ -81,26 +85,29 @@ export async function onRequest(ctx) {
 
   try {
     // ── ROUTER ──
-    if (path === '/auth/login'  && method === 'POST')   return login(request, env);
-    if (path === '/auth/logout' && method === 'POST')   return logout(request, env);
-    if (path === '/auth/check'  && method === 'GET')    return authCheck(request, env);
+    // ต้อง await ทุกตัว ไม่งั้น promise ที่ reject จะหลุด try/catch ไปเลย
+    // (เดิมไม่ await — error จาก D1 กลายเป็นหน้า error ของ Cloudflare ที่เป็น HTML
+    //  frontend คาดว่าจะได้ JSON จึงพังเงียบๆ แทนที่จะโชว์ข้อความให้ผู้ใช้เห็น)
+    if (path === '/auth/login'  && method === 'POST')   return await login(request, env);
+    if (path === '/auth/logout' && method === 'POST')   return await logout(request, env);
+    if (path === '/auth/check'  && method === 'GET')    return await authCheck(request, env);
 
-    if (path.startsWith('/articles'))  return articles(request,  env, segments, method);
-    if (path.startsWith('/apps'))      return apps(request,      env, segments, method);
-    if (path.startsWith('/worksheets'))return worksheets(request, env, segments, method);
-    if (path.startsWith('/settings'))  return settings(request,  env, segments, method);
-    if (path.startsWith('/comments'))  return comments(request,  env, segments, method);
-    if (path.startsWith('/reports'))   return reports(request,   env, segments, method);
-    if (path.startsWith('/codes'))     return codes(request,     env, segments, method);
-    if (path.startsWith('/users'))     return usersHandler(request, env, segments, method);
-    if (path === '/track' && method === 'POST') return track(request, env);
-    if (path.startsWith('/analytics')) return analytics(request, env, segments, method);
-    if (path === '/upload' && method === 'POST') return upload(request, env);
-    if (path === '/backup' && method === 'GET')  return backupAll(env);
+    if (path.startsWith('/articles'))  return await articles(request,  env, segments, method);
+    if (path.startsWith('/apps'))      return await apps(request,      env, segments, method);
+    if (path.startsWith('/worksheets'))return await worksheets(request, env, segments, method);
+    if (path.startsWith('/settings'))  return await settings(request,  env, segments, method);
+    if (path.startsWith('/comments'))  return await comments(request,  env, segments, method);
+    if (path.startsWith('/reports'))   return await reports(request,   env, segments, method);
+    if (path.startsWith('/codes'))     return await codes(request,     env, segments, method);
+    if (path.startsWith('/users'))     return await usersHandler(request, env, segments, method);
+    if (path === '/track' && method === 'POST') return await track(request, env);
+    if (path.startsWith('/analytics')) return await analytics(request, env, segments, method);
+    if (path === '/upload' && method === 'POST') return await upload(request, env);
+    if (path === '/backup' && method === 'GET')  return await backupAll(env);
 
     return err('ไม่พบ endpoint', 404);
   } catch (e) {
-    return err(e.message, 500);
+    return err(e.message || 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', 500);
   }
 }
 
@@ -599,11 +606,25 @@ async function worksheets(req, env, segs, method) {
 // ════════════════════════════════════════════════════════
 // SETTINGS
 // ════════════════════════════════════════════════════════
+// key ที่ห้ามส่งออกหน้าเว็บสาธารณะ — imgbb_key เคยรั่วผ่าน GET /settings
+// (เผื่ออนาคตเพิ่ม key ใหม่ ให้ตั้งชื่อลงท้ายด้วย _key/_secret/_token/_password แล้วจะถูกกันอัตโนมัติ)
+const SECRET_SETTING_KEYS = ['admin_password', 'imgbb_key'];
+const isSecretSetting = (k) => SECRET_SETTING_KEYS.includes(k) || /(_key|_secret|_token|_password)$/.test(k);
+
 async function settings(req, env, segs, method) {
-  if (method === 'GET') {
+  // GET /settings/admin — ต้อง login: ได้ค่าที่เป็นความลับด้วย (ยกเว้น password hash) ไม่ cache
+  if (segs[1] === 'admin' && method === 'GET') {
     const { results } = await env.DB
       .prepare("SELECT key,value FROM settings WHERE key != 'admin_password'").all();
-    const s = Object.fromEntries(results.map(r => [r.key, r.value]));
+    return ok(Object.fromEntries(results.map(r => [r.key, r.value])));
+  }
+
+  // GET /settings — สาธารณะ: ตัด key ที่เป็นความลับออกทั้งหมด
+  if (method === 'GET') {
+    const { results } = await env.DB.prepare('SELECT key,value FROM settings').all();
+    const s = Object.fromEntries(
+      results.filter(r => !isSecretSetting(r.key)).map(r => [r.key, r.value])
+    );
     return okCache(s);
   }
 
