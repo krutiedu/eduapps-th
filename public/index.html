@@ -637,7 +637,10 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
     <div class="footer-logo" id="footerLogo">✦ Kru-ti ครูติ TH</div>
     <div class="footer-links">
       <a href="#/blog">บทความ</a>
-      <a href="#/apps">แอปทั้งหมด</a>
+      <!-- ลิงก์ 2 อันนี้ชี้ไปหน้า SSR จริง (ไม่ใช่ #) เพื่อให้ Google เดินเข้าไปเก็บคลังแอป/ใบงานได้
+           เมนูด้านบนยังใช้ # เหมือนเดิมเพื่อความเร็วตอนใช้งาน -->
+      <a href="/apps">แอปทั้งหมด</a>
+      <a href="/worksheets">ใบงานทั้งหมด</a>
       <a href="#/buy">วิธีซื้อรหัส</a>
       <a href="#/about">เกี่ยวกับเรา</a>
       <a href="#/report">แจ้งปัญหา</a>

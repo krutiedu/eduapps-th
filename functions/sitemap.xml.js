@@ -7,9 +7,11 @@ export async function onRequest({ env }) {
   const today = new Date().toISOString().split('T')[0];
 
   // หน้า static ที่ต้องการให้ Google index
-  // หมายเหตุ: Google ไม่ index URL ที่มี # (fragment) — ใส่เฉพาะ URL จริง
+  // หมายเหตุ: Google ไม่ index URL ที่มี # (fragment) — ใส่เฉพาะ URL จริงที่มีหน้า SSR รองรับ
   const staticPages = [
-    { url: `${BASE}/`, priority: '1.0', freq: 'daily' },
+    { url: `${BASE}/`,           priority: '1.0', freq: 'daily'  },
+    { url: `${BASE}/apps`,       priority: '0.9', freq: 'weekly' },
+    { url: `${BASE}/worksheets`, priority: '0.9', freq: 'weekly' },
   ];
 
   // ดึงบทความที่เผยแพร่แล้วจาก D1
@@ -34,6 +36,38 @@ export async function onRequest({ env }) {
     console.error('sitemap DB error:', e);
   }
 
+  // แอปที่เปิดให้เห็น — มีหน้า SSR ที่ /apps/:id
+  let appUrls = [];
+  try {
+    const { results } = await env.DB
+      .prepare('SELECT id, created_at FROM apps WHERE visible = 1 ORDER BY sort_order ASC LIMIT 1000')
+      .all();
+    appUrls = results.map(a => ({
+      url:      `${BASE}/apps/${a.id}`,
+      lastmod:  (a.created_at || today).substring(0, 10),
+      priority: '0.7',
+      freq:     'weekly',
+    }));
+  } catch (e) {
+    console.error('sitemap apps error:', e);
+  }
+
+  // ใบงานที่เปิดให้เห็น — มีหน้า SSR ที่ /worksheet/:id
+  let worksheetUrls = [];
+  try {
+    const { results } = await env.DB
+      .prepare('SELECT id, created_at FROM worksheets WHERE visible = 1 ORDER BY sort_order ASC LIMIT 1000')
+      .all();
+    worksheetUrls = results.map(w => ({
+      url:      `${BASE}/worksheet/${w.id}`,
+      lastmod:  (w.created_at || today).substring(0, 10),
+      priority: '0.7',
+      freq:     'weekly',
+    }));
+  } catch (e) {
+    console.error('sitemap worksheets error:', e);
+  }
+
   const urlXML = (entry) => `  <url>
     <loc>${entry.url}</loc>
     ${entry.lastmod ? `<lastmod>${entry.lastmod}</lastmod>` : `<lastmod>${today}</lastmod>`}
@@ -46,6 +80,8 @@ export async function onRequest({ env }) {
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 ${staticPages.map(urlXML).join('\n')}
 ${articleUrls.map(urlXML).join('\n')}
+${appUrls.map(urlXML).join('\n')}
+${worksheetUrls.map(urlXML).join('\n')}
 </urlset>`;
 
   return new Response(xml.trim(), {
