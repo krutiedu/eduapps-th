@@ -1597,12 +1597,16 @@ async function renderWorksheetDetail(id) {
     title: w.title,
     desc: w.description || `ใบงาน ${w.category||''} — ดาวน์โหลดได้ที่ Kru-ti ครูติ`,
     image: w.cover_image || undefined,
-    url: SITE + '/#/worksheet/' + w.id,
+    // canonical ชี้หน้า SSR ที่ /worksheet/:id — Google ตัด #/... ทิ้งอยู่แล้ว
+    // บอกไปเลยว่าเนื้อหานี้อยู่ที่ URL จริงไหน จะได้ไม่แข่งกับหน้าแรก
+    url: SITE + '/worksheet/' + w.id,
   });
 
   const unlocked = sessionStorage.getItem('ws_url_' + w.id);
   const fileUrl = (!w.locked && w.file_url) ? w.file_url : unlocked;
-  const shareUrl = SITE + '/#/worksheet/' + w.id;
+  // แชร์ลิงก์หน้า SSR — LINE/Facebook อ่าน OG tag ได้ ขึ้นชื่อและรูปใบงานถูกต้อง
+  // (ลิงก์ #/... crawler อ่านไม่ออก จะขึ้นเป็นหน้าแรกทั่ว ๆ ไป)
+  const shareUrl = SITE + '/worksheet/' + w.id;
   const descIsDup = (w.description||'').trim() === (w.title||'').trim();
 
   app.innerHTML = `
@@ -1957,7 +1961,7 @@ function appCard(a) {
         ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
         : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิดแอป</button>` : '')
       }
-      ${a.prompt ? `<button class="btn-pmt" onclick="openPromptModal('${esc(a.title).replace(/'/g,"\\'")}', this)" data-prompt="${esc(a.prompt).replace(/"/g,'&quot;')}">📋 Prompt</button>` : ''}
+      ${a.has_prompt ? `<button class="btn-pmt" onclick="openPromptModal(${a.id}, '${esc(a.title).replace(/'/g,"\\'")}')">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
         title="แชร์แอปนี้" aria-label="แชร์แอปนี้"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg></button>
     </div>
@@ -1974,12 +1978,20 @@ document.addEventListener('mouseover', e => {
   card.classList.toggle('preview-down', spaceAbove < 250);
 });
 
-function openPromptModal(title, btn) {
-  const prompt = btn.getAttribute('data-prompt') || '';
+// prompt ไม่ได้ส่งมากับรายการแอปแล้ว (ยาวมาก) — ดึงตอนกดดูจริง
+// get() มี cache 30 วิ ในตัว เปิดซ้ำแอปเดิมจึงขึ้นทันที
+async function openPromptModal(id, title) {
+  const body = document.getElementById('promptBody');
   document.getElementById('promptTitle').textContent = title;
-  document.getElementById('promptBody').textContent = prompt;
   document.getElementById('promptCopyBtn').textContent = '📋 คัดลอก Prompt';
+  body.textContent = 'กำลังโหลด prompt...';
   document.getElementById('promptModal').style.display = 'flex';
+  try {
+    const d = await get('/apps/' + id + '/prompt');
+    body.textContent = d.prompt || '(แอปนี้ยังไม่มี prompt)';
+  } catch (e) {
+    body.textContent = 'โหลด prompt ไม่สำเร็จ — ปิดหน้าต่างนี้แล้วลองกดใหม่อีกครั้ง';
+  }
 }
 function closePromptModal() {
   document.getElementById('promptModal').style.display = 'none';
@@ -2032,9 +2044,11 @@ function toast(msg) {
   t._timer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 2600);
 }
 
-// แชร์แอป: สร้างลิงก์กลับมา kru-ti.com แล้วเปิด viewer อัตโนมัติ (เก็บสถิติ + เห็นแบรนด์)
+// แชร์แอป: ส่งลิงก์หน้า SSR ที่ /apps/:id — LINE/Facebook อ่าน OG tag ได้
+// ขึ้นชื่อแอปและคำอธิบายถูกต้อง (ลิงก์ #/... crawler อ่านไม่ออก จะขึ้นเป็นหน้าแรกทั่ว ๆ ไป)
+// ในหน้านั้นมีปุ่มพากลับเข้า viewer ของเว็บหลักอยู่แล้ว
 async function shareApp(id, title) {
-  const url = `${SITE}/#/apps?open=${id}`;
+  const url = `${SITE}/apps/${id}`;
   // มือถือ: ใช้ native share sheet ถ้ามี — ส่ง url อย่างเดียว
   if (navigator.share) {
     try { await navigator.share({ url }); return; } catch (e) { if (e.name === 'AbortError') return; }

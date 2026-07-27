@@ -435,6 +435,16 @@ async function apps(req, env, segs, method) {
     return ok({ url: results[0].url });
   }
 
+  // GET /apps/:id/prompt — ดึง prompt ทีละตัวตอนผู้ใช้กดดูจริง
+  // ไม่ส่งมากับรายการแอปเพราะ prompt ยาวมาก (วัดแล้วกิน 62% ของ payload ทั้งก้อน
+  // ทั้งที่มีแค่ 3 แอปจาก 49 ที่มี prompt — ตัวเดียวยาวสองหมื่นตัวอักษร)
+  if (id && segs[2] === 'prompt' && method === 'GET') {
+    const { results } = await env.DB
+      .prepare('SELECT prompt FROM apps WHERE id=? AND visible=1').bind(id).all();
+    if (!results[0]) return err('ไม่พบแอป', 404);
+    return okCache({ prompt: results[0].prompt || '' });
+  }
+
   // GET /apps — สาธารณะ เฉพาะ visible=1, ไม่ส่ง lock_code, locked=1 ไม่ส่ง url
   // ?popular_days=N → คืน view_count ในช่วง N วันล่าสุด (0 = ทั้งหมด, default ไม่นับ)
   if (!id && method === 'GET') {
@@ -451,7 +461,8 @@ async function apps(req, env, segs, method) {
     let sql;
     if (Number.isFinite(popularDays) && popularDays === 0) {
       // ── popular_days=0 (ทั้งหมด) → ใช้ view_count column ตรงๆ (เร็วมาก) ──
-      sql = `SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at,view_count
+      sql = `SELECT id,icon,title,category,description,url,locked,visible,preview_image,sort_order,is_vip,pinned,created_at,view_count,
+                    (prompt IS NOT NULL AND prompt != '') AS has_prompt
              FROM apps WHERE visible=1
              ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC`;
     } else if (isPop) {
@@ -460,13 +471,16 @@ async function apps(req, env, segs, method) {
       // (เดิมใช้ date(created_at,...) ทำให้ index ใช้ไม่ได้ ต้อง scan วิวเก่าทั้งหมด)
       const cutoff = bkkDayStartUTC(popularDays - 1);
       sql = `
-        SELECT a.id, a.icon, a.title, a.category, a.description, a.url, a.prompt, a.locked, a.visible, a.preview_image, a.sort_order, a.is_vip, a.pinned, a.created_at,
+        SELECT a.id, a.icon, a.title, a.category, a.description, a.url, a.locked, a.visible, a.preview_image, a.sort_order, a.is_vip, a.pinned, a.created_at,
+               (a.prompt IS NOT NULL AND a.prompt != '') AS has_prompt,
                COALESCE((SELECT COUNT(*) FROM page_views pv WHERE pv.path = '/apps/' || a.id AND pv.created_at >= '${cutoff}'), 0) AS view_count
         FROM apps a
         WHERE a.visible=1
         ORDER BY (a.pinned > 0) DESC, a.pinned ASC, a.sort_order ASC, a.created_at ASC`;
     } else {
-      sql = 'SELECT id,icon,title,category,description,url,prompt,locked,visible,preview_image,sort_order,is_vip,pinned,created_at FROM apps WHERE visible=1 ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC';
+      sql = `SELECT id,icon,title,category,description,url,locked,visible,preview_image,sort_order,is_vip,pinned,created_at,
+                    (prompt IS NOT NULL AND prompt != '') AS has_prompt
+             FROM apps WHERE visible=1 ORDER BY (pinned > 0) DESC, pinned ASC, sort_order ASC, created_at ASC`;
     }
     const { results } = await env.DB.prepare(sql).all();
     const safe = results.map(a => ({

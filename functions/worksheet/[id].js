@@ -141,6 +141,7 @@ ${navHTML(BASE)}
   </div>
 </main>
 ${footerHTML(BASE)}
+${trackHTML('/worksheet/' + w.id)}
 </body>
 </html>`;
 
@@ -172,6 +173,23 @@ function footerHTML(BASE) {
   return `<footer>
   <a href="${BASE}/">Kru-ti ครูติ TH</a> — แอปการสอนและบทความ เพื่อครูไทย · © 2568
 </footer>`;
+}
+
+// เก็บสถิติแบบเดียวกับหน้าเว็บหลัก — ใช้ visitor id ตัวเดียวกัน (localStorage '_vid')
+// ถ้าไม่มีบรรทัดนี้ คนที่มาจาก Google จะไม่ปรากฏใน Dashboard เลย
+function trackHTML(path) {
+  return '<script>(function(){var P=' + JSON.stringify(path) + ';'
+    + 'function s(v){try{var b=JSON.stringify({path:P,visitor_id:v});'
+    + 'if(navigator.sendBeacon)navigator.sendBeacon("/api/track",new Blob([b],{type:"application/json"}));'
+    + 'else fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:b,keepalive:true}).catch(function(){});}catch(e){}}'
+    + 'try{var v=localStorage.getItem("_vid"),t=+localStorage.getItem("_vid_ts")||0;'
+    + 'if(v&&(Date.now()-t)<2592000000)return s(v);'
+    + 'var f=[navigator.userAgent,screen.width+"x"+screen.height,Intl.DateTimeFormat().resolvedOptions().timeZone,navigator.language].join("|");'
+    + 'crypto.subtle.digest("SHA-256",new TextEncoder().encode(f)).then(function(b){'
+    + 'var n=Array.from(new Uint8Array(b)).slice(0,8).map(function(x){return x.toString(16).padStart(2,"0")}).join("");'
+    + 'localStorage.setItem("_vid",n);localStorage.setItem("_vid_ts",Date.now());s(n)}).catch(function(){'
+    + 'var n=Math.random().toString(36).slice(2,18);localStorage.setItem("_vid",n);localStorage.setItem("_vid_ts",Date.now());s(n)});'
+    + '}catch(e){}})();<\/script>';
 }
 
 function notFound(BASE) {
