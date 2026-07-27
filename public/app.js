@@ -709,13 +709,13 @@ function renderTableView(items) {
     const tier = a.is_vip ? '<span class="at-tier vip">👑 VIP</span>'
                : a.locked ? '<span class="at-tier lock">🔒 พรีเมียม</span>'
                : '<span class="at-tier free">🆓 ฟรี</span>';
-    // มุมมองตาราง — ไปหน้าของแอปเหมือนมุมมองการ์ด (หนึ่งแอป = หนึ่ง URL)
+    // มุมมองตาราง — ให้เหมือนมุมมองการ์ด: ปุ่มเปิดแอปตรงนั้น ชื่อแอปพาไปหน้าของแอป
     const btn = isLocked
-      ? `<a class="at-btn lock" style="text-decoration:none;" href="/apps/${a.id}">🔒 ปลดล็อก</a>`
-      : `<a class="at-btn" style="text-decoration:none;" href="/apps/${a.id}">🚀 เปิด</a>`;
+      ? `<button class="at-btn lock" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
+      : (appUrl ? `<button class="at-btn" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิด</button>` : '');
     return `<tr>
       <td class="at-icon">${a.icon||'🎮'}</td>
-      <td><div class="at-title">${esc(a.title)}</div><div class="at-desc">${esc(a.description||'')}</div></td>
+      <td><div class="at-title"><a href="/apps/${a.id}" style="color:inherit;text-decoration:none;">${esc(a.title)}</a></div><div class="at-desc">${esc(a.description||'')}</div></td>
       <td class="at-hide-mobile">${esc(a.category||'')}</td>
       <td>${tier}</td>
       <td class="at-hide-mobile at-date">${fmt(a.created_at)}</td>
@@ -1340,23 +1340,29 @@ function appCard(a) {
         ${isLocked ? '<span class="app-preview-lock">🔒 ต้องใช้รหัสปลดล็อก</span>' : ''}
       </div>
     </div>`;
-  return `<div class="app-card">
+  // กดที่ตัวการ์ด (ที่ไหนก็ได้ที่ไม่ใช่ปุ่มและไม่ใช่ลิงก์) → ไปหน้าของแอปนั้น
+  // เดิมการ์ดเป็น div เฉย ๆ กดแล้วไม่มีอะไรเกิดขึ้น ผู้ใช้ต้องเล็งปุ่มเท่านั้น
+  // ชื่อแอปทำเป็น <a> จริงด้วย เพื่อให้ Google เดินตามลิงก์ไปเก็บหน้าแอปได้
+  //
+  // ใช้ location.href ไม่ใช่ go() — /apps/:id เป็นหน้าที่ server เรนเดอร์ ไม่ใช่เส้นทางของ SPA
+  // ถ้าใช้ go() จะ pushState แล้ว router หาเส้นทางไม่เจอ กลายเป็นหน้า 404
+  return `<div class="app-card" style="cursor:pointer;"
+       onclick="if(!event.target.closest('.app-btns')&&!event.target.closest('a'))location.href='/apps/${a.id}'">
     ${preview}
     ${a.pinned?'<div style="position:absolute;top:10px;left:10px;background:#fbbf24;color:#78350f;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:99px;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.15);">📌 PIN</div>':''}
     ${a.is_vip?'<div class="app-vip-badge" title="แอประดับ VIP">👑 VIP</div>':''}
     ${isLocked?`<div style="position:absolute;top:10px;${a.pinned?'left:78px':'left:10px'};font-size:1.1rem;" title="แอปนี้ต้องใช้รหัสผ่าน">🔒</div>`:''}
     <div class="app-top">
       <div class="app-icon icon-blue">${a.icon||'🎮'}</div>
-      <div><h4>${esc(a.title)}</h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
+      <div><h4><a href="/apps/${a.id}" style="color:inherit;text-decoration:none;">${esc(a.title)}</a></h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
     </div>
     <p>${esc(a.description||'')}</p>
     <div class="app-btns">
-      ${/* หนึ่งแอป = หนึ่ง URL — กดแล้วไปที่หน้าของแอปนั้นแล้วเปิดใช้งานที่นั่น
-            เดิมเปิดทับอยู่บนหน้ารวม ทำให้ URL บนแถบที่อยู่ไม่ตรงกับสิ่งที่เห็น
-            แชร์หน้าจอตอนนั้นก็ได้แค่ลิงก์หน้ารวม และคนที่มาจากลิงก์ตรงถูกพาวนกลับมาที่นี่ */''}
+      ${/* ปุ่มนี้ = ทางลัดสำหรับคนที่แค่อยากใช้แอป เปิดตรงนี้เลยไม่ต้องเปลี่ยนหน้า
+            ส่วนคนที่อยากดูรายละเอียด/แชร์/ดู prompt ให้กดที่ตัวการ์ด → ไปหน้า /apps/:id */''}
       ${isLocked
-        ? `<a class="btn-open" style="background:var(--slate);color:#fff;text-align:center;text-decoration:none;" href="/apps/${a.id}">🔒 ปลดล็อก</a>`
-        : `<a class="btn-open" style="text-align:center;text-decoration:none;" href="/apps/${a.id}">🚀 เปิดแอป</a>`
+        ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
+        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิดแอป</button>` : '')
       }
       ${a.has_prompt ? `<button class="btn-pmt" onclick="openPromptModal(${a.id}, '${esc(a.title).replace(/'/g,"\\'")}')">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
