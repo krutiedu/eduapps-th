@@ -18,7 +18,9 @@ export async function onRequest({ params, env, request }) {
   let app = null;
   try {
     const { results } = await env.DB.prepare(
-      `SELECT id,icon,title,category,description,prompt,locked,is_vip,preview_image,created_at
+      // ต้องมี url ด้วย — หน้านี้เปิดแอปเองแล้ว ไม่ได้ส่งต่อไปหน้ารวมอีก
+      // (ส่งออกหน้าเว็บเฉพาะแอปที่ไม่ล็อกเท่านั้น ดูตอนสร้าง URL_FREE)
+      `SELECT id,icon,title,category,description,url,prompt,locked,is_vip,preview_image,created_at
        FROM apps WHERE id=? AND visible=1`
     ).bind(id).all();
     app = results[0] || null;
@@ -199,6 +201,11 @@ ${trackHTML('/apps/' + app.id)}
     document.body.style.overflow = 'hidden';
   }
   window.closeApp = function () {
+    // ต้องออกจากโหมดเต็มจอก่อน ไม่งั้นปิดหน้าต่างแอปแล้วเบราว์เซอร์ยังค้างเต็มจอ
+    // ผู้ใช้ต้องกด Esc เองอีกรอบ
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+    var box = document.querySelector('.viewer-box');
+    if (box) box.classList.remove('fs');
     document.getElementById('viewer').hidden = true;
     document.getElementById('viewerFrame').src = 'about:blank';
     document.body.style.overflow = '';
