@@ -709,9 +709,10 @@ function renderTableView(items) {
     const tier = a.is_vip ? '<span class="at-tier vip">👑 VIP</span>'
                : a.locked ? '<span class="at-tier lock">🔒 พรีเมียม</span>'
                : '<span class="at-tier free">🆓 ฟรี</span>';
+    // มุมมองตาราง — ไปหน้าของแอปเหมือนมุมมองการ์ด (หนึ่งแอป = หนึ่ง URL)
     const btn = isLocked
-      ? `<button class="at-btn lock" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
-      : (appUrl ? `<button class="at-btn" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิด</button>` : '');
+      ? `<a class="at-btn lock" style="text-decoration:none;" href="/apps/${a.id}">🔒 ปลดล็อก</a>`
+      : `<a class="at-btn" style="text-decoration:none;" href="/apps/${a.id}">🚀 เปิด</a>`;
     return `<tr>
       <td class="at-icon">${a.icon||'🎮'}</td>
       <td><div class="at-title">${esc(a.title)}</div><div class="at-desc">${esc(a.description||'')}</div></td>
@@ -1350,9 +1351,12 @@ function appCard(a) {
     </div>
     <p>${esc(a.description||'')}</p>
     <div class="app-btns">
+      ${/* หนึ่งแอป = หนึ่ง URL — กดแล้วไปที่หน้าของแอปนั้นแล้วเปิดใช้งานที่นั่น
+            เดิมเปิดทับอยู่บนหน้ารวม ทำให้ URL บนแถบที่อยู่ไม่ตรงกับสิ่งที่เห็น
+            แชร์หน้าจอตอนนั้นก็ได้แค่ลิงก์หน้ารวม และคนที่มาจากลิงก์ตรงถูกพาวนกลับมาที่นี่ */''}
       ${isLocked
-        ? `<button class="btn-open" style="background:var(--slate);color:#fff;" onclick="openLockModal(${a.id},'${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}')">🔒 ปลดล็อก</button>`
-        : (appUrl ? `<button class="btn-open" onclick="openAppViewer('${encodeURI(appUrl)}','${esc(a.title).replace(/'/g,"\\'")}','${a.icon||'🎮'}',${a.id})">🚀 เปิดแอป</button>` : '')
+        ? `<a class="btn-open" style="background:var(--slate);color:#fff;text-align:center;text-decoration:none;" href="/apps/${a.id}">🔒 ปลดล็อก</a>`
+        : `<a class="btn-open" style="text-align:center;text-decoration:none;" href="/apps/${a.id}">🚀 เปิดแอป</a>`
       }
       ${a.has_prompt ? `<button class="btn-pmt" onclick="openPromptModal(${a.id}, '${esc(a.title).replace(/'/g,"\\'")}')">📋 Prompt</button>` : ''}
       <button class="btn-share" onclick="shareApp(${a.id},'${esc(a.title).replace(/'/g,"\\'")}')"
