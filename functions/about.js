@@ -1,4 +1,4 @@
-// เสิร์ฟหน้าเว็บหลัก (index.html) ที่เส้นทาง /apps
+// เสิร์ฟหน้าเว็บหลัก (index.html) ที่เส้นทาง /about
 // ใช้ Function แทน _redirects เพราะ _redirects ของ Pages ไม่ยอม rewrite เป็น 200
 // ให้ /index.html — มันแปลงเป็น / แล้ว 308 redirect จริง ทำให้ URL เด้งกลับหน้าแรก
 //

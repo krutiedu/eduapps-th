@@ -27,6 +27,14 @@
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 
+# CSS/JS ของเว็บหลัก — แยกออกจาก index.html แล้ว จึง cache ได้
+# ใช้ must-revalidate เหมือน HTML เพราะยังไม่มีเลขเวอร์ชันในชื่อไฟล์
+# (ถ้า cache นานแล้ว deploy ใหม่ ผู้ใช้จะได้โค้ดเก่าค้าง)
+/app.css
+  Cache-Control: public, max-age=0, must-revalidate
+/app.js
+  Cache-Control: public, max-age=0, must-revalidate
+
 # Security headers — ใช้ได้ทุกหน้า
 /*
   X-Content-Type-Options: nosniff
