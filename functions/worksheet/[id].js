@@ -111,10 +111,11 @@ ${navHTML(BASE)}
       </div>
       <p class="lead">${desc}</p>
       <div class="cta">
+        ${/* ต้องเป็น /worksheets?open=ID ไม่ใช่ /worksheet/ID — อันหลังคือหน้านี้เอง กดแล้วโหลดซ้ำเฉย ๆ */''}
         ${isLocked
-          ? `<a class="btn btn-lock" href="${BASE}/worksheet/${w.id}">🔓 ใส่รหัสเพื่อดาวน์โหลด</a>
+          ? `<a class="btn btn-lock" href="${BASE}/worksheets?open=${w.id}">🔓 ใส่รหัสเพื่อดาวน์โหลด</a>
              <a class="btn btn-ghost" href="${BASE}/buy">วิธีขอรหัส →</a>`
-          : `<a class="btn btn-go" href="${BASE}/worksheet/${w.id}">⬇️ ดาวน์โหลดใบงาน</a>`}
+          : `<a class="btn btn-go" href="${BASE}/worksheets?open=${w.id}">⬇️ ดาวน์โหลดใบงาน</a>`}
       </div>
     </div>
   </div>

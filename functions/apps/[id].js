@@ -106,10 +106,13 @@ ${navHTML(BASE)}
   ${app.preview_image ? `<img class="preview" src="${esc(app.preview_image)}" alt="ตัวอย่างหน้าจอ ${title}" loading="lazy">` : ''}
 
   <div class="cta">
+    ${/* ต้องเป็น /apps?open=ID ไม่ใช่ /apps/ID — /apps/ID คือหน้านี้เอง กดแล้วจะแค่โหลดซ้ำ
+          /apps?open=ID จะเปิดคลังแอปแล้วเด้งตัวเปิดแอป (หรือช่องใส่รหัสถ้าล็อกอยู่) ให้อัตโนมัติ
+          และจำรหัสที่เคยปลดไว้ให้ด้วย */''}
     ${isLocked
-      ? `<a class="btn btn-lock" href="${BASE}/apps/${app.id}">🔓 ใส่รหัสเพื่อเปิดแอป</a>
+      ? `<a class="btn btn-lock" href="${BASE}/apps?open=${app.id}">🔓 ใส่รหัสเพื่อเปิดแอป</a>
          <a class="btn btn-ghost" href="${BASE}/buy">วิธีขอรหัส →</a>`
-      : `<a class="btn btn-go" href="${BASE}/apps/${app.id}">🚀 เปิดแอปเลย</a>`}
+      : `<a class="btn btn-go" href="${BASE}/apps?open=${app.id}">🚀 เปิดแอปเลย</a>`}
   </div>
 
   ${app.prompt ? `

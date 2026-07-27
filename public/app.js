@@ -114,7 +114,10 @@ function route() {
   else if (h === '/blog')            view = renderBlog;
   else if (h.startsWith('/article/'))view = () => renderArticle(h.slice(9));
   else if (h === '/apps')            view = () => renderApps(query.get('open'));
-  else if (h === '/worksheets')      view = renderWorksheets;
+  // /worksheets?open=5 — มาจากปุ่มในหน้า /worksheet/5 ให้เปิดรายละเอียดใบงานนั้นเลย
+  else if (h === '/worksheets')      view = () => query.get('open')
+                                       ? renderWorksheetDetail(query.get('open'))
+                                       : renderWorksheets();
   else if (h.startsWith('/worksheet/')) view = () => renderWorksheetDetail(h.slice(11));
   else if (h === '/about')           view = renderAbout;
   else if (h === '/buy')             view = renderBuy;
