@@ -1329,14 +1329,21 @@ function appCard(a) {
   const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
   const isLocked = a.locked && !storedUrl;
   const appUrl = storedUrl || a.url;
-  const previewImg = a.preview_image
-    ? `<img src="${esc(a.preview_image)}" alt="Preview" loading="lazy" onerror="this.parentNode.innerHTML='<div class=app-preview-ph>${a.icon||'🎮'}</div>'">`
-    : `<div class="app-preview-ph">${a.icon||'🎮'}</div>`;
+  // รูปตัวอย่างอยู่บนตัวการ์ด — เห็นได้ทันทีโดยไม่ต้องชี้เมาส์ (มือถือก็เห็น)
+  const thumb = `
+    <div class="app-thumb">
+      ${a.preview_image
+        ? `<img src="${esc(a.preview_image)}" alt="ตัวอย่างหน้าจอ ${esc(a.title)}" loading="lazy"
+             onerror="this.parentNode.innerHTML='<div class=app-thumb-ph>${a.icon||'🎮'}</div>'">`
+        : `<div class="app-thumb-ph">${a.icon||'🎮'}</div>`}
+    </div>`;
+
+  // ป๊อปอัพตอนชี้เมาส์ = คำอธิบาย (สลับที่กับรูป) — คำอธิบายบางแอปยาว
+  // ถ้าวางบนการ์ดจะดันการ์ดสูงไม่เท่ากันและกินที่ของรูป
   const preview = `
     <div class="app-preview">
-      ${previewImg}
       <div class="app-preview-info">
-        <p>${esc(a.description||'')}</p>
+        <p>${esc(a.description || 'ยังไม่มีคำอธิบายสำหรับแอปนี้')}</p>
         ${isLocked ? '<span class="app-preview-lock">🔒 ต้องใช้รหัสปลดล็อก</span>' : ''}
       </div>
     </div>`;
@@ -1356,7 +1363,7 @@ function appCard(a) {
       <div class="app-icon icon-blue">${a.icon||'🎮'}</div>
       <div><h4><a href="/apps/${a.id}" style="color:inherit;text-decoration:none;">${esc(a.title)}</a></h4><span class="tag tag-math" style="font-size:.7rem;">${esc(a.category)}</span></div>
     </div>
-    <p>${esc(a.description||'')}</p>
+    ${thumb}
     <div class="app-btns">
       ${/* ปุ่มนี้ = ทางลัดสำหรับคนที่แค่อยากใช้แอป เปิดตรงนี้เลยไม่ต้องเปลี่ยนหน้า
             ส่วนคนที่อยากดูรายละเอียด/แชร์/ดู prompt ให้กดที่ตัวการ์ด → ไปหน้า /apps/:id */''}

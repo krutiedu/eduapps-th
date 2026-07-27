@@ -281,7 +281,10 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .apps-box .app-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);}
 .apps-box .app-card:hover{background:rgba(255,255,255,.11);box-shadow:none;}
 .apps-box .app-card h4{color:#fff;}
-.apps-box .app-card p{color:rgba(255,255,255,.68);}
+.apps-box .app-card h4 a{color:#fff;}
+/* หมายเหตุ: ไม่ตั้งสีตัวหนังสือให้ .apps-box .app-card p อีกแล้ว
+   ตอนนี้ <p> ที่เหลือในการ์ดมีแค่คำอธิบายในป๊อปอัพ ซึ่งพื้นหลังเป็นสีขาว
+   ถ้าตั้งเป็นสีขาวตามโซนพื้นเข้ม ข้อความจะกลืนหายไปทั้งอัน */
 .apps-box .app-icon{background:rgba(243,172,46,.2);}
 
 .app-preview{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.96);
@@ -291,10 +294,7 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .app-card:hover .app-preview{opacity:1;visibility:visible;transform:translateX(-50%) scale(1);}
 .app-card.preview-down .app-preview{bottom:auto;top:calc(100% + 10px);transform:translateX(-50%) scale(.96);}
 .app-card.preview-down:hover .app-preview{transform:translateX(-50%) scale(1);}
-.app-preview img{width:100%;height:160px;object-fit:cover;display:block;}
-.app-preview-ph{width:100%;height:160px;background:linear-gradient(135deg,var(--ink),var(--ink-3));
-  display:flex;align-items:center;justify-content:center;font-size:3.5rem;}
-.app-preview-info{padding:12px 14px;}
+.app-preview-info{padding:13px 15px;}
 .app-preview-info p{font-size:.84rem;color:var(--ink-soft);line-height:1.55;margin-bottom:6px;}
 .app-preview-lock{display:inline-flex;align-items:center;gap:5px;background:var(--gold-soft);
   color:var(--gold-deep);border:1px solid rgba(243,172,46,.32);padding:4px 12px;border-radius:100px;
@@ -315,7 +315,15 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
   z-index:2;pointer-events:none;}
 .apps-box .app-vip-badge{box-shadow:0 2px 12px rgba(192,132,252,.55);}
 .app-card .tag{margin-top:4px;}
-.app-card p{font-size:.86rem;color:var(--ink-soft);line-height:1.6;margin:9px 0 14px;min-height:38px;}
+
+/* รูปตัวอย่างบนตัวการ์ด — ล็อกสัดส่วนไว้ ทุกการ์ดจึงสูงเท่ากันไม่ว่าไฟล์ต้นฉบับ
+   จะเป็นแนวตั้งหรือแนวนอน (ดูรูปเต็มได้ที่หน้าของแอป) */
+.app-thumb{aspect-ratio:16/10;width:100%;margin:10px 0 14px;border-radius:11px;overflow:hidden;
+  background:var(--paper);border:1px solid var(--line);}
+.app-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.app-thumb-ph{width:100%;height:100%;background:linear-gradient(135deg,var(--ink),var(--ink-3));
+  display:flex;align-items:center;justify-content:center;font-size:2.8rem;}
+.apps-box .app-thumb{border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.05);}
 .app-btns{display:flex;gap:8px;}
 .btn-open{flex:1;background:var(--gold);color:var(--ink);font-family:'Sarabun';
   font-size:.88rem;font-weight:700;padding:10px 0;border-radius:10px;border:none;cursor:pointer;transition:background .2s,color .2s;}
