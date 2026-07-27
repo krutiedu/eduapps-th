@@ -17,6 +17,28 @@ const now = () => Date.now();
 const enc = new TextEncoder();
 const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 
+// ---------- รูปแนบหลายใบ ----------
+// จำนวนรูปสูงสุดที่นักเรียนแนบได้ต่อการส่ง 1 ครั้ง (แก้ตัวเลขนี้ที่เดียวพอ)
+const MAX_IMGS = 10;
+// kb_subs.img_key เก็บได้ 2 แบบ: คีย์เดี่ยว (ของเดิม) หรือ JSON array (หลายรูป)
+// อ่านออกมาเป็น array เสมอ เพื่อให้ข้อมูลเก่ายังใช้ได้โดยไม่ต้องแก้ schema
+function imgKeys(raw) {
+  if (!raw) return [];
+  if (raw[0] === '[') {
+    try { const a = JSON.parse(raw); return Array.isArray(a) ? a : [raw]; } catch { return [raw]; }
+  }
+  return [raw];
+}
+const packKeys = keys => keys.length === 1 ? keys[0] : JSON.stringify(keys);
+const imgUrls = raw => imgKeys(raw).map(k => `/api/kb/img/${encodeURIComponent(k)}`);
+// ใส่ imgs (ทุกใบ) + img (ใบแรก ไว้ให้โค้ดเก่าที่อ่าน field เดียวยังทำงานได้)
+function withImgs(s) {
+  const urls = imgUrls(s.img_key);
+  s.imgs = urls; s.img = urls[0] || '';
+  delete s.img_key;
+  return s;
+}
+
 // ---------- password hashing (PBKDF2 via Web Crypto) ----------
 async function hashPass(pass, saltHex) {
   const salt = saltHex ? Uint8Array.from(saltHex.match(/../g).map(h => parseInt(h, 16)))
@@ -129,34 +151,41 @@ export async function onRequest(context) {
       const { results } = await env.DB.prepare(
         'SELECT no,name,img_key FROM kb_subs WHERE board=? ORDER BY no ASC'
       ).bind(id).all();
-      results.forEach(s => { s.img = `/api/kb/img/${encodeURIComponent(s.img_key)}`; delete s.img_key; });
+      results.forEach(withImgs);
       return json({ board: { id:b.id, title:b.title, room:b.room }, subs: results });
     }
 
     if (path === 'submit' && method === 'POST') {
       const form = await request.formData();
       const board = form.get('board'); const no = parseInt(form.get('no'));
-      const name = (form.get('name') || '').toString().slice(0, 60); const file = form.get('file');
-      if (!board || !no || !file) return json({ error: 'ข้อมูลไม่ครบ' }, 400);
+      const name = (form.get('name') || '').toString().trim().slice(0, 60);
+      const files = form.getAll('file').filter(f => f && typeof f.stream === 'function');
+      if (!board || !no || !files.length) return json({ error: 'ข้อมูลไม่ครบ' }, 400);
+      if (!name) return json({ error: 'กรุณากรอกชื่อ - สกุล' }, 400);
+      if (files.length > MAX_IMGS) return json({ error: `แนบรูปได้สูงสุด ${MAX_IMGS} รูป` }, 400);
       const b = await env.DB.prepare('SELECT id FROM kb_boards WHERE id=?').bind(board).first();
       if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
-      const key = `${board}/${no}-${uid()}.jpg`;
-      await env.BUCKET.put(key, file.stream(), { httpMetadata: { contentType: 'image/jpeg' } });
+      const keys = [];
+      for (const file of files) {
+        const key = `${board}/${no}-${uid()}.jpg`;
+        await env.BUCKET.put(key, file.stream(), { httpMetadata: { contentType: 'image/jpeg' } });
+        keys.push(key);
+      }
+      // ส่งใหม่ทับของเดิม — ลบรูปชุดเก่าทิ้งทุกใบ
       const old = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=? AND no=?').bind(board, no).first();
-      if (old?.img_key) await env.BUCKET.delete(old.img_key).catch(() => {});
+      for (const k of imgKeys(old?.img_key)) await env.BUCKET.delete(k).catch(() => {});
       await env.DB.prepare(`
         INSERT INTO kb_subs (id,board,no,name,img_key,status,created) VALUES (?,?,?,?,?, 'wait', ?)
         ON CONFLICT(board,no) DO UPDATE SET name=excluded.name, img_key=excluded.img_key, status='wait', score=NULL, comment=NULL, created=excluded.created, reviewed=NULL
-      `).bind(uid(), board, no, name, key, now()).run();
-      return json({ ok: true });
+      `).bind(uid(), board, no, name, packKeys(keys), now()).run();
+      return json({ ok: true, count: keys.length });
     }
 
     if (path.startsWith('result/') && method === 'GET') {
       const [, board, no] = path.split('/');
       const s = await env.DB.prepare('SELECT no,name,img_key,status,score,comment FROM kb_subs WHERE board=? AND no=?').bind(board, parseInt(no)).first();
       if (!s) return json({ error: 'ยังไม่พบงานของเลขที่นี้' }, 404);
-      s.img = `/api/kb/img/${encodeURIComponent(s.img_key)}`; delete s.img_key;
-      return json(s);
+      return json(withImgs(s));
     }
 
     // ================= ADMIN (รหัสแยกต่างหาก) =================
@@ -213,7 +242,7 @@ export async function onRequest(context) {
         const { results: boards } = await env.DB.prepare('SELECT id FROM kb_boards WHERE owner=?').bind(username).all();
         for (const b of boards) {
           const { results: subs } = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=?').bind(b.id).all();
-          for (const s of subs) await env.BUCKET.delete(s.img_key).catch(() => {});
+          for (const s of subs) for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
           await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(b.id).run();
         }
         await env.DB.prepare('DELETE FROM kb_boards WHERE owner=?').bind(username).run();
@@ -252,7 +281,7 @@ export async function onRequest(context) {
       const b = await env.DB.prepare('SELECT id,title,room FROM kb_boards WHERE id=? AND owner=?').bind(id, me).first();
       if (!b) return json({ error: 'ไม่พบกระดาน หรือไม่ใช่ของคุณ' }, 404);
       const { results } = await env.DB.prepare('SELECT id,no,name,img_key,status,score,comment FROM kb_subs WHERE board=? ORDER BY no').bind(id).all();
-      results.forEach(s => { s.img = `/api/kb/img/${encodeURIComponent(s.img_key)}`; delete s.img_key; });
+      results.forEach(withImgs);
       return json({ board: b, subs: results });
     }
 
@@ -263,7 +292,7 @@ export async function onRequest(context) {
       if (!b) return json({ error: 'ไม่พบกระดาน หรือไม่ใช่ของคุณ' }, 404);
       // ลบรูปทุกใบใน R2 ก่อน
       const { results: subs } = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=?').bind(id).all();
-      for (const s of subs) await env.BUCKET.delete(s.img_key).catch(() => {});
+      for (const s of subs) for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
       // ลบ subs และ board
       await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(id).run();
       await env.DB.prepare('DELETE FROM kb_boards WHERE id=?').bind(id).run();
@@ -288,7 +317,7 @@ export async function onRequest(context) {
       ).bind(sid, me).first();
       if (!s) return json({ error: 'ไม่มีสิทธิ์ หรือไม่พบ submission' }, 403);
       // ลบรูปใน R2 ก่อน (ไม่ block ถ้าลบไม่ได้)
-      if (s.img_key) await env.BUCKET.delete(s.img_key).catch(() => {});
+      for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
       await env.DB.prepare('DELETE FROM kb_subs WHERE id=?').bind(sid).run();
       return json({ ok: true });
     }

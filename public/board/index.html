@@ -96,11 +96,20 @@
   .scard{max-width:460px;margin:0 auto}
   .stask{background:var(--chalk);color:#fff;border-radius:var(--r);padding:20px;margin-bottom:18px;box-shadow:0 8px 24px rgba(244,166,192,.25)}
   .stask .tag{font-size:12px;opacity:.85;font-weight:600}.stask h2{margin:4px 0 2px;font-size:22px}.stask .rm{font-size:13.5px;opacity:.9}
-  .drop{border:1.5px dashed var(--line);border-radius:var(--r);background:var(--card);padding:26px 18px;text-align:center;color:var(--ink-soft);transition:border-color .15s,background .15s;display:block}
-  .drop.has{border-style:solid;border-color:var(--chalk);padding:12px}
-  .drop .cam{width:54px;height:54px;border-radius:50%;background:var(--marker-soft);color:var(--marker);display:grid;place-items:center;font-size:26px;margin:0 auto 10px}
-  .preview{width:100%;border-radius:12px;display:block}
-  .shrink-note{font-size:12px;color:var(--ok);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:5px}
+  /* แนบรูปหลายใบ — ตารางรูปที่เลือกไว้ + ปุ่มเลือกรูป */
+  .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-bottom:10px}
+  .shot{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
+  .shot img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
+  .shot .rm{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.08);display:grid;place-items:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.14)}
+  .shot .rm:hover{background:var(--marker-soft);color:var(--marker)}
+  .shot .ord{position:absolute;left:4px;bottom:4px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:1px 7px;border-radius:20px}
+  .pickrow{display:flex;gap:8px}
+  .pickbtn{flex:1;border:1.5px dashed var(--line);border-radius:var(--r-sm);background:var(--card);padding:14px 10px;text-align:center;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:border-color .15s,color .15s;display:block}
+  .pickbtn:hover{border-color:var(--chalk);color:var(--chalk)}
+  .pickbtn .ic{display:block;font-size:22px;margin-bottom:4px}
+  .pickrow.off{opacity:.45;pointer-events:none}
+  .shotinfo{font-size:12.5px;color:var(--ink-soft);margin-top:8px;text-align:center}
+  .shotinfo b{color:var(--ok)}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
   .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
   .seg button{padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
@@ -117,6 +126,8 @@
   .work:active{transform:scale(.985)}
   .wopen{display:block;width:100%;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:inherit;font:inherit}
   .work .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:var(--line)}
+  .wthumb{position:relative;display:block}
+  .imgcount{position:absolute;left:6px;bottom:6px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:20px;pointer-events:none}
   .work .wfoot{padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
   .work .wbtns{position:absolute;top:6px;right:6px;display:flex;gap:4px;z-index:3}
   .work .wbtn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border:1px solid rgba(0,0,0,.08);display:grid;place-items:center;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .1s}
@@ -142,6 +153,11 @@
   .vzoom .vzlabel{padding:0 12px;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:600;min-width:54px}
   .varrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;font-size:22px;z-index:2}
   .varrow.l{left:10px}.varrow.r{right:10px}.varrow:disabled{opacity:.25}
+  /* แถบเลือกรูปย่อย เมื่องานชิ้นนั้นมีหลายรูป */
+  .vstrip{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;flex:none;justify-content:center}
+  .vstrip button{flex:none;width:50px;height:50px;border-radius:9px;overflow:hidden;border:2px solid transparent;opacity:.5;transition:.15s;padding:0}
+  .vstrip button.on{border-color:var(--chalk);opacity:1}
+  .vstrip img{width:100%;height:100%;object-fit:cover;display:block}
   .vmark{background:#fff;padding:14px 16px;padding-bottom:max(14px,env(safe-area-inset-bottom));border-radius:20px 20px 0 0}
   .stamps{display:flex;gap:10px;margin-bottom:12px}
   .stamp{flex:1;padding:12px;border-radius:13px;border:1.5px solid var(--line);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--card);transition:.12s}
@@ -166,9 +182,10 @@
   .result{max-width:460px;margin:0 auto;text-align:center}
   .rsheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-top:14px}
   .rsheet img{width:100%;display:block}
+  .rsheet img+img{border-top:1px solid var(--line)}
   .rstamp{font-size:46px;padding:14px 0 4px}.rscore{font-size:34px;font-weight:700;color:var(--chalk)}
   .rcomment{background:var(--marker-soft);color:#8a3a22;border-radius:13px;padding:13px 15px;margin:14px;font-size:14.5px;text-align:left;position:relative}
-  .rcomment::before{content:"ครูเขียนถึงเธอ";display:block;font-size:11px;font-weight:700;color:var(--marker);margin-bottom:4px}
+  .rcomment::before{content:"ความเห็นจากครู";display:block;font-size:11px;font-weight:700;color:var(--marker);margin-bottom:4px}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:30px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:90;box-shadow:var(--shadow-lg)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .modal-bg{position:fixed;inset:0;background:rgba(20,18,15,.4);z-index:70;display:grid;place-items:center;padding:18px;animation:fade .2s}
@@ -192,6 +209,10 @@
    KruBoard · frontend (ต่อ API จริง · ระบบ user/password)
    ============================================================ */
 const API = '/api/kb';
+// จำนวนรูปสูงสุดต่อการส่ง 1 ครั้ง — ต้องตรงกับ MAX_IMGS ใน functions/api/kb/[[route]].js
+const MAX_IMGS = 10;
+// งานเก่าที่มีรูปเดียวจะไม่มี field imgs — เผื่อไว้ให้อ่านได้ทั้ง 2 แบบ
+const subImgs = s => (s && s.imgs && s.imgs.length) ? s.imgs : (s && s.img ? [s.img] : []);
 
 // session ค้างยาว — เก็บใน localStorage (ไม่ต้องล็อกอินบ่อย)
 let _token = localStorage.getItem('kb_token') || null;
@@ -286,11 +307,11 @@ function landing(){
   app.innerHTML=`<div class="wrap">
     <div class="hero">
       <h1>ส่งการบ้าน<br>ตรวจง่าย เห็น<span class="hl">ทั้งห้อง</span>ในจอเดียว</h1>
-      <p>นักเรียนถ่ายงานส่งในไม่กี่วิ ครูกวาดตาดูทั้งห้อง ให้คะแนนและคอมเมนต์ได้ทันที</p>
+      <p>นักเรียนถ่ายรูปงานส่งได้ในไม่กี่วินาที ครูดูภาพรวมทั้งห้อง ให้คะแนนและเขียนความเห็นได้ทันที</p>
     </div>
     <div class="roles">
       <button class="role t" onclick="${_token?"go('t')":'loginModal()'}"><div class="ic">ค</div><h3>ฉันเป็นครู</h3><span>เข้าสู่ระบบด้วยชื่อผู้ใช้ เพื่อสร้างและตรวจกระดาน</span></button>
-      <button class="role s" onclick="openStudentEntry()"><div class="ic">นร</div><h3>ฉันเป็นนักเรียน</h3><span>ส่งงาน หรือดูผลการตรวจของตัวเอง</span></button>
+      <button class="role s" onclick="openStudentEntry()"><div class="ic">นร</div><h3>ฉันเป็นนักเรียน</h3><span>ส่งงาน หรือดูผลการตรวจของตนเอง</span></button>
     </div>
   </div>`;
 }
@@ -330,7 +351,7 @@ async function teacherHome(){
   app.innerHTML=`<div class="wrap"><div class="page">
     <div class="phead"><div><h2>กระดานของฉัน</h2><div class="sub">การบ้านแต่ละชิ้นคือกระดานหนึ่งใบ · มีเฉพาะของคุณ</div></div></div>
     <div class="grid"><button class="newcard" onclick="go('new')"><span class="plus">+</span>สร้างการบ้านใหม่</button>${cards}</div>
-    ${data.boards.length?'':'<div class="empty"><div class="big">📋</div>ยังไม่มีกระดาน เริ่มสร้างการบ้านแรกได้เลย</div>'}
+    ${data.boards.length?'':'<div class="empty"><div class="big">📋</div>ยังไม่มีกระดาน — เริ่มสร้างการบ้านชิ้นแรกได้ที่ปุ่มด้านบน</div>'}
   </div></div>`;
 }
 
@@ -350,7 +371,7 @@ function teacherNew(){
     </div></div></div>`;
 }
 async function createBoard(){
-  const title=$('#f_title').value.trim();if(!title)return toast('ใส่ชื่อการบ้านก่อนนะ');
+  const title=$('#f_title').value.trim();if(!title)return toast('กรุณากรอกชื่อการบ้าน');
   $('#cbtn').disabled=true;
   try{
     const r=await api('/boards',{method:'POST',json:{title,room:$('#f_room').value.trim(),roster:parseInt($('#f_roster').value)||0,peer:$('#f_peer').classList.contains('on')}});
@@ -366,8 +387,8 @@ async function shareView(id){
     <button class="back" onclick="go('board/${id}')">← ไปกระดาน</button><div class="phead"><h2>แจกให้นักเรียน</h2></div>
     <div class="share" style="max-width:420px;margin:0 auto">
       <div class="qrbox"><img src="${qrURL(link)}" alt="QR"></div>
-      <div style="font-weight:600">ฉายโค้ดนี้หน้าห้อง ให้นักเรียนสแกน</div>
-      <div style="font-size:13px;color:var(--ink-soft);margin-top:4px">หรือส่งลิงก์ในไลน์กลุ่มห้อง</div>
+      <div style="font-weight:600">ฉาย QR นี้หน้าชั้นเรียน เพื่อให้นักเรียนสแกน</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:4px">หรือส่งลิงก์ทางกลุ่มไลน์ของห้อง</div>
       <div class="linkrow"><input id="lk" value="${link}" readonly><button class="btn sm" onclick="copyLink()">คัดลอก</button></div>
       <div style="font-size:12.5px;color:var(--ink-soft);margin-top:10px">รหัสกระดาน: <b style="color:var(--chalk)">${id}</b></div>
       <button class="btn primary block" style="margin-top:18px" onclick="go('board/${id}')">ไปหน้าตรวจงาน</button>
@@ -395,13 +416,14 @@ async function teacherBoard(id){
     const idx=subs.indexOf(s);
     const badge=s.status==='ok'?'<div class="badge ok">✓</div>':s.status==='no'?'<div class="badge no">✕</div>':s.status==='star'?'<div class="badge star">★</div>':'';
     const ring=s.status==='wait'?'<div class="pending-ring"></div>':'';
+    const imgs=subImgs(s);
     cells+=`<div class="work">${ring}${badge}
       <div class="wbtns">
-        <button class="wbtn" title="ดาวน์โหลด" onclick="dlSub('${s.img}','${s.no}','${(s.name||'').replace(/'/g,"\\'")}',event)">⏬</button>
+        <button class="wbtn" title="ดาวน์โหลดรูปงาน" onclick="dlSub(${idx},event)">⏬</button>
         <button class="wbtn del" title="ลบงานนี้" onclick="delSub('${s.id}','${s.no}',event)">🗑</button>
       </div>
       <button class="wopen" onclick="openViewer('${id}',${idx})">
-        <img class="thumb" src="${s.img}" loading="lazy" alt="">
+        <div class="wthumb"><img class="thumb" src="${imgs[0]||''}" loading="lazy" alt="">${imgs.length>1?`<span class="imgcount">🖼 ${imgs.length} รูป</span>`:''}</div>
         <div class="wfoot"><span class="no">เลขที่ ${s.no}</span>
         ${s.score!=null&&s.score!==''?`<span class="scorechip">${esc(String(s.score))}</span>`:`<span class="nm">${esc(s.name||'')}</span>`}</div>
       </button></div>`;
@@ -417,16 +439,26 @@ async function teacherBoard(id){
     </div>
     <div class="toolbar"><div class="seg">${seg('all','ทั้งหมด '+counts.all)}${seg('wait','ยังไม่ตรวจ '+counts.wait)}${seg('done','ตรวจแล้ว '+counts.done)}</div>
       <div style="flex:1"></div><button class="btn sm" onclick="go('share/${id}')">📤 แจกลิงก์</button><button class="btn sm" onclick="go('sum/${id}')">📊 สรุปผล</button></div>
-    ${show.length?`<div class="mgrid">${cells}</div>`:`<div class="empty"><div class="big">🪧</div>${subs.length?'ไม่มีงานในหมวดนี้':'ยังไม่มีนักเรียนส่งงาน — แจกลิงก์ให้ห้องได้เลย'}</div>`}
+    ${show.length?`<div class="mgrid">${cells}</div>`:`<div class="empty"><div class="big">🪧</div>${subs.length?'ไม่มีงานในหมวดนี้':'ยังไม่มีนักเรียนส่งงาน — แจกลิงก์ให้นักเรียนเพื่อเริ่มส่งงาน'}</div>`}
   </div></div>`;
 }
 function setFilter(k,id){_filter=k;teacherBoard(id)}
 
 /* ดาวน์โหลด/ลบ จากการ์ด (ไม่เปิด viewer) */
-function dlSub(img,no,name,ev){
+function dlSub(idx,ev){
   if(ev){ev.stopPropagation();ev.preventDefault()}
-  const a=document.createElement('a');a.href=img;a.download=`งาน-เลขที่${no}${name?'-'+name:''}.jpg`;
-  document.body.appendChild(a);a.click();a.remove();toast('กำลังดาวน์โหลด…');
+  const s=_subsCache[idx];if(s)downloadImgs(s);
+}
+/* ดาวน์โหลดรูปทุกใบของงานชิ้นหนึ่ง — เว้นจังหวะทีละใบ กันเบราว์เซอร์บล็อกดาวน์โหลดรัว ๆ */
+function downloadImgs(s){
+  const imgs=subImgs(s);if(!imgs.length)return toast('งานชิ้นนี้ไม่มีรูป');
+  const base=`งาน-เลขที่${s.no}${s.name?'-'+s.name:''}`;
+  imgs.forEach((src,i)=>setTimeout(()=>{
+    const a=document.createElement('a');a.href=src;
+    a.download=imgs.length>1?`${base}-${i+1}.jpg`:`${base}.jpg`;
+    document.body.appendChild(a);a.click();a.remove();
+  },i*350));
+  toast(imgs.length>1?`กำลังดาวน์โหลด ${imgs.length} รูป…`:'กำลังดาวน์โหลด…');
 }
 async function delSub(sid,no,ev){
   if(ev){ev.stopPropagation();ev.preventDefault()}
@@ -451,22 +483,24 @@ async function dlBoardZip(boardId,title,ev){
     const zip=new JSZip();
     // CSV สรุปคะแนน
     const stMap={ok:'✓ ถูก',no:'✕ ผิด',star:'★ ดีเด่น',wait:'ยังไม่ตรวจ'};
-    let csv='\uFEFFเลขที่,ชื่อ,สถานะ,คะแนน,หมายเหตุ\n';
+    let csv='\uFEFFเลขที่,ชื่อ,สถานะ,คะแนน,จำนวนรูป,หมายเหตุ\n';
     subs.forEach(s=>{
-      const row=[s.no,'"'+(s.name||'').replace(/"/g,'""')+'"',stMap[s.status]||s.status,s.score??'','"'+(s.comment||'').replace(/"/g,'""')+'"'];
+      const row=[s.no,'"'+(s.name||'').replace(/"/g,'""')+'"',stMap[s.status]||s.status,s.score??'',subImgs(s).length,'"'+(s.comment||'').replace(/"/g,'""')+'"'];
       csv+=row.join(',')+'\n';
     });
     zip.file('สรุปคะแนน.csv',csv);
 
-    // ดาวน์โหลดรูปทีละใบ (concurrent 4 อันเพื่อกัน rate limit)
+    // ดาวน์โหลดรูปทีละคน (concurrent 4 คนเพื่อกัน rate limit) — หนึ่งคนอาจมีหลายรูป
     let done=0;
     async function fetchOne(s){
-      try{
-        const res=await fetch(s.img);if(!res.ok)throw new Error('fetch '+res.status);
-        const blob=await res.blob();
-        const fname=`เลขที่${s.no}${s.name?'-'+s.name:''}.jpg`;
-        zip.file(fname,blob);
-      }catch(e){console.warn('skip',s.no,e.message)}
+      const imgs=subImgs(s);
+      const base=`เลขที่${s.no}${s.name?'-'+s.name:''}`;
+      for(let i=0;i<imgs.length;i++){
+        try{
+          const res=await fetch(imgs[i]);if(!res.ok)throw new Error('fetch '+res.status);
+          zip.file(imgs.length>1?`${base}-${i+1}.jpg`:`${base}.jpg`,await res.blob());
+        }catch(e){console.warn('skip',s.no,i+1,e.message)}
+      }
       done++;
       if(done%5===0||done===subs.length)toast(`กำลังโหลด ${done}/${subs.length}…`);
     }
@@ -513,11 +547,7 @@ function _zoomApply(){
 function vzIn(){_zoom.scale=Math.min(5,_zoom.scale*1.4);_zoomApply()}
 function vzOut(){_zoom.scale=Math.max(0.3,_zoom.scale/1.4);_zoomApply()}
 function vzReset(){_zoomReset()}
-function vzDownload(){
-  const s=_vCtx.subs[_vCtx.idx];const a=document.createElement('a');
-  a.href=s.img;a.download=`งาน-เลขที่${s.no}${s.name?'-'+s.name:''}.jpg`;
-  document.body.appendChild(a);a.click();a.remove();toast('กำลังดาวน์โหลด…');
-}
+function vzDownload(){downloadImgs(_vCtx.subs[_vCtx.idx])}
 async function vzDelete(){
   const s=_vCtx.subs[_vCtx.idx];
   if(!confirm(`ลบงานของเลขที่ ${s.no}${s.name?' ('+s.name+')':''}?\nทำแล้วไม่สามารถกู้คืนได้`))return;
@@ -527,7 +557,7 @@ async function vzDelete(){
     _subsCache=_vCtx.subs;
     if(_vCtx.subs.length===0){closeViewer();return}
     if(_vCtx.idx>=_vCtx.subs.length)_vCtx.idx=_vCtx.subs.length-1;
-    renderViewer();
+    _vCtx.i=0;renderViewer();
   }catch(e){toast(e.message)}
 }
 function _vstageBind(){
@@ -560,17 +590,20 @@ function _vstageBind(){
   // double-click/tap = toggle zoom 1x ↔ 2.5x
   wrap.ondblclick=()=>{if(_zoom.scale>1)_zoomReset();else{_zoom.scale=2.5;_zoomApply()}};
 }
-function openViewer(boardId,idx){_vCtx={boardId,subs:_subsCache,idx};_zoomReset();renderViewer()}
+function openViewer(boardId,idx){_vCtx={boardId,subs:_subsCache,idx,i:0};_zoomReset();renderViewer()}
 function renderViewer(){
   const{subs,idx}=_vCtx,s=subs[idx];
+  const imgs=subImgs(s);
+  if(_vCtx.i>=imgs.length)_vCtx.i=0;   // งานชิ้นใหม่อาจมีรูปน้อยกว่าชิ้นก่อน
   _zoom.scale=1;_zoom.x=0;_zoom.y=0; // reset zoom เมื่อเปลี่ยนรูป
   const stamp=k=>`<button class="stamp ${k} ${s.status===k?'on':''}" onclick="setStamp('${k}')">${k==='ok'?'✓ ถูก':k==='no'?'✕ ผิด':'★ ดีเด่น'}</button>`;
   let el=document.getElementById('viewer');
   if(!el){el=document.createElement('div');el.id='viewer';el.className='viewer';document.body.appendChild(el)}
-  el.innerHTML=`<div class="vtop"><div><div class="vname">เลขที่ ${s.no}${s.name?' · '+esc(s.name):''}</div><div class="vsub">${idx+1} / ${subs.length}</div></div><button class="vclose" onclick="closeViewer()">✕</button></div>
+  el.innerHTML=`<div class="vtop"><div><div class="vname">เลขที่ ${s.no}${s.name?' · '+esc(s.name):''}</div><div class="vsub">${idx+1} / ${subs.length}${imgs.length>1?` · รูปที่ ${_vCtx.i+1} / ${imgs.length}`:''}</div></div><button class="vclose" onclick="closeViewer()">✕</button></div>
+    ${imgs.length>1?`<div class="vstrip">${imgs.map((u,i)=>`<button class="${i===_vCtx.i?'on':''}" onclick="viSel(${i})"><img src="${u}" alt=""></button>`).join('')}</div>`:''}
     <div class="vstage">
       <button class="varrow l" ${idx===0?'disabled':''} onclick="vNav(-1)">‹</button>
-      <div class="vimg-wrap"><img src="${s.img}" alt=""></div>
+      <div class="vimg-wrap"><img src="${imgs[_vCtx.i]||''}" alt=""></div>
       <button class="varrow r" ${idx===subs.length-1?'disabled':''} onclick="vNav(1)">›</button>
       <div class="vzoom">
         <button onclick="vzOut()" title="ย่อ">−</button>
@@ -590,13 +623,15 @@ function renderViewer(){
 }
 function setStamp(k){const s=_vCtx.subs[_vCtx.idx];collectInputs();s.status=s.status===k?'wait':k;renderViewer()}
 function collectInputs(){const sc=document.getElementById('v_score'),cm=document.getElementById('v_comment'),s=_vCtx.subs[_vCtx.idx];if(sc)s.score=sc.value;if(cm)s.comment=cm.value}
-function vNav(d){collectInputs();const n=_vCtx.idx+d;if(n<0||n>=_vCtx.subs.length)return;_vCtx.idx=n;renderViewer()}
+function vNav(d){collectInputs();const n=_vCtx.idx+d;if(n<0||n>=_vCtx.subs.length)return;_vCtx.idx=n;_vCtx.i=0;renderViewer()}
+/* เลือกดูรูปใบอื่นของงานชิ้นเดิม */
+function viSel(i){collectInputs();_vCtx.i=i;renderViewer()}
 async function saveMark(){
   collectInputs();const s=_vCtx.subs[_vCtx.idx];
   if(s.status==='wait'&&s.score!==''&&s.score!=null)s.status='ok';
   try{await api('/subs/'+s.id,{method:'PUT',json:{status:s.status,score:s.score,comment:s.comment}});toast('บันทึกแล้ว')}
   catch(e){return toast(e.message)}
-  if(_vCtx.idx<_vCtx.subs.length-1){_vCtx.idx++;renderViewer()}else closeViewer();
+  if(_vCtx.idx<_vCtx.subs.length-1){_vCtx.idx++;_vCtx.i=0;renderViewer()}else closeViewer();
 }
 function closeViewer(){const el=document.getElementById('viewer');if(el)el.remove();document.body.style.overflow='';teacherBoard(_vCtx.boardId)}
 
@@ -632,17 +667,17 @@ async function studentPeer(id){
     app.innerHTML=`<div class="wrap"><div class="empty" style="padding-top:80px"><div class="big">🔒</div>${esc(e.message)}<br><button class="btn sm" style="margin-top:14px" onclick="go('s/${id}')">ไปหน้าส่งงาน</button></div></div>`;return;
   }
   const{board:b,subs}=data;
-  const cards=subs.length?subs.map((s,i)=>`<button class="pwork" onclick="openPeerViewer(${i})">
-    <img src="${s.img}" alt="" loading="lazy">
+  const cards=subs.length?subs.map((s,i)=>{const im=subImgs(s);return `<button class="pwork" onclick="openPeerViewer(${i})">
+    <div class="wthumb"><img src="${im[0]||''}" alt="" loading="lazy">${im.length>1?`<span class="imgcount">🖼 ${im.length} รูป</span>`:''}</div>
     <div class="pwlbl"><span class="pno">เลขที่ ${s.no}</span>${s.name?`<span class="pnm">${esc(s.name)}</span>`:''}</div>
-  </button>`).join(''):`<div class="empty"><div class="big">🪧</div>ยังไม่มีเพื่อนส่งงาน</div>`;
+  </button>`}).join(''):`<div class="empty"><div class="big">🪧</div>ยังไม่มีผู้ส่งงาน</div>`;
   app.innerHTML=`<div class="wrap"><div class="page">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <button class="btn sm" onclick="go('')">← กลับ</button>
       <button class="btn sm" onclick="go('s/${id}')">📤 ส่งงานของฉัน</button>
       <button class="btn sm" style="margin-left:auto" onclick="go('r/${id}')">📋 ดูผลตรวจ</button>
     </div>
-    <div class="phead"><div><h2>${esc(b.title)}</h2><div class="sub">${esc(b.room||'')} · 👥 กระดานแชร์ — ดูงานเพื่อนๆ ได้</div></div></div>
+    <div class="phead"><div><h2>${esc(b.title)}</h2><div class="sub">${esc(b.room||'')} · 👥 กระดานแชร์ — ดูงานของเพื่อนร่วมชั้นได้</div></div></div>
     ${subs.length?`<div class="pgrid">${cards}</div>`:cards}
   </div></div>`;
   // เก็บ subs สำหรับ peer viewer
@@ -650,17 +685,19 @@ async function studentPeer(id){
 }
 
 /* peer viewer — แบบเดียวกับครู แต่ไม่มี control ตรวจ */
-let _pvIdx=0;
-function openPeerViewer(idx){_pvIdx=idx;_zoomReset();renderPeerViewer()}
+let _pvIdx=0,_pvImg=0;
+function openPeerViewer(idx){_pvIdx=idx;_pvImg=0;_zoomReset();renderPeerViewer()}
 function renderPeerViewer(){
   const subs=window._peerSubs||[];const s=subs[_pvIdx];if(!s)return;
+  const imgs=subImgs(s);if(_pvImg>=imgs.length)_pvImg=0;
   _zoom.scale=1;_zoom.x=0;_zoom.y=0;
   let el=document.getElementById('viewer');
   if(!el){el=document.createElement('div');el.id='viewer';el.className='viewer';document.body.appendChild(el)}
-  el.innerHTML=`<div class="vtop"><div><div class="vname">เลขที่ ${s.no}${s.name?' · '+esc(s.name):''}</div><div class="vsub">${_pvIdx+1} / ${subs.length}</div></div><button class="vclose" onclick="closePeerViewer()">✕</button></div>
+  el.innerHTML=`<div class="vtop"><div><div class="vname">เลขที่ ${s.no}${s.name?' · '+esc(s.name):''}</div><div class="vsub">${_pvIdx+1} / ${subs.length}${imgs.length>1?` · รูปที่ ${_pvImg+1} / ${imgs.length}`:''}</div></div><button class="vclose" onclick="closePeerViewer()">✕</button></div>
+    ${imgs.length>1?`<div class="vstrip">${imgs.map((u,i)=>`<button class="${i===_pvImg?'on':''}" onclick="pvSel(${i})"><img src="${u}" alt=""></button>`).join('')}</div>`:''}
     <div class="vstage">
       <button class="varrow l" ${_pvIdx===0?'disabled':''} onclick="pvNav(-1)">‹</button>
-      <div class="vimg-wrap"><img src="${s.img}" alt=""></div>
+      <div class="vimg-wrap"><img src="${imgs[_pvImg]||''}" alt=""></div>
       <button class="varrow r" ${_pvIdx===subs.length-1?'disabled':''} onclick="pvNav(1)">›</button>
       <div class="vzoom">
         <button onclick="vzOut()" title="ย่อ">−</button>
@@ -672,16 +709,18 @@ function renderPeerViewer(){
   document.body.style.overflow='hidden';
   setTimeout(_vstageBind,30);
 }
-function pvNav(d){const n=_pvIdx+d;if(n<0||n>=window._peerSubs.length)return;_pvIdx=n;renderPeerViewer()}
+function pvNav(d){const n=_pvIdx+d;if(n<0||n>=window._peerSubs.length)return;_pvIdx=n;_pvImg=0;renderPeerViewer()}
+function pvSel(i){_pvImg=i;renderPeerViewer()}
 function closePeerViewer(){const el=document.getElementById('viewer');if(el)el.remove();document.body.style.overflow=''}
 
 /* ---- student submit ---- */
-let _pendingBlob=null;
+let _pendingShots=[];   // รูปที่เลือกไว้แต่ยังไม่ส่ง: [{blob,url,origKB,newKB}]
+function clearShots(){_pendingShots.forEach(s=>URL.revokeObjectURL(s.url));_pendingShots=[]}
 async function studentSubmit(id){
   setWho('');loading();
   let b;try{b=await api('/board/'+id,{noAuth:true})}catch(e){
     app.innerHTML=`<div class="wrap"><div class="empty" style="padding-top:80px"><div class="big">🔍</div>ไม่พบกระดานนี้<br><button class="btn sm" style="margin-top:14px" onclick="go('')">กลับหน้าแรก</button></div></div>`;return}
-  _pendingBlob=null;
+  clearShots();
     app.innerHTML=`<div class="wrap"><div class="page"><div class="scard">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
       <button class="btn sm" onclick="go('')">← กลับ</button>
@@ -689,37 +728,69 @@ async function studentSubmit(id){
       <button class="btn sm" style="margin-left:auto" onclick="go('r/${id}')">📋 ดูผลการตรวจ</button>
     </div>
     <div class="stask"><div class="tag">ส่งการบ้าน</div><h2>${esc(b.title)}</h2><div class="rm">${esc(b.room||'')}</div></div>
-    <div class="field"><label>เลขที่ของเธอ</label><input id="s_no" type="number" inputmode="numeric" placeholder="เช่น 12"></div>
-    <div class="field"><label>ชื่อ (ไม่บังคับ)</label><input id="s_name" placeholder="ชื่อเล่นก็ได้"></div>
-    <div class="field"><label>รูปงานของเธอ</label>
-      <label class="drop" id="drop"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickImg(this)">
-      <div id="dropInner"><div class="cam">📷</div>แตะเพื่อถ่ายรูป หรือเลือกจากเครื่อง</div></label></div>
+    <div class="field"><label>เลขที่</label><input id="s_no" type="number" inputmode="numeric" placeholder="เช่น 12"></div>
+    <div class="field"><label>ชื่อ - สกุล</label><input id="s_name" placeholder="เช่น สมชาย ใจดี"></div>
+    <div class="field"><label>รูปงาน (แนบได้สูงสุด ${MAX_IMGS} รูป)</label>
+      <div class="shots" id="shots"></div>
+      <div class="pickrow" id="pickrow">
+        <label class="pickbtn"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickImg(this)"><span class="ic">📷</span>ถ่ายรูป</label>
+        <label class="pickbtn"><input type="file" accept="image/*" multiple style="display:none" onchange="pickImg(this)"><span class="ic">🖼</span>เลือกจากเครื่อง</label>
+      </div>
+      <div class="shotinfo" id="shotinfo"></div>
+    </div>
     <button class="btn primary block" id="subBtn" onclick="submitWork('${id}')">ส่งงาน</button>
   </div></div></div>`;
+  renderShots();
+}
+function renderShots(){
+  const g=$('#shots'),info=$('#shotinfo'),row=$('#pickrow');
+  if(!g||!info||!row)return;
+  g.innerHTML=_pendingShots.map((s,i)=>`<div class="shot">
+    <img src="${s.url}" alt="">
+    <button class="rm" title="นำรูปนี้ออก" onclick="removeShot(${i})">✕</button>
+    <span class="ord">${i+1}</span>
+  </div>`).join('');
+  row.classList.toggle('off',_pendingShots.length>=MAX_IMGS);
+  if(!_pendingShots.length){info.textContent='ยังไม่ได้แนบรูป — ต้องแนบอย่างน้อย 1 รูป';return}
+  const kb=_pendingShots.reduce((a,s)=>a+s.newKB,0);
+  info.innerHTML=`แนบแล้ว <b>${_pendingShots.length}</b> / ${MAX_IMGS} รูป · ย่อขนาดแล้วรวม ${kb} KB`;
+}
+function removeShot(i){
+  const s=_pendingShots[i];if(!s)return;
+  URL.revokeObjectURL(s.url);_pendingShots.splice(i,1);renderShots();
 }
 async function pickImg(input){
-  const f=input.files[0];if(!f)return;
-  $('#dropInner').innerHTML='<div style="color:var(--ink-soft)">กำลังย่อรูป…</div>';
-  const{blob,origKB,newKB}=await compress(f);_pendingBlob=blob;
-  const u=URL.createObjectURL(blob);
-  $('#drop').classList.add('has');
-  $('#dropInner').innerHTML=`<img class="preview" src="${u}"><div class="shrink-note">✓ ย่อรูปแล้ว ${origKB}KB → ${newKB}KB</div>`;
+  const files=[...input.files];input.value='';   // เคลียร์ค่า เพื่อให้เลือกไฟล์เดิมซ้ำได้
+  if(!files.length)return;
+  const room=MAX_IMGS-_pendingShots.length;
+  if(room<=0)return toast(`แนบรูปได้สูงสุด ${MAX_IMGS} รูป`);
+  if(files.length>room)toast(`แนบได้อีก ${room} รูป — ระบบรับเฉพาะ ${room} รูปแรก`);
+  const info=$('#shotinfo');if(info)info.textContent='กำลังย่อรูป…';
+  for(const f of files.slice(0,room)){
+    const{blob,origKB,newKB}=await compress(f);
+    _pendingShots.push({blob,url:URL.createObjectURL(blob),origKB,newKB});
+  }
+  renderShots();
 }
 async function submitWork(id){
-  const no=$('#s_no').value.trim();if(!no)return toast('ใส่เลขที่ก่อนนะ');
-  if(!_pendingBlob)return toast('ยังไม่ได้แนบรูปงาน');
-  $('#subBtn').disabled=true;$('#subBtn').textContent='กำลังส่ง…';
-  const fd=new FormData();fd.append('board',id);fd.append('no',no);fd.append('name',$('#s_name').value.trim());fd.append('file',_pendingBlob,'work.jpg');
+  const no=$('#s_no').value.trim();if(!no)return toast('กรุณากรอกเลขที่');
+  const name=$('#s_name').value.trim();if(!name)return toast('กรุณากรอกชื่อ - สกุล');
+  if(!_pendingShots.length)return toast('กรุณาแนบรูปงานอย่างน้อย 1 รูป');
+  const n=_pendingShots.length;
+  $('#subBtn').disabled=true;$('#subBtn').textContent=`กำลังส่ง ${n} รูป…`;
+  const fd=new FormData();fd.append('board',id);fd.append('no',no);fd.append('name',name);
+  _pendingShots.forEach((s,i)=>fd.append('file',s.blob,`work-${i+1}.jpg`));
   try{await api('/submit',{method:'POST',body:fd,noAuth:true})}
   catch(e){$('#subBtn').disabled=false;$('#subBtn').textContent='ส่งงาน';return toast(e.message)}
+  clearShots();
   app.innerHTML=`<div class="wrap"><div class="page"><div class="result">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
       <button class="btn sm" onclick="go('')">← กลับหน้าแรก</button>
     </div>
-    <div style="font-size:60px;margin-top:30px">🎉</div><h2 style="margin:6px 0">ส่งงานเรียบร้อย!</h2>
-    <p style="color:var(--ink-soft)">เลขที่ ${no}</p>
+    <div style="font-size:60px;margin-top:30px">🎉</div><h2 style="margin:6px 0">ส่งงานเรียบร้อย</h2>
+    <p style="color:var(--ink-soft)">เลขที่ ${no} · ${esc(name)} · ${n} รูป</p>
     <button class="btn primary block" style="margin-top:20px;max-width:300px;margin-inline:auto" onclick="go('r/${id}')">ดูผลการตรวจ (เมื่อครูตรวจแล้ว)</button>
-    <button class="btn ghost block" style="margin-top:8px;max-width:300px;margin-inline:auto" onclick="go('s/${id}')">ส่งงานคนอื่น / ส่งใหม่</button>
+    <button class="btn ghost block" style="margin-top:8px;max-width:300px;margin-inline:auto" onclick="go('s/${id}')">ส่งงานอีกครั้ง / ส่งแทนผู้อื่น</button>
   </div></div></div>`;
 }
 
@@ -736,16 +807,17 @@ async function studentResult(id){
       <button class="btn sm" style="margin-left:auto" onclick="go('s/${id}')">📤 ไปส่งงาน</button>
     </div>
     <div class="phead" style="justify-content:center"><h2>ดูผลการตรวจ</h2></div>
-    <div class="field" style="max-width:240px;margin:0 auto"><label>ใส่เลขที่ของเธอ</label><input id="r_no" type="number" inputmode="numeric" placeholder="เลขที่"></div>
+    <div class="field" style="max-width:240px;margin:0 auto"><label>เลขที่</label><input id="r_no" type="number" inputmode="numeric" placeholder="เช่น 12"></div>
     <button class="btn primary" style="margin-top:6px" onclick="showResult('${id}')">ดูผล</button><div id="rOut"></div></div></div></div>`;
 }
 async function showResult(id){
-  const no=$('#r_no').value.trim();if(!no)return toast('ใส่เลขที่ก่อนนะ');
+  const no=$('#r_no').value.trim();if(!no)return toast('กรุณากรอกเลขที่');
   const out=$('#rOut');out.innerHTML='<div class="spin"></div>';
   let s;try{s=await api('/result/'+id+'/'+no,{noAuth:true})}catch(e){out.innerHTML=`<div class="empty" style="padding:30px"><div class="big">🤔</div>${esc(e.message)}</div>`;return}
-  if(s.status==='wait'){out.innerHTML=`<div class="rsheet"><img src="${s.img}"><div style="padding:18px"><div style="font-size:34px">⏳</div><div style="font-weight:600">ครูยังไม่ได้ตรวจงานนี้</div><div style="font-size:13px;color:var(--ink-soft)">กลับมาดูใหม่ทีหลังนะ</div></div></div>`;return}
+  const pics=subImgs(s).map(u=>`<img src="${u}" alt="">`).join('');
+  if(s.status==='wait'){out.innerHTML=`<div class="rsheet">${pics}<div style="padding:18px"><div style="font-size:34px">⏳</div><div style="font-weight:600">ครูยังไม่ได้ตรวจงานนี้</div><div style="font-size:13px;color:var(--ink-soft)">กรุณาตรวจสอบอีกครั้งภายหลัง</div></div></div>`;return}
   const stamp=s.status==='ok'?'✅':s.status==='no'?'❌':'⭐';
-  out.innerHTML=`<div class="rsheet"><img src="${s.img}"><div class="rstamp">${stamp}</div>
+  out.innerHTML=`<div class="rsheet">${pics}<div class="rstamp">${stamp}</div>
     ${s.score!=null&&s.score!==''?`<div class="rscore">${esc(String(s.score))} คะแนน</div>`:''}
     ${s.comment?`<div class="rcomment">${esc(s.comment)}</div>`:'<div style="height:14px"></div>'}</div>`;
 }
