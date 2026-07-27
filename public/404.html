@@ -48,10 +48,10 @@ footer a{color:#ffc555;text-decoration:none;font-weight:700;}
     <p>ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว<br>ลองเริ่มจากหน้าเหล่านี้ดูครับ</p>
     <div class="links">
       <a class="main" href="/">หน้าหลัก</a>
-      <a href="/#/blog">บทความ</a>
+      <a href="/blog">บทความ</a>
       <a href="/apps">แอปทั้งหมด</a>
       <a href="/worksheets">ใบงาน</a>
-      <a href="/#/report">แจ้งปัญหา</a>
+      <a href="/report">แจ้งปัญหา</a>
     </div>
   </div>
 </main>
@@ -59,16 +59,11 @@ footer a{color:#ffc555;text-decoration:none;font-weight:700;}
   <a href="/">Kru-ti ครูติ TH</a> — แอปการสอนและบทความ เพื่อครูไทย · © 2568
 </footer>
 <script>
-// เว็บหลักเป็น SPA ที่ใช้ hash routing — บางหน้าจึงไม่มี path จริง
-// ถ้าคนพิมพ์ /blog หรือ /about มาตรง ๆ ให้พาไปหน้าที่ถูกต้องแทนที่จะให้เจอ 404 เปล่า ๆ
-// (crawler ยังได้สถานะ 404 ตามปกติ — หน้าพวกนี้อยู่หลัง # จึงไม่ได้ตั้งใจให้ index อยู่แล้ว)
+// ลิงก์เก่าแบบ #/... ที่ถูกแชร์ไว้ ยังพามาถึงหน้าที่ถูกต้องได้
+// (ทุกเส้นทางของเว็บเป็น path จริงแล้ว หน้านี้จึงเจอเฉพาะ URL ที่ไม่มีอยู่จริง)
 (function () {
-  var map = {
-    '/blog': '/#/blog', '/about': '/#/about', '/buy': '/#/buy',
-    '/report': '/#/report', '/privacy': '/#/privacy'
-  };
-  var to = map[location.pathname.replace(/\/+$/, '') || '/'];
-  if (to) location.replace(to);
+  var h = location.hash;
+  if (h && h.charAt(1) === '/') location.replace(h.slice(1));
 })();
 </script>
 </body>

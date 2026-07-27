@@ -112,9 +112,9 @@ ${navHTML(BASE)}
       <p class="lead">${desc}</p>
       <div class="cta">
         ${isLocked
-          ? `<a class="btn btn-lock" href="${BASE}/#/worksheet/${w.id}">🔓 ใส่รหัสเพื่อดาวน์โหลด</a>
-             <a class="btn btn-ghost" href="${BASE}/#/buy">วิธีขอรหัส →</a>`
-          : `<a class="btn btn-go" href="${BASE}/#/worksheet/${w.id}">⬇️ ดาวน์โหลดใบงาน</a>`}
+          ? `<a class="btn btn-lock" href="${BASE}/worksheet/${w.id}">🔓 ใส่รหัสเพื่อดาวน์โหลด</a>
+             <a class="btn btn-ghost" href="${BASE}/buy">วิธีขอรหัส →</a>`
+          : `<a class="btn btn-go" href="${BASE}/worksheet/${w.id}">⬇️ ดาวน์โหลดใบงาน</a>`}
       </div>
     </div>
   </div>
@@ -137,7 +137,7 @@ ${navHTML(BASE)}
   <div class="more">
     <a href="${BASE}/worksheets">ดูใบงานทั้งหมด →</a>
     <a href="${BASE}/apps">คลังแอปการสอน →</a>
-    <a href="${BASE}/#/blog">อ่านบทความ →</a>
+    <a href="${BASE}/blog">อ่านบทความ →</a>
   </div>
 </main>
 ${footerHTML(BASE)}
@@ -162,7 +162,7 @@ function navHTML(BASE) {
   <a class="logo" href="${BASE}/"><span class="logo-mark">✦</span>Kru-ti ครูติ <em>TH</em></a>
   <div class="nav-links">
     <a href="${BASE}/">หน้าหลัก</a>
-    <a href="${BASE}/#/blog">บทความ</a>
+    <a href="${BASE}/blog">บทความ</a>
     <a href="${BASE}/apps">แอป</a>
     <a href="${BASE}/worksheets">ใบงาน</a>
   </div>

@@ -75,7 +75,7 @@ export async function onRequest({ params, env, request }) {
     image: img ? [img] : [],
     datePublished: dateISO,
     dateModified: (art.updated_at || art.created_at || '').replace(' ', 'T'),
-    author: { '@type': 'Person', name: art.author_name || 'Kru-ti ครูติ', url: `${SITE}/#/about` },
+    author: { '@type': 'Person', name: art.author_name || 'Kru-ti ครูติ', url: `${SITE}/about` },
     publisher: {
       '@type': 'Organization',
       name: 'Kru-ti ครูติ TH',
@@ -112,12 +112,12 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
   <a class="logo" href="${BASE}/"><span class="logo-mark">✦</span>Kru-ti ครูติ <em>TH</em></a>
   <div class="nav-links">
     <a href="${BASE}/">หน้าหลัก</a>
-    <a href="${BASE}/#/blog">บทความ</a>
-    <a href="${BASE}/#/apps">แอปทั้งหมด</a>
+    <a href="${BASE}/blog">บทความ</a>
+    <a href="${BASE}/apps">แอปทั้งหมด</a>
   </div>
 </nav>
 <main class="art-wrap">
-  <a class="back" href="${BASE}/#/blog">← บทความทั้งหมด</a>
+  <a class="back" href="${BASE}/blog">← บทความทั้งหมด</a>
   <h1>${title}</h1>
   <div class="art-info">
     <span class="cat">${esc(art.category || '')}</span>
@@ -142,8 +142,8 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     </a>`).join('')}
   </div>` : ''}
   <div class="more">
-    <a href="${BASE}/#/blog">อ่านบทความอื่น →</a>
-    <a href="${BASE}/#/apps">ดูแอปการสอนทั้งหมด →</a>
+    <a href="${BASE}/blog">อ่านบทความอื่น →</a>
+    <a href="${BASE}/apps">ดูแอปการสอนทั้งหมด →</a>
   </div>
 </main>
 <footer>
