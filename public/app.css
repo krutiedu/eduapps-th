@@ -181,6 +181,8 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 
 /* ── ARTICLE PAGE ── */
 .art-wrap{max-width:820px;margin:0 auto;padding:42px 22px;}
+/* รูปปกบทความ — ต้องตรงกับ .cover ใน functions/article/[id].js (หน้า SSR) */
+.cover{width:100%;height:auto;border-radius:14px;margin-bottom:24px;display:block;}
 .art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.42;margin-bottom:16px;}
 .art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;
           padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}

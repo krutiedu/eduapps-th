@@ -342,6 +342,11 @@ async function renderArticle(slugOrId) {
   const cmtData = await get('/comments/' + art.id).catch(() => ({ comments: [] }));
   // ลิงก์แชร์แบบสั้น: ใช้ id แทน slug ไทยที่ encode ยาว
   const shareUrl = `${SITE}/article/${art.id}`;  // URL จริง — crawler เห็น OG tags
+  // รูปปก — หน้า SSR (/article/:id) โชว์มาตลอด แต่หน้านี้ไม่เคยโชว์ บทความเดียวกัน
+  // จึงหน้าตาไม่เหมือนกันระหว่างกดเข้าจากในเว็บกับกด F5
+  // ข้ามถ้าผู้เขียนวางรูปเดียวกันไว้ในเนื้อหาอยู่แล้ว จะได้ไม่ขึ้นซ้ำสองใบติดกัน
+  const cover = (art.image_url && !String(art.content || '').includes(art.image_url))
+                ? art.image_url : '';
 
   app.innerHTML = `
   <div class="art-wrap rv">
@@ -354,6 +359,7 @@ async function renderArticle(slugOrId) {
       <span>👁 ${art.views||0} ครั้ง</span>
     </div>
     ${adSlot()}
+    ${cover ? `<img class="cover" src="${cover}" alt="${esc(art.title)}">` : ''}
     <div class="art-body">${addLazyLoading(art.content||'')}</div>
     <div style="margin-top:28px;">${adSlot()}</div>
     <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">

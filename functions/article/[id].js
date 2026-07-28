@@ -63,7 +63,13 @@ export async function onRequest({ params, env, request }) {
   const excerpt  = esc(art.excerpt || art.title);
   const author   = esc(art.author_name || 'Kru-ti ครูติ');
   const canon    = `${SITE}/article/${art.id}`;
-  const img      = art.image_url || `${SITE}/og-image.png`; // ไม่มีรูปปก → ใช้รูปแบรนด์
+  const img      = art.image_url || `${SITE}/og-image.png`; // สำหรับ og:image/JSON-LD เท่านั้น
+  // รูปที่โชว์บนหน้าจริง — ต้องแยกจาก img ข้างบน 2 เหตุผล
+  //   1. ถ้าบทความไม่มีรูปปก img จะเป็นรูปแบรนด์ ซึ่งเอามาแปะหัวบทความไม่ได้
+  //      (บทความ 12/13 เคยขึ้นแบนเนอร์ og-image.png เป็นรูปปกอยู่พักหนึ่ง)
+  //   2. ผู้เขียนบางคนวางรูปปกซ้ำในเนื้อหาด้วย จะได้ไม่โชว์ซ้ำสองใบติดกัน
+  const cover    = (art.image_url && !String(art.content || '').includes(art.image_url))
+                   ? art.image_url : '';
   const dateISO  = (art.created_at || '').replace(' ', 'T');
   const dateThai = fmtThai(art.created_at);
 
@@ -114,7 +120,10 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     <a href="${BASE}/">หน้าหลัก</a>
     <a href="${BASE}/blog">บทความ</a>
     <a href="${BASE}/apps">แอปทั้งหมด</a>
+    <a href="${BASE}/worksheets">ใบงาน</a>
+    <a href="${BASE}/buy">ซื้อรหัส</a>
   </div>
+  <div class="nav-right"></div>
 </nav>
 <main class="art-wrap">
   <a class="back" href="${BASE}/blog">← บทความทั้งหมด</a>
@@ -124,7 +133,7 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     <span>📅 ${dateThai}</span>
     <span>✍️ ${author}</span>
   </div>
-  ${img ? `<img class="cover" src="${esc(img)}" alt="${title}">` : ''}
+  ${cover ? `<img class="cover" src="${esc(cover)}" alt="${title}">` : ''}
   <div class="art-body">${addLazy(art.content || '')}</div>
   <div class="share">
     <strong>แชร์:</strong>
@@ -197,10 +206,15 @@ nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:ce
 .logo{font-family:'Pridi',serif;font-size:1.15rem;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;gap:9px;}
 .logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-deep));display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:1rem;}
 .logo em{font-style:normal;font-size:.65rem;color:#7587a5;align-self:flex-start;margin-top:2px;}
-.nav-links{display:flex;gap:4px;}
-.nav-links a{padding:8px 14px;border-radius:9px;font-size:.9rem;font-weight:600;color:#aebad0;text-decoration:none;}
+.nav-links{display:flex;gap:2px;}
+.nav-links a{padding:9px 16px;border-radius:9px;font-size:.94rem;font-weight:600;color:#aebad0;text-decoration:none;}
 .nav-links a:hover{color:#fff;background:rgba(255,255,255,.07);}
-.art-wrap{max-width:730px;margin:0 auto;padding:42px 22px;}
+/* ตัวถ่วงฝั่งขวา — nav ใช้ space-between ถ้ามีแค่ logo กับ nav-links เมนูจะถูกดันไปชิดขวา
+   ไม่ตรงกับเว็บหลักที่มีปุ่มค้นหาคั่นอยู่ทำให้เมนูอยู่กลาง (หน้านี้ไม่มีปุ่มค้นหาเพราะต้องใช้ JS) */
+.nav-right{width:104px;}
+@media(max-width:820px){.nav-links{display:none;}.nav-right{display:none;}}
+/* ความกว้างต้องเท่ากับ .art-wrap ใน public/app.css ไม่งั้นบทความเดียวกันบรรทัดตัดคนละที่ */
+.art-wrap{max-width:820px;margin:0 auto;padding:42px 22px;}
 .back{color:var(--slate);font-size:.9rem;font-weight:600;text-decoration:none;display:inline-block;margin-bottom:18px;}
 .back:hover{color:var(--ink);}
 .art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.42;margin-bottom:16px;}
@@ -245,6 +259,16 @@ nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:ce
 .rel-date{display:block;font-size:.78rem;color:var(--slate);margin-top:5px;}
 .more{margin-top:26px;padding-top:22px;border-top:1px solid var(--line);display:flex;gap:20px;flex-wrap:wrap;}
 .more a{color:var(--gold-deep);font-weight:700;font-size:.92rem;text-decoration:none;}
-footer{background:var(--ink);color:rgba(255,255,255,.72);padding:24px 22px;text-align:center;font-size:.85rem;margin-top:48px;}
+/* ⚠️ selector footer เปล่า ๆ โดนแท็ก <footer> ที่ผู้เขียนใส่ไว้ในเนื้อบทความด้วย
+   (ใช้ทำกล่องเน้นสีเข้ม เช่น "แหล่งข้อมูลประกอบ") — ต้องให้ตรงกับกฎ footer ใน
+   public/app.css เป๊ะ ๆ ไม่งั้นบทความเดียวกันหน้าตาไม่เหมือนกันระหว่างเข้าจากในเว็บ
+   (SPA) กับกด F5 (หน้านี้) เดิมกฎนี้มี text-align:center ติดมาด้วย กล่องในบทความ
+   เลยจัดกึ่งกลางเฉพาะตอนกด F5 */
+footer{background:var(--ink);color:rgba(255,255,255,.72);padding:38px 26px 30px;
+  margin-top:48px;position:relative;overflow:hidden;}
+footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-size:10rem;
+  color:rgba(243,172,46,.08);pointer-events:none;line-height:1;}
+/* ท้ายหน้าจริงเท่านั้น — ห้ามย้ายสองบรรทัดนี้ไปไว้ที่ selector footer เปล่า */
+body>footer{text-align:center;font-size:.85rem;padding:24px 22px;}
 footer a{color:var(--gold-bright);text-decoration:none;font-weight:700;}
 `;
