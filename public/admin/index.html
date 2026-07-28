@@ -1681,7 +1681,10 @@ function renderArticleEditor(art) {
       <button onclick="previewArticle()" title="ดูตัวอย่างบทความ (เหมือนตอนเผยแพร่จริง)" style="color:#2563eb;font-weight:700;">👁 ดูตัวอย่าง</button>
       <button onclick="edClear()" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
     </div>
-    <div class="editor-body" id="editorBody" contenteditable="true"
+    <!-- class art-body เพิ่มมาเพื่อให้ CSS ที่ edScopeCSS ล่ามไว้ (.art-body ...) แสดงผล
+         ตอนเขียนด้วย ไม่ใช่เห็นเฉพาะตอนเผยแพร่ — หน้า admin ไม่มีกฎ .art-body ของตัวเอง
+         จึงไม่ชนกับ .editor-body -->
+    <div class="editor-body art-body" id="editorBody" contenteditable="true"
          data-ph="เริ่มพิมพ์เนื้อหาที่นี่...">${cleaned.html}</div>
     <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · รูปและปุ่มจะแทรกตรงตำแหน่งเคอร์เซอร์ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
   </div>
@@ -2006,6 +2009,49 @@ function edClosestBlock(ed, node) {
 // <h1> แยก 2 กรณี ห้ามลบทิ้งหมด:
 //   ข้อความตรงกับหัวข้อบทความ = ซ้ำจริง → ลบ
 //   ข้อความต่างออกไป          = หัวข้อของเนื้อหาเอง → เปลี่ยนเป็น <h2> ไม่งั้นเนื้อหาหาย
+// ล่าม CSS ใน <style> ไว้ให้มีผลเฉพาะในเนื้อบทความ
+// AI มักพ่น <style> ที่มีกฎอย่าง body{font-family:Georgia} หรือ h1{color:...} มาด้วย
+// <style> ในเนื้อหามีผลกับทั้งหน้า วัดแล้วเปลี่ยนฟอนต์ทั้งเว็บจาก Sarabun เป็น Georgia
+// (ตัวไทยหาย) พื้นหลังเปลี่ยน และบีบความกว้างทั้งหน้าเหลือ 700px
+// ไม่ลบทิ้งเพราะดีไซน์ที่ AI ทำมาอาจตั้งใจใช้ — เติม .art-body นำหน้าทุก selector แทน
+// ใช้ CSSOM ของเบราว์เซอร์แยกวิเคราะห์ ไม่ใช้ regex เพราะ @media ซ้อนกันได้
+function edScopeCSS(cssText) {
+  const SCOPE = '.art-body';
+  const doc = document.implementation.createHTMLDocument('');
+  const st = doc.createElement('style');
+  st.textContent = String(cssText || '');
+  doc.head.appendChild(st);
+
+  let touched = false;
+  const prefix = sel => sel.split(',').map(s => {
+    s = s.trim();
+    if (!s || s.startsWith(SCOPE)) return s;          // ล่ามไว้แล้ว กดบันทึกซ้ำต้องไม่ซ้อนอีกชั้น
+    touched = true;
+    // body/html/:root หมายถึง "ทั้งหน้า" → เปลี่ยนให้หมายถึงกล่องเนื้อหาแทน
+    if (/^(html|body|:root)\b/i.test(s)) return s.replace(/^(html|body|:root)/i, SCOPE);
+    return SCOPE + ' ' + s;
+  }).join(', ');
+
+  const walk = (rules, out) => {
+    for (const r of rules) {
+      if (r.type === CSSRule.STYLE_RULE) {
+        out.push(prefix(r.selectorText) + '{' + r.style.cssText + '}');
+      } else if (r.type === CSSRule.MEDIA_RULE) {
+        const inner = []; walk(r.cssRules, inner);
+        out.push('@media ' + r.conditionText + '{' + inner.join('') + '}');
+      } else if (r.type === CSSRule.KEYFRAMES_RULE || r.type === CSSRule.FONT_FACE_RULE) {
+        out.push(r.cssText);                           // ไม่มี selector ปล่อยผ่านได้
+      } else if (r.type === CSSRule.IMPORT_RULE) {
+        touched = true;                                // @import ดึงไฟล์จากเว็บนอก — ทิ้ง
+      }
+    }
+  };
+  const out = [];
+  try { walk(st.sheet.cssRules, out); }
+  catch (e) { return { css: String(cssText || ''), touched: false }; }
+  return { css: out.join('\n'), touched };
+}
+
 function edCleanHTML(html, title) {
   const changes = [];
   const box = document.createElement('div');
@@ -2017,6 +2063,14 @@ function edCleanHTML(html, title) {
     if (el.tagName === 'SCRIPT') changes.push('สคริปต์');   // หลุดขึ้นเว็บจะรันกับผู้อ่านทุกคน
     el.remove();
   });
+
+  // <style> ไม่ลบ แต่ล่ามไว้ให้มีผลเฉพาะในเนื้อบทความ (ดู edScopeCSS)
+  let scoped = 0;
+  box.querySelectorAll('style').forEach(el => {
+    const r = edScopeCSS(el.textContent);
+    if (r.touched) { el.textContent = r.css; scoped++; }
+  });
+  if (scoped) changes.push(`จำกัดขอบเขต CSS ${scoped} ก้อน`);
 
   let unwrapped = 0;
   box.querySelectorAll('article,main,header').forEach(el => {
