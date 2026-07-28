@@ -2347,7 +2347,7 @@ async function doInsertImg() {
     const f = fileInput?.files?.[0];
     if (!f) { toast('❌ กรุณาเลือกไฟล์รูปก่อน'); return; }
     closeModal();
-    toast('⏳ กำลังอัปโหลดรูป...');
+    toast('⏳ กำลังเตรียมรูป...');   // ยังไม่อัป — ต้องให้เลือกขนาดก่อน
     try {
       const url = await uploadToImgbb(f);
       if (url) {
@@ -2410,11 +2410,130 @@ async function getImgbbKey() {
   _imgbbKey = s.imgbb_key || '';
   return _imgbbKey;
 }
+// ══════════════════════════════════════════════════════════
+// บีบรูปก่อนอัปโหลด
+// ══════════════════════════════════════════════════════════
+// วัดจากเครื่องเจ้าของเว็บ 28 ก.ค. 2569: รูปจาก ChatGPT ถูกอัปดิบ 2.19–2.46 MB ต่อใบ
+// ทั้งที่กรอบบทความกว้างแค่ ~760px และ i.ibb.co ตอบช้า (TTFB 0.77–5.8 วิ)
+// ขนาดไฟล์คือตัวที่แก้ได้ง่ายและได้ผลมากที่สุด
+//
+// ตั้งใจใช้ค่าแนว "งานศิลปะ" ของ KruBoard อย่างเดียว (กว้างสุด 1600 คุณภาพ .88)
+// ไม่เอาโหมด std/lean ที่ปรับพื้นให้ขาวและตัดสี เพราะบทความต้องรักษาสีสันไว้
+const IMG_MAX_W = 1600;
+const IMG_Q     = 0.88;
+// ต่ำกว่านี้ไม่ต้องถาม อัปตรงเลย — บีบแล้วไม่คุ้มกับการขัดจังหวะคนเขียน
+const IMG_SKIP_BYTES = 300 * 1024;
+
+// WebP เล็กกว่า JPEG ~30% ที่ความชัดเท่ากัน และเก็บพื้นโปร่งใสได้
+// ถ้าเบราว์เซอร์ไม่รองรับแล้วสั่งเข้ารหัสเป็น WebP มันจะเงียบ ๆ คืน PNG ซึ่งใหญ่กว่ามาก
+let _webpOK = null;
+function webpOK() {
+  if (_webpOK === null) {
+    const c = document.createElement('canvas'); c.width = c.height = 1;
+    _webpOK = c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  }
+  return _webpOK;
+}
+
+// ไม่ใช้ canvas.toBlob เพราะบางเบราว์เซอร์จัดคิว callback ช้ามาก (วัดใน KruBoard ได้ ~1050 ms
+// ต่อรูป ขณะที่ toDataURL งานเดียวกันเสร็จใน ~30 ms) ผลลัพธ์ไบต์เหมือนกัน
+function canvasBlob(c, type, q) {
+  const url = c.toDataURL(type, q);
+  const comma = url.indexOf(','), bin = atob(url.slice(comma + 1));
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], { type: url.slice(5, url.indexOf(';')) });
+}
+
+const fmtBytes = b => b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB';
+
+// บีบรูป — คืน null ถ้าเป็นชนิดที่บีบไม่ได้/ไม่ควรบีบ
+function compressImage(file, type) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const src = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(src);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) { rej(new Error('อ่านขนาดรูปไม่ได้')); return; }
+      if (w > IMG_MAX_W) { h = Math.round(h * IMG_MAX_W / w); w = IMG_MAX_W; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      try { res({ blob: canvasBlob(c, type, IMG_Q), w, h }); }
+      catch (e) { rej(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); rej(new Error('เปิดไฟล์รูปไม่ได้')); };
+    img.src = src;
+  });
+}
+
+// ถามว่าจะอัปแบบบีบหรือต้นฉบับ พร้อมโชว์ตัวเลขจริงทั้งสองแบบ
+// คืน File/Blob ที่จะอัป หรือ null ถ้ายกเลิก
+function pickUploadImage(file) {
+  return new Promise(async resolve => {
+    // GIF บีบแล้วภาพเคลื่อนไหวหาย · SVG ไม่ใช่ภาพแรสเตอร์ · ไฟล์เล็กอยู่แล้วไม่ต้องถาม
+    if (/^image\/(gif|svg\+xml)$/i.test(file.type) || file.size <= IMG_SKIP_BYTES) {
+      resolve(file); return;
+    }
+    const type = webpOK() ? 'image/webp' : 'image/jpeg';
+    const ext  = webpOK() ? 'webp' : 'jpg';
+    let out;
+    try { out = await compressImage(file, type); }
+    catch (e) { resolve(file); return; }          // บีบไม่ได้ → ใช้ต้นฉบับ ไม่ขวางงาน
+
+    // บีบแล้วไม่เล็กลงจริง (เช่นรูปเล็กที่ optimize มาแล้ว) — ไม่ต้องถามให้เสียเวลา
+    if (out.blob.size >= file.size * 0.9) { resolve(file); return; }
+
+    const name = file.name.replace(/\.[^.]+$/, '') + '.' + ext;
+    const small = new File([out.blob], name, { type });
+    const times = (file.size / small.size).toFixed(1);
+    const preview = URL.createObjectURL(small);
+
+    document.getElementById('modal').innerHTML = `
+    <div class="modal-ov">
+      <div class="modal" style="max-width:460px;">
+        <h3>🖼 ขนาดรูปก่อนอัปโหลด</h3>
+        <img src="${preview}" style="width:100%;max-height:230px;object-fit:contain;border-radius:10px;background:#f1f5f9;margin-bottom:14px;">
+        <table style="width:100%;font-size:.9rem;border-collapse:collapse;">
+          <tr><td style="padding:7px 0;color:#64748b;">ต้นฉบับ</td>
+              <td style="text-align:right;font-weight:700;">${fmtBytes(file.size)}</td></tr>
+          <tr><td style="padding:7px 0;color:#0f766e;">บีบแบบรักษาสี (${out.w}×${out.h})</td>
+              <td style="text-align:right;font-weight:700;color:#0f766e;">${fmtBytes(small.size)}</td></tr>
+        </table>
+        <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:9px 12px;margin:12px 0;font-size:.85rem;color:#0f766e;">
+          เล็กลง <strong>${times} เท่า</strong> — คงสีและความละเอียดไว้ ไม่ปรับพื้นหลัง ไม่ตัดสี
+        </div>
+        <div class="modal-footer" style="flex-wrap:wrap;">
+          <button class="btn btn-outline" id="_imgCancel">ยกเลิก</button>
+          <button class="btn btn-outline" id="_imgOrig">ใช้ต้นฉบับ</button>
+          <button class="btn btn-primary" id="_imgSmall">ใช้แบบบีบ (แนะนำ)</button>
+        </div>
+      </div>
+    </div>`;
+    const done = v => { URL.revokeObjectURL(preview); closeModal(); resolve(v); };
+    document.getElementById('_imgSmall').onclick  = () => done(small);
+    document.getElementById('_imgOrig').onclick   = () => done(file);
+    document.getElementById('_imgCancel').onclick = () => done(null);
+  });
+}
+
 async function uploadToImgbb(file) {
   const key = await getImgbbKey();
   if (!key) { alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ'); return null; }
-  const fd = new FormData(); fd.append('image', file);
-  const r = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd }).then(x=>x.json());
+  const picked = await pickUploadImage(file);
+  if (!picked) return null;                       // ผู้ใช้กดยกเลิก
+  const send = async blob => {
+    const fd = new FormData(); fd.append('image', blob, blob.name || 'image');
+    return fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd }).then(x=>x.json());
+  };
+  let r = await send(picked);
+  // เผื่อ imgbb ไม่รับ WebP — เข้ารหัสใหม่เป็น JPEG แล้วลองอีกครั้ง ดีกว่าให้ผู้ใช้เจอ error เฉย ๆ
+  if (!r.success && picked !== file && /webp/i.test(picked.type || '')) {
+    try {
+      const j = await compressImage(file, 'image/jpeg');
+      r = await send(new File([j.blob], (picked.name || 'image').replace(/\.webp$/i, '.jpg'), { type: 'image/jpeg' }));
+    } catch (e) { /* ใช้ผลเดิม */ }
+  }
   if (r.success && r.data?.url) return r.data.url;
   throw new Error(r.error?.message || 'อัปโหลดไม่สำเร็จ');
 }
@@ -2422,7 +2541,7 @@ async function uploadToImgbb(file) {
 async function uploadImg() {
   const file = document.getElementById('imgFile').files[0];
   if (!file) return;
-  toast('⏳ กำลังอัปโหลดรูป...');
+  toast('⏳ กำลังเตรียมรูป...');   // ยังไม่อัป — ต้องให้เลือกขนาดก่อน
   try {
     const url = await uploadToImgbb(file);
     if (!url) return;

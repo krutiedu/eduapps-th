@@ -764,6 +764,14 @@ async function upload(req, env) {
   const file     = formData.get('image');
   if (!file) return err('ไม่พบไฟล์รูป');
 
+  // endpoint นี้เปิดสาธารณะ (ฟอร์มแจ้งปัญหาแนบรูปได้โดยไม่ต้อง login) ใครก็ยิงเข้ามาใช้
+  // imgbb key ของเว็บเป็นที่ฝากรูปฟรีได้ WAF จำกัดความถี่ไว้แล้วแต่ไม่ได้จำกัดขนาด
+  const MAX_UPLOAD = 8 * 1024 * 1024;
+  if (typeof file.size === 'number' && file.size > MAX_UPLOAD) {
+    return err(`ไฟล์ใหญ่เกินไป — รูปต้องไม่เกิน ${MAX_UPLOAD / 1048576} MB`, 413);
+  }
+  if (file.type && !/^image\//i.test(file.type)) return err('ไฟล์ที่แนบต้องเป็นรูปภาพ');
+
   const body = new FormData();
   body.append('image', file);
   const res  = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method: 'POST', body });

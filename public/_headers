@@ -33,6 +33,10 @@
   Cache-Control: public, max-age=0, must-revalidate
 /admin/index.html
   Cache-Control: public, max-age=0, must-revalidate
+/board/
+  Cache-Control: public, max-age=0, must-revalidate
+/board/index.html
+  Cache-Control: public, max-age=0, must-revalidate
 
 # CSS/JS ของเว็บหลัก — แยกออกจาก index.html แล้ว จึง cache ได้
 # ใช้ must-revalidate เหมือน HTML เพราะยังไม่มีเลขเวอร์ชันในชื่อไฟล์
