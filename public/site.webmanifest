@@ -47,21 +47,21 @@
       "name": "บทความ",
       "short_name": "บทความ",
       "description": "อ่านบทความล่าสุดสำหรับครู",
-      "url": "/#/blog",
+      "url": "/blog",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "แอปทั้งหมด",
       "short_name": "แอป",
       "description": "เครื่องมือและแอปการสอน",
-      "url": "/#/apps",
+      "url": "/apps",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "ใบงาน",
       "short_name": "ใบงาน",
       "description": "ใบงานพร้อมใช้",
-      "url": "/#/worksheets",
+      "url": "/worksheets",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
