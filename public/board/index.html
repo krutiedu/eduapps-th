@@ -110,6 +110,15 @@
   .pickrow.off{opacity:.45;pointer-events:none}
   .shotinfo{font-size:12.5px;color:var(--ink-soft);margin-top:8px;text-align:center}
   .shotinfo b{color:var(--ok)}
+  .shotinfo .warn{display:block;margin-top:4px;color:var(--marker)}
+  .modes{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .modebtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);padding:11px 13px;color:var(--ink-soft);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .modebtn .t{flex:1;min-width:0}
+  .modebtn b{display:block;font-size:14px;font-weight:700;color:var(--ink)}
+  .modebtn span{display:block;font-size:11.5px;line-height:1.35;margin-top:1px}
+  .modebtn .rec{font-style:normal;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;border:1px solid var(--ok);color:var(--ok);margin-left:7px;white-space:nowrap}
+  .modebtn .kb{flex:none;font-size:12.5px;font-weight:700;color:var(--ok)}
+  .modebtn.on{border-color:var(--chalk-deep);box-shadow:inset 0 0 0 1px var(--chalk-deep)}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
   .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
   .seg button{padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft)}
@@ -209,8 +218,10 @@
    KruBoard · frontend (ต่อ API จริง · ระบบ user/password)
    ============================================================ */
 const API = '/api/kb';
-// จำนวนรูปสูงสุดต่อการส่ง 1 ครั้ง — ต้องตรงกับ MAX_IMGS ใน functions/api/kb/[[route]].js
-const MAX_IMGS = 10;
+// จำนวนรูปสูงสุดต่อการส่ง 1 ครั้ง — ค่าจริงมาจาก backend (GET /board/:id → max_imgs)
+// ตัวเลขนี้เป็นแค่ค่าสำรองกรณี API ไม่ส่งมา ถ้าจะเปลี่ยนเพดานจริงให้แก้ MAX_IMGS
+// ในไฟล์ functions/api/kb/[[route]].js ที่เดียวพอ
+let MAX_IMGS = 10;
 // งานเก่าที่มีรูปเดียวจะไม่มี field imgs — เผื่อไว้ให้อ่านได้ทั้ง 2 แบบ
 const subImgs = s => (s && s.imgs && s.imgs.length) ? s.imgs : (s && s.img ? [s.img] : []);
 
@@ -231,21 +242,98 @@ async function api(path, opts = {}) {
   return data;
 }
 
-/* ---- image compression (ของจริง) ---- */
-function compress(file, maxW = 1200, quality = .72) {
-  return new Promise(res => {
+/* ---- image compression (ของจริง) ----
+   2 โหมด: มาตรฐาน (ใบงาน/ลายมือ — ปรับพื้นกระดาษให้ขาวเรียบ ไฟล์เล็กมาก)
+   กับ งานศิลปะ (คงสีและเฉดทุกอย่าง ลดแค่ความละเอียดที่เกินจำเป็น)
+   ปรับจูนตัวเลขทั้งหมดได้ที่ IMG_MODES ที่เดียว */
+const IMG_MODES = {
+  std:  { label:'มาตรฐาน', hint:'ลายมือจาง ดินสออ่อน หรือถ่ายในที่แสงน้อย',        maxW:1200, q:.80, paper:true,  autoGray:true  },
+  lean: { label:'ประหยัด', hint:'ภาพถ่ายเอกสาร ตัวหนังสือชัด — กินพื้นที่น้อยที่สุด',
+          rec:'แนะนำ',                                                             maxW:1200, q:.68, paper:true,  autoGray:true  },
+  art:  { label:'งานศิลปะ', hint:'ภาพวาด งานสี ที่ต้องดูรายละเอียด', icon:'🎨 ',    maxW:1600, q:.88, paper:false, autoGray:false },
+};
+let _imgMode = 'std';   // ค่าเริ่มต้นต้องเป็น std เสมอ (รีเซ็ตทุกครั้งที่เปิดหน้าส่งงาน)
+
+// WebP เล็กกว่า JPEG ~30% ที่ความชัดเท่ากัน แต่ต้องเช็คก่อนว่า browser รองรับ
+// ถ้าไม่รองรับแล้วสั่ง toBlob('image/webp') browser จะเงียบ ๆ คืน PNG มาแทน ซึ่งใหญ่กว่ามาก
+let _webpOK = null;
+function webpOK(){
+  if(_webpOK===null){
+    const c=document.createElement('canvas');c.width=c.height=1;
+    _webpOK=c.toDataURL('image/webp').indexOf('data:image/webp')===0;
+  }
+  return _webpOK;
+}
+const imgType = () => webpOK() ? 'image/webp' : 'image/jpeg';
+const imgExt  = () => webpOK() ? 'webp' : 'jpg';
+
+/* ทำให้พื้นกระดาษขาวเรียบ — ตัวนี้ทำให้ไฟล์เล็กลงมากที่สุด
+   เพราะพื้นที่ส่วนใหญ่ของรูปใบงานคือกระดาษ ที่กล้องเก็บ noise + เงา + สีเหลืองจากหลอดไฟมาด้วย
+   วิธี: หาระดับความสว่าง "ระดับกระดาษ" ของแต่ละช่องสี (เปอร์เซ็นไทล์ 92) แล้วดึงให้เป็น 255
+   เป็นการคูณค่าล้วน ๆ ไม่มีการตัดโทนมืดทิ้ง → รอยดินสออ่อนไม่หาย แค่พื้นรอบ ๆ ขาวขึ้น
+   แยกทำทีละช่องสี ทำให้สีเหลืองจากแสงหลอดไฟหายไปด้วย */
+function paperWhite(d){
+  const hist=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+  const step=Math.max(4,Math.floor(d.length/4/40000)*4);   // สุ่มอ่านพอประมาณ ไม่ต้องไล่ทุกพิกเซล
+  let n=0;
+  for(let i=0;i<d.length;i+=step){hist[0][d[i]]++;hist[1][d[i+1]]++;hist[2][d[i+2]]++;n++}
+  const lut=[];
+  for(let ch=0;ch<3;ch++){
+    let acc=0,hi=255;
+    for(let v=0;v<256;v++){acc+=hist[ch][v];if(acc>=n*.92){hi=v;break}}
+    // กันเคสถ่ายในที่มืดหรือพื้นไม่ใช่กระดาษ — ไม่ขยายเกิน 1.6 เท่า
+    const scale=Math.min(255/Math.max(hi,1),1.6),t=new Uint8Array(256);
+    for(let v=0;v<256;v++)t[v]=Math.min(255,Math.round(v*scale));
+    lut.push(t);
+  }
+  for(let i=0;i<d.length;i+=4){d[i]=lut[0][d[i]];d[i+1]=lut[1][d[i+1]];d[i+2]=lut[2][d[i+2]]}
+}
+
+/* ถ้ารูปแทบไม่มีสีอยู่แล้ว (งานดินสอ/ปากกาดำ) ตัดสีทิ้ง — เล็กลงอีกโดยไม่เสียอะไร
+   ถ้ามีสีจริง (ปากกาแดงของครู งานที่ระบายสี) จะไม่แตะเลย */
+function maybeGray(d){
+  const step=Math.max(4,Math.floor(d.length/4/20000)*4);
+  let sat=0,n=0;
+  for(let i=0;i<d.length;i+=step){
+    const mx=Math.max(d[i],d[i+1],d[i+2]),mn=Math.min(d[i],d[i+1],d[i+2]);
+    if(mx>24){sat+=(mx-mn)/mx;n++}
+  }
+  if(!n||sat/n>.10)return false;      // มีสีจริง — ไม่แปลง
+  for(let i=0;i<d.length;i+=4){
+    const y=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000|0;
+    d[i]=d[i+1]=d[i+2]=y;
+  }
+  return true;
+}
+
+function compress(file, mode = _imgMode) {
+  const M = IMG_MODES[mode] || IMG_MODES.std;
+  return new Promise((res, rej) => {
     const img = new Image();
+    const src = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(src);
       let { width: w, height: h } = img;
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      if (w > M.maxW) { h = Math.round(h * M.maxW / w); w = M.maxW; }
       const c = document.createElement('canvas'); c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      c.toBlob(b => res({ blob: b, origKB: Math.round(file.size/1024), newKB: Math.round(b.size/1024) }),
-               'image/jpeg', quality);
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      if (M.paper || M.autoGray) {
+        const id = ctx.getImageData(0, 0, w, h);
+        if (M.paper) paperWhite(id.data);
+        if (M.autoGray) maybeGray(id.data);
+        ctx.putImageData(id, 0, 0);
+      }
+      c.toBlob(b => b ? res({ blob:b, kb:Math.round(b.size/1024) }) : rej(new Error('ย่อรูปไม่สำเร็จ ลองใหม่อีกครั้ง')),
+               imgType(), M.q);
     };
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(src); rej(new Error('เปิดไฟล์รูปนี้ไม่ได้')); };
+    img.src = src;
   });
 }
+const fmtKB = kb => kb >= 1024 ? (kb/1024).toFixed(1)+' MB' : kb+' KB';
+// เดานามสกุลจาก URL ของรูป เพื่อตั้งชื่อไฟล์ตอนดาวน์โหลดให้ถูก (งานเก่าเป็น .jpg งานใหม่เป็น .webp)
+const urlExt = u => { const m=/\.([a-z0-9]{3,4})(?:$|[?#])/i.exec(decodeURIComponent(u||'')); return m ? m[1].toLowerCase() : 'jpg'; };
 
 /* ---- helpers ---- */
 const $ = s => document.querySelector(s);
@@ -455,7 +543,7 @@ function downloadImgs(s){
   const base=`งาน-เลขที่${s.no}${s.name?'-'+s.name:''}`;
   imgs.forEach((src,i)=>setTimeout(()=>{
     const a=document.createElement('a');a.href=src;
-    a.download=imgs.length>1?`${base}-${i+1}.jpg`:`${base}.jpg`;
+    a.download=imgs.length>1?`${base}-${i+1}.${urlExt(src)}`:`${base}.${urlExt(src)}`;
     document.body.appendChild(a);a.click();a.remove();
   },i*350));
   toast(imgs.length>1?`กำลังดาวน์โหลด ${imgs.length} รูป…`:'กำลังดาวน์โหลด…');
@@ -498,7 +586,7 @@ async function dlBoardZip(boardId,title,ev){
       for(let i=0;i<imgs.length;i++){
         try{
           const res=await fetch(imgs[i]);if(!res.ok)throw new Error('fetch '+res.status);
-          zip.file(imgs.length>1?`${base}-${i+1}.jpg`:`${base}.jpg`,await res.blob());
+          zip.file(imgs.length>1?`${base}-${i+1}.${urlExt(imgs[i])}`:`${base}.${urlExt(imgs[i])}`,await res.blob());
         }catch(e){console.warn('skip',s.no,i+1,e.message)}
       }
       done++;
@@ -714,13 +802,18 @@ function pvSel(i){_pvImg=i;renderPeerViewer()}
 function closePeerViewer(){const el=document.getElementById('viewer');if(el)el.remove();document.body.style.overflow=''}
 
 /* ---- student submit ---- */
-let _pendingShots=[];   // รูปที่เลือกไว้แต่ยังไม่ส่ง: [{blob,url,origKB,newKB}]
-function clearShots(){_pendingShots.forEach(s=>URL.revokeObjectURL(s.url));_pendingShots=[]}
+// รูปที่เลือกไว้แต่ยังไม่ส่ง: [{file, out:{std:{blob,kb,url}, art:{...}}}]
+// เก็บ File ต้นฉบับไว้ด้วย เพื่อให้สลับโหมดแล้วบีบใหม่จากของเดิมได้ (File เป็นแค่ handle ไม่กิน RAM)
+let _pendingShots=[];
+const shotOut = s => s.out[_imgMode];
+function freeShot(s){Object.values(s.out).forEach(o=>URL.revokeObjectURL(o.url))}
+function clearShots(){_pendingShots.forEach(freeShot);_pendingShots=[]}
 async function studentSubmit(id){
   setWho('');loading();
   let b;try{b=await api('/board/'+id,{noAuth:true})}catch(e){
     app.innerHTML=`<div class="wrap"><div class="empty" style="padding-top:80px"><div class="big">🔍</div>ไม่พบกระดานนี้<br><button class="btn sm" style="margin-top:14px" onclick="go('')">กลับหน้าแรก</button></div></div>`;return}
-  clearShots();
+  if(b.max_imgs>0)MAX_IMGS=b.max_imgs;   // ยึดเพดานจาก backend เสมอ
+  clearShots();_imgMode='std';           // เปิดหน้าใหม่ทีไร กลับไปโหมดมาตรฐานเสมอ
     app.innerHTML=`<div class="wrap"><div class="page"><div class="scard">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
       <button class="btn sm" onclick="go('')">← กลับ</button>
@@ -731,6 +824,7 @@ async function studentSubmit(id){
     <div class="field"><label>เลขที่</label><input id="s_no" type="number" inputmode="numeric" placeholder="เช่น 12"></div>
     <div class="field"><label>ชื่อ - สกุล</label><input id="s_name" placeholder="เช่น สมชาย ใจดี"></div>
     <div class="field"><label>รูปงาน (แนบได้สูงสุด ${MAX_IMGS} รูป)</label>
+      <div class="modes" id="modeRow"></div>
       <div class="shots" id="shots"></div>
       <div class="pickrow" id="pickrow">
         <label class="pickbtn"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickImg(this)"><span class="ic">📷</span>ถ่ายรูป</label>
@@ -743,21 +837,46 @@ async function studentSubmit(id){
   renderShots();
 }
 function renderShots(){
-  const g=$('#shots'),info=$('#shotinfo'),row=$('#pickrow');
+  const g=$('#shots'),info=$('#shotinfo'),row=$('#pickrow'),mr=$('#modeRow');
   if(!g||!info||!row)return;
-  g.innerHTML=_pendingShots.map((s,i)=>`<div class="shot">
-    <img src="${s.url}" alt="">
+  // โชว์ขนาดรวมข้างโหมดที่บีบไว้แล้ว นักเรียนจะได้เทียบเห็นเลขจริงโดยไม่ต้องกดสลับไปมา
+  if(mr)mr.innerHTML=Object.keys(IMG_MODES).map(k=>{const m=IMG_MODES[k];
+    const ready=_pendingShots.length&&_pendingShots.every(s=>s.out[k]);
+    const kb=ready?_pendingShots.reduce((a,s)=>a+s.out[k].kb,0):null;
+    return `<button type="button" class="modebtn${k===_imgMode?' on':''}" onclick="setImgMode('${k}')">
+      <span class="t"><b>${m.icon||''}${m.label}${m.rec?`<i class="rec">${m.rec}</i>`:''}</b>
+      <span>${m.hint}</span></span>
+      ${kb!==null?`<span class="kb">${fmtKB(kb)}</span>`:''}
+    </button>`}).join('');
+  g.innerHTML=_pendingShots.map((s,i)=>{const o=shotOut(s);return `<div class="shot">
+    <img src="${o?o.url:''}" alt="">
     <button class="rm" title="นำรูปนี้ออก" onclick="removeShot(${i})">✕</button>
     <span class="ord">${i+1}</span>
-  </div>`).join('');
+  </div>`}).join('');
   row.classList.toggle('off',_pendingShots.length>=MAX_IMGS);
   if(!_pendingShots.length){info.textContent='ยังไม่ได้แนบรูป — ต้องแนบอย่างน้อย 1 รูป';return}
-  const kb=_pendingShots.reduce((a,s)=>a+s.newKB,0);
-  info.innerHTML=`แนบแล้ว <b>${_pendingShots.length}</b> / ${MAX_IMGS} รูป · ย่อขนาดแล้วรวม ${kb} KB`;
+  // ขนาดของแต่ละโหมดโชว์อยู่บนปุ่มแล้ว ตรงนี้เหลือแค่ยอดรวมของโหมดที่เลือกอยู่ + คำเตือนโหมดศิลปะ
+  const kb=_pendingShots.reduce((a,s)=>a+(shotOut(s)?.kb||0),0);
+  const head=`แนบแล้ว <b>${_pendingShots.length}</b> / ${MAX_IMGS} รูป · รวม <b>${fmtKB(kb)}</b>`;
+  info.innerHTML=_imgMode==='art'
+    ? head+`<span class="warn">โหมดงานศิลปะไฟล์ใหญ่กว่าปกติหลายเท่า ทำให้พื้นที่เก็บงานเต็มเร็วขึ้น — เลือกเมื่อครูสั่งงานที่ต้องดูสีและรายละเอียดจริง ๆ</span>`
+    : head;
+}
+async function setImgMode(m){
+  if(m===_imgMode||!IMG_MODES[m])return;
+  _imgMode=m;
+  const info=$('#shotinfo');
+  if(info&&_pendingShots.some(s=>!s.out[m]))info.textContent='กำลังแปลงรูปใหม่…';
+  for(const s of _pendingShots){
+    if(s.out[m])continue;
+    try{const o=await compress(s.file,m);o.url=URL.createObjectURL(o.blob);s.out[m]=o}
+    catch(e){toast(e.message)}
+  }
+  renderShots();
 }
 function removeShot(i){
   const s=_pendingShots[i];if(!s)return;
-  URL.revokeObjectURL(s.url);_pendingShots.splice(i,1);renderShots();
+  freeShot(s);_pendingShots.splice(i,1);renderShots();
 }
 async function pickImg(input){
   const files=[...input.files];input.value='';   // เคลียร์ค่า เพื่อให้เลือกไฟล์เดิมซ้ำได้
@@ -767,8 +886,11 @@ async function pickImg(input){
   if(files.length>room)toast(`แนบได้อีก ${room} รูป — ระบบรับเฉพาะ ${room} รูปแรก`);
   const info=$('#shotinfo');if(info)info.textContent='กำลังย่อรูป…';
   for(const f of files.slice(0,room)){
-    const{blob,origKB,newKB}=await compress(f);
-    _pendingShots.push({blob,url:URL.createObjectURL(blob),origKB,newKB});
+    try{
+      const o=await compress(f);
+      o.url=URL.createObjectURL(o.blob);
+      _pendingShots.push({file:f,out:{[_imgMode]:o}});
+    }catch(e){toast(e.message)}
   }
   renderShots();
 }
@@ -777,9 +899,10 @@ async function submitWork(id){
   const name=$('#s_name').value.trim();if(!name)return toast('กรุณากรอกชื่อ - สกุล');
   if(!_pendingShots.length)return toast('กรุณาแนบรูปงานอย่างน้อย 1 รูป');
   const n=_pendingShots.length;
+  if(_pendingShots.some(s=>!shotOut(s)))return toast('ยังแปลงรูปไม่เสร็จ รอสักครู่แล้วลองใหม่');
   $('#subBtn').disabled=true;$('#subBtn').textContent=`กำลังส่ง ${n} รูป…`;
   const fd=new FormData();fd.append('board',id);fd.append('no',no);fd.append('name',name);
-  _pendingShots.forEach((s,i)=>fd.append('file',s.blob,`work-${i+1}.jpg`));
+  _pendingShots.forEach((s,i)=>fd.append('file',shotOut(s).blob,`work-${i+1}.${imgExt()}`));
   try{await api('/submit',{method:'POST',body:fd,noAuth:true})}
   catch(e){$('#subBtn').disabled=false;$('#subBtn').textContent='ส่งงาน';return toast(e.message)}
   clearShots();
