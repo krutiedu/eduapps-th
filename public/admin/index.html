@@ -4129,7 +4129,73 @@ function showAdminOfflineRetry() {
   box.appendChild(wrap);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// ══════════════════════════════════════════════════════════
+// เตือนเมื่อหน้านี้เป็นเวอร์ชันเก่า
+// ══════════════════════════════════════════════════════════
+// แท็บที่เปิดค้างไว้จะรัน JavaScript ชุดเดิมตลอด ต่อให้ deploy โค้ดใหม่ขึ้นเว็บแล้ว
+// และมันเงียบมาก — เคยทำให้อัปรูปแล้วไม่ถูกบีบ เพราะแท็บที่เปิดค้างยังใช้โค้ดเก่าอยู่
+// โดยไม่มีใครรู้ ต้องไล่หาสาเหตุย้อนหลังกว่าจะเจอ
+//
+// Cloudflare Pages ไม่ส่ง ETag/Last-Modified/Content-Length มาให้ (เช็คแล้ว ได้ null หมด)
+// จึงเทียบด้วยการดึงไฟล์มาแฮชเอง · /admin/ เป็นไฟล์นิ่ง ไม่ใช่ Function จึงไม่กินโควตา
+// Pages request · เช็คเฉพาะตอนแท็บถูกมองอยู่ ไม่กวนตอนพับไว้เบื้องหลัง
+let _verHash = null;
+let _verMuted = false;
+const VER_CHECK_MS = 10 * 60 * 1000;
+
+// แฮชเบา ๆ พอให้รู้ว่าไฟล์เปลี่ยน ไม่ต้องใช้ crypto (200 KB ใช้เวลาไม่ถึง 2 ms)
+function quickHash(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + '.' + s.length;
+}
+
+async function checkAdminVersion() {
+  if (document.hidden || _verMuted) return;
+  let txt;
+  try {
+    const r = await fetch('/admin/?_v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    txt = await r.text();
+  } catch (e) { return; }          // เน็ตสะดุด ไม่ต้องทำอะไร
+  const h = quickHash(txt);
+  if (_verHash === null) { _verHash = h; return; }   // ครั้งแรก = ค่าตั้งต้น
+  if (h !== _verHash) showVersionBanner();
+}
+
+function showVersionBanner() {
+  if (document.getElementById('verBanner')) return;
+  const d = document.createElement('div');
+  d.id = 'verBanner';
+  d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:10000;background:#15223c;'
+    + 'color:#fff;padding:13px 18px;display:flex;align-items:center;justify-content:center;'
+    + 'gap:14px;flex-wrap:wrap;font-family:\'Sarabun\',sans-serif;font-size:.9rem;'
+    + 'box-shadow:0 -4px 18px rgba(0,0,0,.22);';
+  d.innerHTML = `
+    <span>🔄 <strong style="color:#f0a830;">มีเวอร์ชันใหม่ของหน้าจัดการ</strong>
+      — หน้านี้ยังใช้โค้ดเก่าอยู่ ฟีเจอร์ใหม่จะยังไม่ทำงานจนกว่าจะโหลดใหม่</span>
+    <button id="_verReload" style="background:#f0a830;color:#15223c;border:none;padding:8px 20px;
+      border-radius:9px;font-family:'Sarabun';font-weight:700;font-size:.88rem;cursor:pointer;">
+      โหลดหน้าใหม่</button>
+    <button id="_verClose" title="ปิดคำเตือนนี้" style="background:none;border:1px solid rgba(255,255,255,.3);
+      color:#aebad0;padding:7px 13px;border-radius:9px;font-family:'Sarabun';font-size:.85rem;cursor:pointer;">
+      ไว้ก่อน</button>`;
+  document.body.appendChild(d);
+  document.getElementById('_verReload').onclick = () => {
+    // เซฟร่างที่เขียนค้างก่อนเสมอ ไม่งั้นการโหลดใหม่จะกินงานที่ยังไม่ได้บันทึก
+    try { if (window._saveDraftNow) window._saveDraftNow(); } catch (e) {}
+    location.reload();
+  };
+  document.getElementById('_verClose').onclick = () => { _verMuted = true; d.remove(); };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  checkAdminVersion();                                  // เก็บค่าตั้งต้น
+  setInterval(checkAdminVersion, VER_CHECK_MS);
+  // กลับมาที่แท็บนี้เมื่อไหร่ให้เช็คทันที — เป็นจังหวะที่คนมักกลับมาทำงานต่อพอดี
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAdminVersion(); });
+});
 window.editArticle = editArticle;
 window.delArticle = delArticle;
 window.openAppModal = openAppModal;
