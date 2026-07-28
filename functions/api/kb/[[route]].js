@@ -18,8 +18,20 @@ const enc = new TextEncoder();
 const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 
 // ---------- รูปแนบหลายใบ ----------
-// จำนวนรูปสูงสุดที่นักเรียนแนบได้ต่อการส่ง 1 ครั้ง (แก้ตัวเลขนี้ที่เดียวพอ)
+// จำนวนรูปสูงสุดที่นักเรียนแนบได้ต่อการส่ง 1 ครั้ง
+// แก้ที่นี่ที่เดียวพอ — หน้าส่งงานอ่านค่านี้จาก GET /board/:id (field max_imgs)
 const MAX_IMGS = 10;
+// เพดานขนาดไฟล์ฝั่ง server — หน้าเว็บย่อรูปให้ก่อนส่งอยู่แล้ว
+// (โหมดมาตรฐาน ~100 KB · โหมดงานศิลปะ ~400-600 KB ต่อใบ)
+// ค่านี้ไว้กันคนที่ยิง API ตรงด้วยไฟล์เต็มขนาด ไม่ได้ไว้ดักผู้ใช้ปกติ
+const MAX_IMG_BYTES   = 3  * 1024 * 1024;   // ต่อรูป
+const MAX_TOTAL_BYTES = 20 * 1024 * 1024;   // รวมทั้งการส่ง 1 ครั้ง
+// ชนิดไฟล์ที่รับ + นามสกุลที่ใช้ตั้งชื่อ key — งานเก่าทั้งหมดเป็น .jpg
+const IMG_TYPES = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
+// เพดานเลขที่ — กันคนยิง API ตรงแล้วสร้างแถว/รูปได้ไม่จำกัด
+// กระดานที่ครูระบุจำนวนนักเรียนไว้ ใช้ roster + NO_SLACK เผื่อกรณีกรอกน้อยกว่าห้องจริง
+const MAX_NO   = 80;
+const NO_SLACK = 15;
 // kb_subs.img_key เก็บได้ 2 แบบ: คีย์เดี่ยว (ของเดิม) หรือ JSON array (หลายรูป)
 // อ่านออกมาเป็น array เสมอ เพื่อให้ข้อมูลเก่ายังใช้ได้โดยไม่ต้องแก้ schema
 function imgKeys(raw) {
@@ -37,6 +49,17 @@ function withImgs(s) {
   s.imgs = urls; s.img = urls[0] || '';
   delete s.img_key;
   return s;
+}
+
+// ลบรูปใน R2 เป็นชุด — R2 รับ array ได้ถึง 1000 คีย์ต่อ 1 call
+// ⚠️ ห้ามเปลี่ยนกลับไปวนลบทีละใบ: Workers free plan จำกัด subrequest 50 ครั้งต่อ 1 request
+// ห้อง 40 คน × 10 รูป = 400 ครั้ง → ครูจะลบกระดานไม่ผ่าน
+// ยอมกลืน error เหมือนเดิม เพื่อไม่ให้ครูลบกระดานไม่ได้เพราะรูปใบเดียวมีปัญหา
+async function delKeys(env, keys) {
+  const list = [...new Set((keys || []).filter(Boolean))];
+  for (let i = 0; i < list.length; i += 1000) {
+    await env.BUCKET.delete(list.slice(i, i + 1000)).catch(() => {});
+  }
 }
 
 // ---------- password hashing (PBKDF2 via Web Crypto) ----------
@@ -138,7 +161,8 @@ export async function onRequest(context) {
       const id = path.slice(6);
       const b = await env.DB.prepare('SELECT id,title,room,peer FROM kb_boards WHERE id=?').bind(id).first();
       if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
-      return json(b);
+      // หน้าส่งงานใช้ max_imgs คุม UI — จะได้ไม่ต้องแก้ตัวเลขซ้ำใน 2 ไฟล์
+      return json({ ...b, max_imgs: MAX_IMGS });
     }
 
     // GET /peer/:boardId — นักเรียนดูงานเพื่อน (เฉพาะกระดานที่ peer=1)
@@ -163,21 +187,41 @@ export async function onRequest(context) {
       if (!board || !no || !files.length) return json({ error: 'ข้อมูลไม่ครบ' }, 400);
       if (!name) return json({ error: 'กรุณากรอกชื่อ - สกุล' }, 400);
       if (files.length > MAX_IMGS) return json({ error: `แนบรูปได้สูงสุด ${MAX_IMGS} รูป` }, 400);
-      const b = await env.DB.prepare('SELECT id FROM kb_boards WHERE id=?').bind(board).first();
+      const b = await env.DB.prepare('SELECT id,roster FROM kb_boards WHERE id=?').bind(board).first();
       if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
-      const keys = [];
-      for (const file of files) {
-        const key = `${board}/${no}-${uid()}.jpg`;
-        await env.BUCKET.put(key, file.stream(), { httpMetadata: { contentType: 'image/jpeg' } });
-        keys.push(key);
+      // เลขที่ต้องอยู่ในช่วงที่เป็นไปได้จริง
+      const maxNo = b.roster > 0 ? Math.min(b.roster + NO_SLACK, MAX_NO) : MAX_NO;
+      if (no < 1 || no > maxNo) return json({ error: `เลขที่ต้องอยู่ระหว่าง 1–${maxNo}` }, 400);
+      // ขนาดไฟล์ — เช็คก่อนอัปโหลดขึ้น R2
+      let totalBytes = 0;
+      for (const f of files) {
+        if (f.size > MAX_IMG_BYTES) return json({ error: `รูปแต่ละใบต้องไม่เกิน ${Math.round(MAX_IMG_BYTES / 1048576)} MB` }, 400);
+        totalBytes += f.size;
       }
-      // ส่งใหม่ทับของเดิม — ลบรูปชุดเก่าทิ้งทุกใบ
+      if (totalBytes > MAX_TOTAL_BYTES) return json({ error: `รูปทั้งหมดรวมกันต้องไม่เกิน ${Math.round(MAX_TOTAL_BYTES / 1048576)} MB` }, 400);
+      // อ่านคีย์ชุดเดิมไว้ก่อนแต่ยังไม่ลบ — ถ้าเขียน D1 ไม่สำเร็จ งานเดิมต้องยังอยู่ครบ
       const old = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=? AND no=?').bind(board, no).first();
-      for (const k of imgKeys(old?.img_key)) await env.BUCKET.delete(k).catch(() => {});
-      await env.DB.prepare(`
-        INSERT INTO kb_subs (id,board,no,name,img_key,status,created) VALUES (?,?,?,?,?, 'wait', ?)
-        ON CONFLICT(board,no) DO UPDATE SET name=excluded.name, img_key=excluded.img_key, status='wait', score=NULL, comment=NULL, created=excluded.created, reviewed=NULL
-      `).bind(uid(), board, no, name, packKeys(keys), now()).run();
+      const keys = [];
+      try {
+        for (const file of files) {
+          // เก็บนามสกุล + content-type ตามชนิดจริงของไฟล์ ไม่งั้นดาวน์โหลดออกมาเปิดไม่ถูกโปรแกรม
+          const ext = IMG_TYPES[file.type] || 'jpg';
+          const key = `${board}/${no}-${uid()}.${ext}`;
+          await env.BUCKET.put(key, file.stream(), { httpMetadata: { contentType: IMG_TYPES[file.type] ? file.type : 'image/jpeg' } });
+          keys.push(key);
+        }
+        await env.DB.prepare(`
+          INSERT INTO kb_subs (id,board,no,name,img_key,status,created) VALUES (?,?,?,?,?, 'wait', ?)
+          ON CONFLICT(board,no) DO UPDATE SET name=excluded.name, img_key=excluded.img_key, status='wait', score=NULL, comment=NULL, created=excluded.created, reviewed=NULL
+        `).bind(uid(), board, no, name, packKeys(keys), now()).run();
+      } catch (err) {
+        // อัปขึ้น R2 แล้วแต่เขียนฐานข้อมูลไม่สำเร็จ — เก็บกวาดรูปที่เพิ่งอัปทิ้ง
+        // ไม่งั้นกลายเป็นรูปกำพร้าที่ลบผ่านหน้าเว็บไม่ได้อีกเลย (งานชุดเดิมยังไม่ถูกแตะ)
+        await delKeys(env, keys);
+        return json({ error: 'ส่งงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' }, 500);
+      }
+      // เขียน D1 สำเร็จแล้วค่อยลบรูปชุดเก่า (กรณีส่งทับของเดิม)
+      await delKeys(env, imgKeys(old?.img_key));
       return json({ ok: true, count: keys.length });
     }
 
@@ -239,12 +283,13 @@ export async function onRequest(context) {
       // DELETE /api/admin/teachers/<username> — ลบครู + กระดาน + รูป
       if (path.match(/^admin\/teachers\/[^/]+$/) && method === 'DELETE') {
         const username = decodeURIComponent(path.split('/')[2]);
-        const { results: boards } = await env.DB.prepare('SELECT id FROM kb_boards WHERE owner=?').bind(username).all();
-        for (const b of boards) {
-          const { results: subs } = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=?').bind(b.id).all();
-          for (const s of subs) for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
-          await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(b.id).run();
-        }
+        // รวมคีย์รูปของทุกกระดานในคิวรีเดียวแล้วลบทีเดียว — จำนวน subrequest คงที่
+        // ไม่ว่าครูคนนี้จะมีกี่กระดาน (เดิมวนต่อกระดาน ครูที่มีหลายกระดานจะลบไม่ผ่าน)
+        const { results: subs } = await env.DB.prepare(
+          'SELECT s.img_key FROM kb_subs s JOIN kb_boards b ON s.board=b.id WHERE b.owner=?'
+        ).bind(username).all();
+        await delKeys(env, subs.flatMap(s => imgKeys(s.img_key)));
+        await env.DB.prepare('DELETE FROM kb_subs WHERE board IN (SELECT id FROM kb_boards WHERE owner=?)').bind(username).run();
         await env.DB.prepare('DELETE FROM kb_boards WHERE owner=?').bind(username).run();
         await env.DB.prepare('DELETE FROM kb_teachers WHERE username=?').bind(username).run();
         return json({ ok: true });
@@ -290,9 +335,9 @@ export async function onRequest(context) {
       const id = path.split('/')[1];
       const b = await env.DB.prepare('SELECT id FROM kb_boards WHERE id=? AND owner=?').bind(id, me).first();
       if (!b) return json({ error: 'ไม่พบกระดาน หรือไม่ใช่ของคุณ' }, 404);
-      // ลบรูปทุกใบใน R2 ก่อน
+      // ลบรูปทุกใบใน R2 ก่อน (ลบเป็นชุดเดียว ดู delKeys)
       const { results: subs } = await env.DB.prepare('SELECT img_key FROM kb_subs WHERE board=?').bind(id).all();
-      for (const s of subs) for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
+      await delKeys(env, subs.flatMap(s => imgKeys(s.img_key)));
       // ลบ subs และ board
       await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(id).run();
       await env.DB.prepare('DELETE FROM kb_boards WHERE id=?').bind(id).run();
@@ -317,7 +362,7 @@ export async function onRequest(context) {
       ).bind(sid, me).first();
       if (!s) return json({ error: 'ไม่มีสิทธิ์ หรือไม่พบ submission' }, 403);
       // ลบรูปใน R2 ก่อน (ไม่ block ถ้าลบไม่ได้)
-      for (const k of imgKeys(s.img_key)) await env.BUCKET.delete(k).catch(() => {});
+      await delKeys(env, imgKeys(s.img_key));
       await env.DB.prepare('DELETE FROM kb_subs WHERE id=?').bind(sid).run();
       return json({ ok: true });
     }
