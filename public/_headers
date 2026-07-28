@@ -27,6 +27,10 @@
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 
+# ไฟล์เช็คเวอร์ชันของหน้า admin — ต้องได้ค่าสดเสมอ ไม่งั้นแถบเตือนจะไม่มีวันขึ้น
+/version.txt
+  Cache-Control: no-store
+
 # หน้า admin — ไม่มีเลขเวอร์ชันในชื่อไฟล์ ถ้าไม่ตั้งตรงนี้จะตกไปใช้ Browser Cache TTL
 # 4 ชั่วโมงของ Cloudflare → แก้หน้า admin แล้ว deploy แต่ยังเห็นของเก่า (เคยเจอมาแล้ว)
 /admin/

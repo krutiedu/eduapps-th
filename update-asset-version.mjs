@@ -15,6 +15,12 @@ const hash = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).diges
 const vCss = hash('public/app.css');
 const vJs  = hash('public/app.js');
 
+// public/version.txt — ไฟล์จิ๋วไว้ให้หน้า admin เช็คว่ามีเวอร์ชันใหม่ไหม
+// เดิมหน้า admin ดึงตัวเองมาทั้งไฟล์ (63 KB) ทุกรอบเพื่อเทียบ เปลืองเน็ตโดยใช่เหตุ
+// ไฟล์นี้ ~20 ไบต์ · ถ้าลืมรันสคริปต์ ค่าจะไม่เปลี่ยน = แถบเตือนไม่ขึ้น (เงียบแบบไม่พัง)
+const vAdmin = hash('public/admin/index.html');
+fs.writeFileSync('public/version.txt', `${vAdmin} ${vCss} ${vJs}\n`);
+
 let html = fs.readFileSync('public/index.html', 'utf8');
 const before = html;
 html = html.replace(/href="\/app\.css(\?v=[a-f0-9]+)?"/, `href="/app.css?v=${vCss}"`);
@@ -26,3 +32,4 @@ if (html === before) {
   fs.writeFileSync('public/index.html', html);
   console.log('อัปเดตแล้ว:  app.css?v=' + vCss + '   app.js?v=' + vJs);
 }
+console.log('version.txt: ' + vAdmin + ' (admin)  ' + vCss + ' (css)  ' + vJs + ' (js)');
