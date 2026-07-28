@@ -109,18 +109,38 @@ tr:hover td{background:#fafafa;}
   padding:5px 9px;cursor:pointer;font-size:.85rem;font-family:'Sarabun',sans-serif;
   font-weight:700;transition:.15s;}
 .editor-toolbar button:hover{background:#eff6ff;border-color:#93c5fd;}
+.editor-toolbar select{background:#fff;border:1px solid #e2e8f0;border-radius:5px;
+  padding:5px 8px;cursor:pointer;font-size:.85rem;font-family:'Sarabun',sans-serif;
+  font-weight:700;transition:.15s;color:#334155;}
+.editor-toolbar select:hover{background:#eff6ff;border-color:#93c5fd;}
+.editor-toolbar .tb-sep{width:1px;background:#e2e8f0;margin:2px 3px;}
 .editor-body{min-height:280px;border:1px solid #e2e8f0;border-radius:0 0 8px 8px;
              padding:14px;outline:none;font-size:.95rem;line-height:1.85;background:#fff;}
 .editor-body:focus{border-color:#93c5fd;}
+/* placeholder แบบ CSS — เดิมยัดข้อความจริงลง innerHTML ทำให้ range ที่จำไว้ชี้ไป node
+   ที่ถูกลบทิ้งตอนเริ่มพิมพ์ (รูปเลยไปโผล่ผิดบรรทัด) และถ้าเซฟโดยไม่แตะกล่องเลย
+   ข้อความ placeholder จะติดไปเป็นเนื้อหาบทความจริง */
+.editor-body.is-empty::before{content:attr(data-ph);color:#94a3b8;pointer-events:none;display:block;}
 .editor-body h2{font-size:1.25rem;font-weight:800;margin:20px 0 8px;}
 .editor-body h3{font-size:1.05rem;font-weight:700;margin:16px 0 6px;}
 .editor-body p{margin-bottom:12px;}
-.editor-body img{border-radius:8px;max-width:100%;margin:8px 0;}
+.editor-body img{border-radius:8px;width:100%;max-width:100%;height:auto;display:block;margin:8px 0;}
 .editor-body blockquote{border-left:3px solid #2563eb;padding:8px 14px;background:#eff6ff;margin:10px 0;border-radius:0 6px 6px 0;}
 .editor-body code{font-family:'Fira Code',monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.88em;color:#ea580c;}
 .editor-body pre{background:#f1f5f9;padding:12px;border-radius:6px;margin:10px 0;overflow-x:auto;}
 .editor-body ul,.editor-body ol{margin:0 0 12px 22px;}
 .editor-body li{margin-bottom:4px;}
+/* ขนาดตัวอักษร + ขนาด/ตำแหน่งรูป — ต้องตรงกับ .art-body ใน public/app.css
+   และใน functions/article/[id].js ไม่งั้นที่เห็นตอนเขียนจะไม่ตรงกับที่เผยแพร่จริง */
+.editor-body .t-sm{font-size:.86rem;line-height:1.75;}
+.editor-body .t-lg{font-size:1.15rem;line-height:1.8;}
+.editor-body .t-xl{font-size:1.38rem;line-height:1.7;font-weight:600;}
+.editor-body img.w-75{width:75%;}
+.editor-body img.w-50{width:50%;}
+.editor-body img.w-auto{width:auto;}
+.editor-body img.a-l{margin-left:0;margin-right:auto;}
+.editor-body img.a-c{margin-left:auto;margin-right:auto;}
+.editor-body img.a-r{margin-left:auto;margin-right:0;}
 
 /* UPLOAD BUTTON */
 .upload-btn-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
@@ -1382,7 +1402,7 @@ function artRowsHtml(arr) {
     <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openPinModal('article',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
-      <a class="btn btn-outline btn-sm" href="${location.origin}/#/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/article/${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="editArticle(${a.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delArticle(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
@@ -1637,6 +1657,15 @@ function renderArticleEditor(art) {
       <button onclick="fmt('italic')" title="ตัวเอียง"><i>I</i></button>
       <button onclick="fmtH('h2')" title="หัวข้อใหญ่">H2</button>
       <button onclick="fmtH('h3')" title="หัวข้อเล็ก">H3</button>
+      <select onchange="if(this.value)fmtSize(this.value==='reset'?'':this.value);this.selectedIndex=0;"
+              title="ขนาดตัวอักษรของย่อหน้าที่เคอร์เซอร์อยู่ (เลือกหลายย่อหน้าได้)">
+        <option value="">🅰 ขนาด ▾</option>
+        <option value="t-sm">เล็ก</option>
+        <option value="reset">ปกติ</option>
+        <option value="t-lg">ใหญ่</option>
+        <option value="t-xl">ใหญ่มาก</option>
+      </select>
+      <div class="tb-sep"></div>
       <button onclick="fmt('insertUnorderedList')" title="รายการ">• รายการ</button>
       <button onclick="fmt('insertOrderedList')" title="รายการตัวเลข">1. รายการ</button>
       <button onclick="fmtLink()" title="ลิงก์">🔗 ลิงก์</button>
@@ -1646,10 +1675,11 @@ function renderArticleEditor(art) {
       <button onclick="insertHTML()" title="วางโค้ด HTML (ตาราง/รูปแบบ) ให้แสดงผลจริง" style="color:#7c3aed;font-weight:700;">⧉ วาง HTML</button>
       <button onclick="fmtCode()" title="แสดงข้อความเป็นโค้ด (ไม่แปลง HTML)">‹ โค้ด</button>
       <button onclick="previewArticle()" title="ดูตัวอย่างบทความ (เหมือนตอนเผยแพร่จริง)" style="color:#2563eb;font-weight:700;">👁 ดูตัวอย่าง</button>
-      <button onclick="document.getElementById('editorBody').innerHTML=''" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
+      <button onclick="edClear()" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
     </div>
-    <div class="editor-body" id="editorBody" contenteditable="true">${art?.content||'<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>'}</div>
-    <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
+    <div class="editor-body" id="editorBody" contenteditable="true"
+         data-ph="เริ่มพิมพ์เนื้อหาที่นี่...">${art?.content||''}</div>
+    <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · รูปและปุ่มจะแทรกตรงตำแหน่งเคอร์เซอร์ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
   </div>
 
   <div class="btn-group">
@@ -1659,9 +1689,26 @@ function renderArticleEditor(art) {
     <span id="draftIndicator" style="font-size:.8rem;color:#059669;font-weight:700;opacity:0;transition:opacity .3s;align-self:center;">✓ บันทึกร่างอัตโนมัติแล้ว</span>
   </div>`;
 
-  // Focus editor
   const ed = document.getElementById('editorBody');
-  ed.addEventListener('focus', () => { if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = ''; });
+  _edRange = null;   // ตำแหน่งเก่าจากบทความก่อนหน้าใช้ไม่ได้แล้ว
+  edSyncPH();
+
+  // ── กันเคอร์เซอร์หลุดตอนกดปุ่ม toolbar ──
+  // เดิมพอ mousedown ปุ่ม โฟกัสจะย้ายจากกล่องเขียนไปที่ปุ่ม ตำแหน่งเคอร์เซอร์หายก่อน
+  // onclick จะได้ทำงาน — รูป/HTML/ปุ่มดาวน์โหลดเลยไปโผล่คนละบรรทัดกับที่ผู้ใช้เลือก
+  document.querySelector('.editor-toolbar')?.addEventListener('mousedown', e => {
+    if (e.target.closest('button')) e.preventDefault();   // <select> ต้องได้โฟกัส ไม่กัน
+  });
+
+  // จำตำแหน่งเคอร์เซอร์ล่าสุดไว้เสมอ เผื่อกรณีที่โฟกัสหลุดจริง (เปิด modal / prompt)
+  if (!window._edSelHooked) {
+    document.addEventListener('selectionchange', edSaveRange);
+    window._edSelHooked = true;
+  }
+  ed.addEventListener('input', edSyncPH);
+
+  // ให้ Enter สร้าง <p> ใหม่แทน <div> — ขนาดตัวอักษรและ CSS ของเว็บอิงกับ <p>
+  try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
 
   // ── auto-save ร่างบทความ กันข้อมูลหายเมื่อหน้า reload/หลุด ──
   const draftKey = '_draft_' + (editingId || 'new');
@@ -1676,15 +1723,14 @@ function renderArticleEditor(art) {
       localStorage.removeItem(draftKey);
     } else
     if (saved && (saved.title || saved.excerpt || saved.content)) {
-      const isEmpty = !titleEl.value.trim() &&
-        (!ed.innerHTML.trim() || ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>');
+      const isEmpty = !titleEl.value.trim() && edIsEmpty(ed);
       const ageMin = saved.savedAt ? (Date.now() - saved.savedAt) / 60000 : 999;
 
       if (isEmpty && !editingId && ageMin < 60*24) {
         // เขียนบทความใหม่ + ฟอร์มว่าง + ร่างยังไม่เก่าเกิน 24 ชม → เติมร่างกลับทันที
         titleEl.value = saved.title || '';
         excerptEl.value = saved.excerpt || '';
-        if (saved.content) ed.innerHTML = saved.content;
+        if (saved.content) edSetHTML(saved.content);
         // แจ้งเบาๆ ว่ากู้ร่างให้แล้ว พร้อมปุ่มทิ้งถ้าไม่ต้องการ
         const agoTxt = ageMin < 1 ? 'เมื่อสักครู่' : ageMin < 60 ? `${Math.round(ageMin)} นาทีที่แล้ว` : `${Math.round(ageMin/60)} ชั่วโมงที่แล้ว`;
         document.getElementById('editorAlert').innerHTML = `
@@ -1709,9 +1755,7 @@ function renderArticleEditor(art) {
 
   // บันทึกร่างอัตโนมัติ 2 วิ หลังหยุดพิมพ์
   const doSaveDraft = () => {
-    if (ed.innerHTML === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') return;
-    if (!titleEl.value.trim() && !excerptEl.value.trim() &&
-        (!ed.innerHTML.trim() || ed.innerHTML === '<p><br></p>')) return; // ว่างจริง ไม่บันทึก
+    if (!titleEl.value.trim() && !excerptEl.value.trim() && edIsEmpty(ed)) return; // ว่างจริง ไม่บันทึก
     const draft = {
       title: titleEl.value, excerpt: excerptEl.value,
       content: ed.innerHTML, savedAt: Date.now(),
@@ -1741,7 +1785,7 @@ function restoreDraft(key) {
     if (!d) return;
     document.getElementById('artTitle').value = d.title || '';
     document.getElementById('artExcerpt').value = d.excerpt || '';
-    document.getElementById('editorBody').innerHTML = d.content || '';
+    edSetHTML(d.content || '');
     document.getElementById('editorAlert').innerHTML = '';
     toast('✅ กู้คืนร่างแล้ว');
   } catch (e) { toast('❌ กู้คืนร่างไม่สำเร็จ'); }
@@ -1758,7 +1802,7 @@ function discardDraft(key) {
   if (title) title.value = '';
   if (excerpt) excerpt.value = '';
   if (img) img.value = '';
-  if (ed) ed.innerHTML = '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>';
+  if (ed) edSetHTML('');
   document.getElementById('editorAlert').innerHTML = '';
   toast('🗑 ทิ้งร่างแล้ว เริ่มเขียนใหม่ได้เลย');
   if (title) title.focus();
@@ -1782,13 +1826,13 @@ async function previewArticle() {
     ? '<span style="background:#dcfce7;color:#15803d;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">✅ จะเผยแพร่</span>'
     : '<span style="background:#fef3e2;color:#c2660c;padding:3px 12px;border-radius:100px;font-size:.78rem;font-weight:700;">📋 แบบร่าง (ดูตัวอย่าง)</span>';
 
-  // ดึง CSS จาก index.html จริงตอน runtime — sync กับเว็บจริงเสมอ
+  // ดึง app.css ตัวจริงตอน runtime — sync กับเว็บจริงเสมอ
+  // เดิมโค้ดนี้ match <style> ใน index.html ซึ่งไม่มีแล้ว (CSS ย้ายไป /app.css ตั้งแต่เมื่อไหร่ไม่รู้)
+  // regex เลยได้ null ทุกครั้ง → ตัวอย่างใช้ PREVIEW_CSS สำเนาเก่าในไฟล์นี้มาตลอดโดยไม่มีใครรู้
   if (!_pvCSSCache) {
     try {
-      const resp = await fetch(location.origin + '/');
-      const txt  = await resp.text();
-      const m    = txt.match(/<style>([\s\S]*?)<\/style>/);
-      _pvCSSCache = m ? m[1] : PREVIEW_CSS;
+      const resp = await fetch('/app.css?_pv=' + Date.now());
+      _pvCSSCache = resp.ok ? await resp.text() : PREVIEW_CSS;
     } catch { _pvCSSCache = PREVIEW_CSS; }
   }
   const LIVE_CSS = _pvCSSCache;
@@ -1836,13 +1880,158 @@ a{color:var(--mint);}
   w.document.close();
 }
 
-function fmt(cmd)  { document.execCommand(cmd, false, null); document.getElementById('editorBody').focus(); }
-function fmtH(tag) {
-  document.execCommand('formatBlock', false, tag);
-  document.getElementById('editorBody').focus();
+// ══════════════════════════════════════════════════════════
+// ตำแหน่งเคอร์เซอร์ในกล่องเขียน
+// ══════════════════════════════════════════════════════════
+// ทุกคำสั่งจัดรูปแบบและการแทรก (รูป/HTML/ปุ่ม) ทำงานกับ selection ปัจจุบันของ document
+// ถ้าโฟกัสหลุดไปที่ปุ่มหรือ modal ก่อน selection นั้นจะไม่ได้ชี้อยู่ในกล่องเขียนอีกต่อไป
+// จึงต้องจำ range ล่าสุดที่ "อยู่ในกล่องเขียนจริง ๆ" ไว้ แล้วคืนกลับก่อนสั่งงานทุกครั้ง
+let _edRange = null;
+
+function edSaveRange() {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  // เก็บเฉพาะ range ที่อยู่ในกล่องเขียน — โฟกัสไปที่อื่นจะไม่ทับค่าเดิมที่ยังใช้ได้
+  if (ed.contains(r.commonAncestorContainer)) _edRange = r.cloneRange();
 }
-function fmtBlock() { document.execCommand('formatBlock', false, 'blockquote'); document.getElementById('editorBody').focus(); }
-function fmtCode()  { document.execCommand('formatBlock', false, 'pre'); document.getElementById('editorBody').focus(); }
+
+// กล่องว่างจริงไหม (มีรูป/ตารางถือว่าไม่ว่าง แม้ไม่มีตัวอักษร)
+function edIsEmpty(ed) {
+  ed = ed || document.getElementById('editorBody');
+  if (!ed) return true;
+  if (ed.querySelector('img,table,iframe,hr,video')) return false;
+  return ed.textContent.trim() === '';
+}
+function edSyncPH() {
+  const ed = document.getElementById('editorBody');
+  if (ed) ed.classList.toggle('is-empty', edIsEmpty(ed));
+}
+
+// เปลี่ยนเนื้อหาทั้งก้อน (กู้ร่าง/ทิ้งร่าง) — ต้องล้างตำแหน่งเคอร์เซอร์ที่จำไว้ด้วยเสมอ
+// เพราะเมื่อ node ที่ range ชี้อยู่ถูกลบ เบราว์เซอร์จะย้าย range ไปเกาะที่ตัวกล่องแทน
+// ทำให้ ed.contains() ยังตอบ true ทั้งที่ตำแหน่งนั้นไม่มีความหมายแล้ว (ของใหม่จะไปโผล่บนสุด)
+function edSetHTML(html) {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return;
+  ed.innerHTML = html || '';
+  _edRange = null;
+  edSyncPH();
+}
+
+// คืนโฟกัส + เคอร์เซอร์กลับเข้ากล่องเขียน แล้วคืน selection ที่พร้อมใช้
+function edFocus() {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return null;
+  // ต้องตัดสินใจ "ก่อน" เรียก focus() เพราะ focus() จะวางเคอร์เซอร์ที่ต้นกล่องให้เอง
+  // กลายเป็น range ที่อยู่ในกล่องเหมือนกัน จนแยกไม่ออกว่าผู้ใช้เคยเลือกตำแหน่งไว้จริงไหม
+  // (เคยทำให้รูปไปโผล่บนสุดแทนที่จะต่อท้าย ตอนที่ยังไม่เคยคลิกในกล่องเลย)
+  const saved = (_edRange && ed.contains(_edRange.commonAncestorContainer)) ? _edRange : null;
+  ed.focus({ preventScroll: true });
+  const sel = window.getSelection();
+  if (!sel) return null;
+  const r = document.createRange();
+  if (saved) {
+    sel.removeAllRanges();
+    sel.addRange(saved);
+    return sel;
+  }
+  // ไม่มีตำแหน่งที่ใช้ได้ (เพิ่งเปิดหน้ามา หรือเนื้อหาเดิมถูกลบไปแล้ว) → ต่อท้ายเนื้อหา
+  r.selectNodeContents(ed);
+  r.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(r);
+  return sel;
+}
+
+// ยังใช้ execCommand แม้จะ deprecated เพราะเป็นทางเดียวที่ Ctrl+Z ย้อนกลับได้
+// (Range.insertNode เขียน DOM ตรง ๆ ไม่เข้า undo stack ของเบราว์เซอร์)
+function edExec(cmd, val = null) {
+  edFocus();
+  let done = false;
+  try { done = document.execCommand(cmd, false, val); } catch (e) { done = false; }
+  edSaveRange();
+  edSyncPH();
+  return done;
+}
+
+function edInsertHTML(html) {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return;
+  if (!edExec('insertHTML', html)) {
+    // เบราว์เซอร์ปฏิเสธคำสั่ง — ต่อท้ายเนื้อหาแทน ดีกว่าหายเงียบ ๆ
+    ed.insertAdjacentHTML('beforeend', html);
+    edSyncPH();
+  }
+  // Chrome แอบใส่ font-size ของกล่องเขียน (0.95rem) เป็น inline style ให้ของที่แทรกเข้าไป
+  // เพื่อ "รักษาหน้าตาเดิม" — แต่ค่านั้นจะติดไปในบทความจริงและทับ CSS ของเว็บ
+  ed.querySelectorAll('a.dl-btn[style], img[style]').forEach(el => {
+    el.style.removeProperty('font-size');
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  });
+}
+
+// หา block ที่ครอบ node อยู่ (หยุดที่กล่องเขียน)
+function edClosestBlock(ed, node) {
+  let el = node && node.nodeType === 1 ? node : node && node.parentElement;
+  while (el && el !== ed) {
+    if (/^(P|H2|H3|H4|LI|BLOCKQUOTE|PRE|FIGURE)$/.test(el.tagName)) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+// ล้างเนื้อหาทั้งหมด — ถามก่อน เดิมกดพลาดแล้วหายทันทีไม่มีทางกู้
+function edClear() {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return;
+  if (!edIsEmpty(ed) && !confirm('ล้างเนื้อหาบทความทั้งหมด? กด Ctrl+Z เพื่อเรียกคืนได้ทันทีถ้ากดพลาด')) return;
+  edFocus();
+  document.execCommand('selectAll', false, null);
+  edExec('delete');
+  _edRange = null;
+  edSyncPH();
+}
+
+function fmt(cmd)   { edExec(cmd); }
+function fmtH(tag)  { edExec('formatBlock', tag); }
+function fmtBlock() { edExec('formatBlock', 'blockquote'); }
+function fmtCode()  { edExec('formatBlock', 'pre'); }
+
+// ── ขนาดตัวอักษร ─────────────────────────────────────────
+// ใส่เป็น class ที่ย่อหน้า ไม่ใช้ execCommand('fontSize') ที่จะพ่น <font size="4">
+// รกไปทั้งบทความและทำให้แก้ขนาดทีหลังจาก CSS ที่เดียวไม่ได้
+const ED_SIZES = ['t-sm', 't-lg', 't-xl'];
+function fmtSize(cls) {
+  const ed = document.getElementById('editorBody');
+  if (!ed) return;
+  let sel = edFocus();
+  if (!sel || !sel.rangeCount) return;
+
+  // ข้อความที่ยังลอยอยู่ไม่มีย่อหน้าครอบ — ห่อ <p> ให้ก่อน ไม่งั้นไม่มีที่ให้ใส่ class
+  if (!edClosestBlock(ed, sel.getRangeAt(0).startContainer)) {
+    document.execCommand('formatBlock', false, 'p');
+    sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+  }
+
+  const range = sel.getRangeAt(0);
+  const hit = [...ed.querySelectorAll('p,h2,h3,h4,li,blockquote,figure')]
+    .filter(el => range.intersectsNode(el));
+  // ตัด parent ที่มีลูกโดนเลือกอยู่แล้วออก จะได้ไม่ใส่ class ซ้อนกันสองชั้น
+  const targets = hit.filter(el => !hit.some(o => o !== el && el.contains(o)));
+
+  if (!targets.length) { toast('วางเคอร์เซอร์ในย่อหน้าที่ต้องการก่อนครับ'); return; }
+  targets.forEach(el => {
+    el.classList.remove(...ED_SIZES);
+    if (cls) el.classList.add(cls);
+    if (!el.getAttribute('class')) el.removeAttribute('class');
+  });
+  edSaveRange();
+  toast(cls ? '✅ ปรับขนาดตัวอักษรแล้ว' : '✅ คืนขนาดปกติแล้ว');
+}
 
 // วาง HTML ดิบ (ตาราง/รูปแบบ) ให้แสดงผลจริง — ไม่ห่อ <pre>
 function insertHTML() {
@@ -1885,28 +2074,17 @@ function doInsertHTML() {
   const html = document.getElementById('htmlInput').value.trim();
   if (!html) { closeModal(); return; }
   closeModal();
-  const ed = document.getElementById('editorBody');
-  ed.focus();
-  // ลบ placeholder เริ่มต้นถ้ายังอยู่
-  if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
-  // แทรกเป็น HTML จริง ณ ตำแหน่งเคอร์เซอร์ (หรือต่อท้ายถ้าไม่มี selection)
-  const sel = window.getSelection();
-  if (sel && sel.rangeCount && ed.contains(sel.anchorNode)) {
-    document.execCommand('insertHTML', false, html + '<p><br></p>');
-  } else {
-    ed.innerHTML += html + '<p><br></p>';
-  }
+  // แทรก ณ ตำแหน่งเคอร์เซอร์ที่จำไว้ (edInsertHTML คืนโฟกัสให้เองก่อนแทรก)
+  edInsertHTML(html + '<p><br></p>');
   toast('✅ แทรก HTML แล้ว — กด 👁 ดูตัวอย่างเพื่อตรวจ');
 }
 function fmtLink()  {
+  const sel = edFocus();
+  if (!sel || sel.isCollapsed) { toast('⚠️ เลือกข้อความที่จะทำเป็นลิงก์ก่อนครับ'); return; }
   const url = prompt('กรอก URL ลิงก์:');
-  if (url) { document.execCommand('createLink', false, url); document.getElementById('editorBody').focus(); }
+  if (url) edExec('createLink', url);
 }
 function insertImg() {
-  // บันทึก cursor position ก่อนเปิด modal (focus จะย้ายออกจาก editor)
-  const sel = window.getSelection();
-  window._imgSavedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
-
   document.getElementById('modal').innerHTML = `
   <div class="modal-ov" onclick="closeModalSafe(event, this)">
     <div class="modal" style="max-width:480px;">
@@ -1957,10 +2135,28 @@ function insertImg() {
         </div>
       </div>
 
-      <!-- ฟิลด์ Alt text (ร่วมกันทั้ง 2 แท็บ) -->
+      <!-- ฟิลด์ร่วมกันทั้ง 2 แท็บ -->
       <div class="form-group" style="margin-top:16px;">
         <label class="form-label" style="font-size:.85rem;">คำอธิบายรูป (Alt text — ช่วย SEO)</label>
         <input type="text" class="form-input" id="imgAltInput" placeholder="เช่น แผนผังปฏิทินการย้ายครู 2569">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size:.85rem;">ขนาดและตำแหน่งในบทความ</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="form-select" id="imgWidthInput" style="flex:1;min-width:135px;">
+            <option value="">เต็มความกว้าง</option>
+            <option value="w-75">75%</option>
+            <option value="w-50">ครึ่งหนึ่ง (50%)</option>
+            <option value="w-auto">ขนาดจริงของรูป</option>
+          </select>
+          <select class="form-select" id="imgAlignInput" style="flex:1;min-width:135px;">
+            <option value="a-c">จัดกึ่งกลาง</option>
+            <option value="a-l">ชิดซ้าย</option>
+            <option value="a-r">ชิดขวา</option>
+          </select>
+        </div>
+        <div style="font-size:.75rem;color:#94a3b8;margin-top:5px;">รูปจะแทรกตรงบรรทัดที่เคอร์เซอร์อยู่</div>
       </div>
 
       <div class="modal-footer">
@@ -2009,39 +2205,23 @@ function previewImgUrl(url) {
 }
 
 async function doInsertImg() {
+  const esc      = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   const alt      = (document.getElementById('imgAltInput')?.value || 'รูปภาพ').trim();
   const urlInput = document.getElementById('imgUrlInput')?.value.trim();
   const fileInput = document.getElementById('imgFileInput');
   const panelUrl  = document.getElementById('imgPanelUrl');
   const isUrl = panelUrl && panelUrl.style.display !== 'none';
-
-  // helper: restore cursor แล้วแทรก HTML เข้า editor
-  function insertIntoEditor(imgHTML) {
-    const ed = document.getElementById('editorBody');
-    if (!ed) return;
-    if (ed.innerHTML.trim() === '<p>เริ่มพิมพ์เนื้อหาที่นี่...</p>') ed.innerHTML = '';
-    ed.focus();
-    // restore cursor ที่บันทึกไว้ก่อนเปิด modal
-    if (window._imgSavedRange) {
-      try {
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(window._imgSavedRange);
-      } catch(e) { /* range stale — ใช้ fallback */ }
-    }
-    // ลอง execCommand (ทำงานเมื่อมี selection)
-    const ok = document.execCommand('insertHTML', false, imgHTML + '<p><br></p>');
-    if (!ok) {
-      // fallback: ต่อท้าย innerHTML ถ้า execCommand ล้มเหลว
-      ed.innerHTML += imgHTML + '<p></p>';
-    }
-    window._imgSavedRange = null;
-  }
+  // ขนาด/ตำแหน่งคุมด้วย class ที่นิยามไว้ใน app.css + หน้า SSR ไม่ใช่ inline style
+  // จะได้ปรับหน้าตารูปทั้งเว็บทีหลังจาก CSS ที่เดียว
+  const cls = [document.getElementById('imgWidthInput')?.value,
+               document.getElementById('imgAlignInput')?.value].filter(Boolean).join(' ');
+  const imgTag = src =>
+    `<img src="${esc(src)}" alt="${esc(alt)}"${cls ? ` class="${cls}"` : ''}>`;
 
   if (isUrl) {
     if (!urlInput) { toast('❌ กรุณาใส่ URL รูปภาพ'); return; }
     closeModal();
-    insertIntoEditor(`<img src="${urlInput}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
+    edInsertHTML(imgTag(urlInput) + '<p><br></p>');
     toast('✅ แทรกรูปจาก URL แล้ว');
   } else {
     const f = fileInput?.files?.[0];
@@ -2051,7 +2231,7 @@ async function doInsertImg() {
     try {
       const url = await uploadToImgbb(f);
       if (url) {
-        insertIntoEditor(`<img src="${url}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`);
+        edInsertHTML(imgTag(url) + '<p><br></p>');
         toast('✅ แทรกรูปแล้ว');
       }
     } catch(e) { toast('❌ ' + e.message); }
@@ -2090,11 +2270,10 @@ function insertDownload() {
     const url   = document.getElementById('_dlUrl').value.trim();
     const label = document.getElementById('_dlLabel').value.trim();
     if (!url || !label) { alert('กรุณาใส่ URL และชื่อปุ่มให้ครบ'); return; }
-    document.getElementById('editorBody').focus();
-    document.execCommand('insertHTML', false,
-      `<a href="${url}" target="_blank" rel="noopener" class="dl-btn">📥 ${label}</a><p><br></p>`
-    );
-    close(); toast('✅ แทรกปุ่มดาวน์โหลดแล้ว');
+    const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    close();  // ปิดก่อน แล้วค่อยแทรก — edInsertHTML จะคืนเคอร์เซอร์กลับเข้ากล่องเขียนให้เอง
+    edInsertHTML(`<a href="${esc(url)}" target="_blank" rel="noopener" class="dl-btn">📥 ${esc(label)}</a><p><br></p>`);
+    toast('✅ แทรกปุ่มดาวน์โหลดแล้ว');
   };
   overlay.addEventListener('keydown', e => {
     if (e.key==='Enter') document.getElementById('_dlOk').click();
@@ -2153,7 +2332,7 @@ async function saveArticle() {
   window._saveDraftNow = null;
   if (window._currentDraftKey) { localStorage.removeItem(window._currentDraftKey); window._currentDraftKey = null; }
   const itemId = editingId || res.id;
-  const url = itemId ? `${location.origin}/#/article/${itemId}` : `${location.origin}/#/blog`;
+  const url = itemId ? `${location.origin}/article/${itemId}` : `${location.origin}/blog`;
   toastWithLink(editingId ? '✅ แก้ไขบทความแล้ว' : '✅ เผยแพร่บทความแล้ว', url);
   setTimeout(() => nav('articles'), 800);
 }
@@ -2213,7 +2392,7 @@ function appRowsHtml(arr) {
     <td>${a.prompt?'<span class="badge badge-green">มี</span>':'<span class="badge badge-gray">-</span>'}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openPinModal('app',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
-      <a class="btn btn-outline btn-sm" href="${location.origin}/#/apps?open=${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/apps?open=${a.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;margin-left:4px">👁</a>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openAppModal(${a.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delApp(${a.id},'${a.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
@@ -2330,7 +2509,7 @@ async function saveApp(id) {
     : await api.post('/apps', body);
   if (res.error) { toast('❌ '+res.error); return; }
   closeModal();
-  toastWithLink('✅ บันทึกแอปแล้ว', `${location.origin}/#/apps`);
+  toastWithLink('✅ บันทึกแอปแล้ว', `${location.origin}/apps`);
   renderApps();
 }
 
@@ -2397,7 +2576,7 @@ function wsRowsHtml(arr) {
     </td>
     <td style="text-align:center;">${w.downloads||0}</td>
     <td style="white-space:nowrap">
-      <a class="btn btn-outline btn-sm" href="${location.origin}/#/worksheet/${w.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
+      <a class="btn btn-outline btn-sm" href="${location.origin}/worksheet/${w.id}" target="_blank" rel="noopener" title="ดูในเว็บจริง" style="text-decoration:none;">👁</a>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openWorksheetModal(${w.id})">✏️ แก้ไข</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delWorksheet(${w.id},'${w.title.replace(/'/g,"\\'")}')">🗑</button>
     </td>
@@ -2512,7 +2691,7 @@ async function saveWorksheet(id) {
   if (res.error) { toast('❌ '+res.error); return; }
   closeModal();
   const wsId = (id && id !== 'null') ? id : res.id;
-  const wsUrl = wsId ? `${location.origin}/#/worksheet/${wsId}` : `${location.origin}/#/worksheets`;
+  const wsUrl = wsId ? `${location.origin}/worksheet/${wsId}` : `${location.origin}/worksheets`;
   toastWithLink('✅ บันทึกใบงานแล้ว', wsUrl);
   renderWorksheets();
 }
@@ -3600,8 +3779,7 @@ function closeModalSafe(event, el) {
   fields.forEach(f => {
     if (f.type === 'checkbox' || f.type === 'radio' || f.type === 'hidden') return;
     const val = f.isContentEditable ? f.textContent.trim() : (f.value || '').trim();
-    // ข้าม placeholder เริ่มต้นของ editor
-    if (val && val !== 'เริ่มพิมพ์เนื้อหาที่นี่...') hasData = true;
+    if (val) hasData = true;
   });
   if (hasData) {
     if (confirm('ปิดหน้าต่างนี้? ข้อมูลที่กรอกไว้จะหายทั้งหมด')) closeModal();

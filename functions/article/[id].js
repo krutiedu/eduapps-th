@@ -217,7 +217,17 @@ nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:ce
 .art-body pre code{background:none;padding:0;font-size:.88rem;color:var(--chalk);}
 .art-body blockquote{border-left:3px solid var(--gold);padding:12px 19px;margin:15px 0;background:var(--gold-soft);border-radius:0 11px 11px 0;color:var(--ink-soft);}
 .art-body a{color:var(--mint);}
-.art-body img{border-radius:11px;margin:13px 0;max-width:100%;}
+.art-body img{border-radius:11px;margin:13px 0;width:100%;max-width:100%;height:auto;display:block;}
+/* ชุดนี้ต้องตรงกับ public/app.css และ .editor-body ใน public/admin/index.html (ดูหมายเหตุที่ app.css) */
+.art-body .t-sm{font-size:.9rem;line-height:1.85;}
+.art-body .t-lg{font-size:1.2rem;line-height:1.9;}
+.art-body .t-xl{font-size:1.42rem;line-height:1.75;font-weight:600;}
+.art-body img.w-75{width:75%;}
+.art-body img.w-50{width:50%;}
+.art-body img.w-auto{width:auto;}
+.art-body img.a-l{margin-left:0;margin-right:auto;}
+.art-body img.a-c{margin-left:auto;margin-right:auto;}
+.art-body img.a-r{margin-left:auto;margin-right:0;}
 .art-body table{width:100%;border-collapse:collapse;margin:15px 0;font-size:.92rem;}
 .art-body th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--line);font-weight:700;color:var(--ink-soft);}
 .art-body td{padding:10px 12px;border-bottom:1px solid var(--line);}
