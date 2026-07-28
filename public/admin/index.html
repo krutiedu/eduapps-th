@@ -1322,7 +1322,7 @@ function kbShowCreds(username, password, name) {
     <div style="font-size:.78rem;color:#64748b;margin-bottom:4px;">รหัสผ่าน</div>
     <div style="font-family:monospace;font-weight:700;font-size:1rem;">${password}</div>
   </div>
-  <button class="btn btn-primary" style="width:100%;" onclick="navigator.clipboard.writeText('ชื่อผู้ใช้: ${username}\\nรหัสผ่าน: ${password}\\nเข้าใช้งาน: ${location.origin}/board').then(()=>{toast('📋 คัดลอกแล้ว');closeModal();renderKruboard();})">📋 คัดลอกข้อมูลทั้งหมด</button>`;
+  <button class="btn btn-primary" style="width:100%;" onclick="navigator.clipboard.writeText('ชื่อผู้ใช้: ${username}\\nรหัสผ่าน: ${password}\\nเข้าใช้งาน: https://kru-ti.com/board').then(()=>{toast('📋 คัดลอกแล้ว');closeModal();renderKruboard();})">📋 คัดลอกข้อมูลทั้งหมด</button>`;
   kbOpenModal(html);
 }
 
@@ -3191,7 +3191,11 @@ function buildEmailHTML() {
   const code = document.getElementById('emCode').value.trim();
   const pkg  = document.getElementById('emPkg').value.trim() || 'แพ็กเกจของคุณ';
   const apps = document.getElementById('emApps').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const siteUrl = location.origin + '/'; // email client ตัด # ออก — ลิงก์ตรงไปหน้าแรกแล้วนำทางต่อ
+  // ห้ามใช้ location.origin ในอีเมล: หน้า admin เปิดจาก eduapps-th.pages.dev ได้ด้วย
+  // (Cloudflare เปิดทิ้งไว้ตลอด) ถ้าเผลอเปิดจากที่นั่น ลูกค้าที่จ่ายเงินจะได้ลิงก์ pages.dev
+  // ติดอยู่ในกล่องจดหมายถาวร — ยึดโดเมนหลักเหมือนที่ app.js ทำกับ canonical/ลิงก์แชร์
+  const SITE_URL = 'https://kru-ti.com';
+  const appsUrl  = SITE_URL + '/apps';   // หน้าที่มีช่อง 🎟️ "มีรหัสปลดล็อก?" อยู่จริง
   const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f1;padding:28px 12px;"><tr><td align="center">
@@ -3220,7 +3224,7 @@ function buildEmailHTML() {
   <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;font-weight:bold;color:#15223c;margin-bottom:12px;">วิธีใช้รหัส (ใช้เวลาไม่ถึง 1 นาที)</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:1.8;color:#41506b;">
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">1.</td>
-        <td style="padding-bottom:8px;">เข้าเว็บ <a href="${siteUrl}" style="color:#0fa294;font-weight:bold;">kru-ti.com</a> แล้วไปที่หน้า <strong>แอปทั้งหมด</strong></td></tr>
+        <td style="padding-bottom:8px;">เปิดหน้า <a href="${appsUrl}" style="color:#0fa294;font-weight:bold;">แอปทั้งหมด</a> ที่เว็บ kru-ti.com (กดลิงก์นี้ได้เลย)</td></tr>
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">2.</td>
         <td style="padding-bottom:8px;">กรอกรหัสด้านบนในช่อง <strong>&#127903;&#65039; "มีรหัสปลดล็อก?"</strong> แล้วกดปุ่ม ปลดล็อก</td></tr>
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;">3.</td>
@@ -3228,7 +3232,7 @@ function buildEmailHTML() {
   </table>
 </td></tr>
 <tr><td style="padding:22px 36px;" align="center">
-  <a href="${siteUrl}" style="display:inline-block;background-color:#f0a830;color:#15223c;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 38px;border-radius:11px;">&#128275; ไปปลดล็อกแอปเลย</a>
+  <a href="${appsUrl}" style="display:inline-block;background-color:#f0a830;color:#15223c;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 38px;border-radius:11px;">&#128275; ไปปลดล็อกแอปเลย</a>
 </td></tr>
 ${apps.length ? `<tr><td style="padding:4px 36px 8px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -3253,7 +3257,7 @@ ${apps.length ? `<tr><td style="padding:4px 36px 8px;">
 </td></tr>
 <tr><td style="background-color:#15223c;padding:18px 36px;text-align:center;">
   <div style="font-family:Tahoma,Arial,sans-serif;font-size:11.5px;color:#9db0cc;line-height:1.9;">
-    <a href="${location.origin}" style="color:#f0a830;text-decoration:none;font-weight:bold;">kru-ti.com</a><br>
+    <a href="${SITE_URL}" style="color:#f0a830;text-decoration:none;font-weight:bold;">kru-ti.com</a><br>
     &#169; 2569 Kru-ti ครูติ TH
   </div>
 </td></tr>
@@ -3264,8 +3268,9 @@ ${apps.length ? `<tr><td style="padding:4px 36px 8px;">
 async function copyEmail() {
   const btn = document.getElementById('emCopyBtn');
   const html = buildEmailHTML();
+  // ฉบับ text ล้วน — ใช้เมื่อลูกค้าเปิดอีเมลด้วยโปรแกรมที่ไม่แสดง HTML
   const plain = 'รหัสปลดล็อกของคุณ: ' + document.getElementById('emCode').value
-    + '\nใช้งานที่ ' + location.origin + '/';
+    + '\nนำไปกรอกที่ https://kru-ti.com/apps ในช่อง "มีรหัสปลดล็อก?"';
   try {
     // วิธีหลัก: ClipboardItem แบบ text/html → วางใน Gmail ติด format เต็ม
     await navigator.clipboard.write([
