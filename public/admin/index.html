@@ -1605,6 +1605,10 @@ function renderArticleEditor(art) {
   editingId = art?.id || null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page==='new-article'));
 
+  // บทความเก่าที่วางโค้ดมาทั้งก้อนอาจมีเปลือกและหัวข้อซ้ำค้างอยู่ — เก็บกวาดตอนเปิดแก้ไข
+  // แต่ไม่บันทึกให้เอง ต้องแจ้งให้เห็นแล้วให้เจ้าของกด 💾 ยืนยันเอง
+  const cleaned = art?.content ? edCleanHTML(art.content, art.title) : { html: '', changes: [] };
+
   document.getElementById('content').innerHTML = `
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
     <button class="btn btn-outline btn-sm" onclick="nav('articles')">← กลับ</button>
@@ -1678,7 +1682,7 @@ function renderArticleEditor(art) {
       <button onclick="edClear()" title="ล้างทั้งหมด" style="color:#dc2626;">✕ ล้าง</button>
     </div>
     <div class="editor-body" id="editorBody" contenteditable="true"
-         data-ph="เริ่มพิมพ์เนื้อหาที่นี่...">${art?.content||''}</div>
+         data-ph="เริ่มพิมพ์เนื้อหาที่นี่...">${cleaned.html}</div>
     <p style="font-size:.75rem;color:#94a3b8;margin-top:6px;">💡 เลือกข้อความแล้วกดปุ่ม toolbar เพื่อจัดรูปแบบ · รูปและปุ่มจะแทรกตรงตำแหน่งเคอร์เซอร์ · ถ้ามีโค้ด HTML (เช่นตาราง) ให้กด <strong style="color:#7c3aed;">⧉ วาง HTML</strong> เพื่อให้แสดงผลจริง</p>
   </div>
 
@@ -1776,6 +1780,15 @@ function renderArticleEditor(art) {
   // ให้ nav() เรียกบันทึกทันทีก่อนสลับหน้า
   window._saveDraftNow = doSaveDraft;
   window._currentDraftKey = draftKey;
+
+  // แจ้งว่าเก็บกวาดอะไรให้บ้าง — ต่อท้ายกล่องแจ้งเตือน ไม่ทับข้อความกู้ร่างที่อาจมีอยู่
+  if (cleaned.changes.length) {
+    document.getElementById('editorAlert').insertAdjacentHTML('beforeend', `
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.85rem;color:#92400e;">
+        🧹 บทความนี้มีโค้ดส่วนเกินที่ติดมาตอนวาง — จัดให้แล้ว: <strong>${cleaned.changes.join(' · ')}</strong><br>
+        <span style="color:#a16207;">ยังไม่ได้บันทึก · ตรวจดูแล้วกด 💾 บันทึกบทความ เพื่อยืนยัน หรือกด ← กลับ ถ้าไม่ต้องการเปลี่ยน</span>
+      </div>`);
+  }
 }
 
 // กู้คืนร่าง
@@ -1983,6 +1996,55 @@ function edClosestBlock(ed, node) {
   return null;
 }
 
+// ══════════════════════════════════════════════════════════
+// ทำความสะอาด HTML ที่ copy มาจากที่อื่น
+// ══════════════════════════════════════════════════════════
+// เวลา copy หน้าเว็บหรือผลลัพธ์จาก AI มาทั้งก้อน มักพ่วง <article> ครอบ และ <h1>
+// หัวข้อติดมาด้วย แต่หน้าบทความใส่ <h1> จากช่อง "หัวข้อบทความ" ให้อยู่แล้ว
+// หัวข้อจึงโผล่ 2 ครั้ง และมี <h1> ซ้อนกัน 2 อันซึ่งเสีย SEO
+//
+// <h1> แยก 2 กรณี ห้ามลบทิ้งหมด:
+//   ข้อความตรงกับหัวข้อบทความ = ซ้ำจริง → ลบ
+//   ข้อความต่างออกไป          = หัวข้อของเนื้อหาเอง → เปลี่ยนเป็น <h2> ไม่งั้นเนื้อหาหาย
+function edCleanHTML(html, title) {
+  const changes = [];
+  const box = document.createElement('div');
+  box.innerHTML = String(html || '');
+
+  // ตัวแยกวิเคราะห์ของเบราว์เซอร์ตัด <html>/<body> ทิ้งให้เองอยู่แล้ว
+  // เหลือแค่พวกที่รอด ต้องแกะเปลือกเอง
+  box.querySelectorAll('script,title,meta,link').forEach(el => {
+    if (el.tagName === 'SCRIPT') changes.push('สคริปต์');   // หลุดขึ้นเว็บจะรันกับผู้อ่านทุกคน
+    el.remove();
+  });
+
+  let unwrapped = 0;
+  box.querySelectorAll('article,main,header').forEach(el => {
+    while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+    el.remove(); unwrapped++;
+  });
+  if (unwrapped) changes.push(`เปลือกหน้าเว็บ ${unwrapped} ชั้น`);
+
+  const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+  const t = norm(title);
+  let removed = 0, demoted = 0;
+  box.querySelectorAll('h1').forEach(h => {
+    if (t && norm(h.textContent) === t) { h.remove(); removed++; return; }
+    const h2 = document.createElement('h2');
+    h2.innerHTML = h.innerHTML;
+    if (h.getAttribute('class')) h2.setAttribute('class', h.getAttribute('class'));
+    h.replaceWith(h2); demoted++;
+  });
+  if (removed) changes.push(`หัวข้อซ้ำ ${removed} อัน`);
+  if (demoted) changes.push(`หัวข้อ H1 → H2 ${demoted} อัน`);
+
+  // ไม่มีอะไรต้องแก้ = คืนของเดิมทุกตัวอักษร ห้ามคืน box.innerHTML
+  // เพราะการอ่านเข้า-เขียนออกผ่าน DOM จะจัดรูปแบบใหม่เงียบ ๆ (เช่นเติม <tbody> ให้ตาราง)
+  // เนื้อหาที่ไม่มีปัญหาจะได้ไม่ถูกแตะทุกครั้งที่กดบันทึก
+  if (!changes.length) return { html: String(html || ''), changes };
+  return { html: box.innerHTML, changes };
+}
+
 // ล้างเนื้อหาทั้งหมด — ถามก่อน เดิมกดพลาดแล้วหายทันทีไม่มีทางกู้
 function edClear() {
   const ed = document.getElementById('editorBody');
@@ -2074,9 +2136,13 @@ function doInsertHTML() {
   const html = document.getElementById('htmlInput').value.trim();
   if (!html) { closeModal(); return; }
   closeModal();
+  // โค้ดที่ copy มาทั้งหน้ามักพ่วงเปลือกและหัวข้อซ้ำมาด้วย — เก็บกวาดก่อนแทรก
+  const c = edCleanHTML(html, document.getElementById('artTitle')?.value);
   // แทรก ณ ตำแหน่งเคอร์เซอร์ที่จำไว้ (edInsertHTML คืนโฟกัสให้เองก่อนแทรก)
-  edInsertHTML(html + '<p><br></p>');
-  toast('✅ แทรก HTML แล้ว — กด 👁 ดูตัวอย่างเพื่อตรวจ');
+  edInsertHTML(c.html + '<p><br></p>');
+  toast(c.changes.length
+    ? '✅ แทรก HTML แล้ว · เก็บกวาดให้: ' + c.changes.join(' · ')
+    : '✅ แทรก HTML แล้ว — กด 👁 ดูตัวอย่างเพื่อตรวจ');
 }
 function fmtLink()  {
   const sel = edFocus();
@@ -2315,11 +2381,14 @@ async function uploadImg() {
 async function saveArticle() {
   const title = document.getElementById('artTitle').value.trim();
   if (!title) { alert('กรุณาใส่หัวข้อบทความ'); return; }
+  // ตาข่ายชั้นสุดท้าย — เนื้อหาอาจมีเปลือก/หัวข้อซ้ำหลุดเข้ามาทางอื่น เช่นวางด้วย Ctrl+V ตรง ๆ
+  const clean = edCleanHTML(document.getElementById('editorBody').innerHTML, title);
+  if (clean.changes.length) toast('🧹 เก็บกวาดก่อนบันทึก: ' + clean.changes.join(' · '));
   const body = {
     title,
     category: document.getElementById('artCat').value,
     excerpt:  document.getElementById('artExcerpt').value.trim(),
-    content:  document.getElementById('editorBody').innerHTML,
+    content:  clean.html,
     image_url:document.getElementById('artImg').value.trim(),
     published: parseInt(document.getElementById('artPub').value),
   };
