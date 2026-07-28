@@ -2352,7 +2352,7 @@ async function doInsertImg() {
       const url = await uploadToImgbb(f);
       if (url) {
         edInsertHTML(imgTag(url) + '<p><br></p>');
-        toast('✅ แทรกรูปแล้ว');
+        toast('✅ แทรกรูปแล้ว' + uploadInfo());
       }
     } catch(e) { toast('❌ ' + e.message); }
   }
@@ -2528,14 +2528,37 @@ async function uploadToImgbb(file) {
   };
   let r = await send(picked);
   // เผื่อ imgbb ไม่รับ WebP — เข้ารหัสใหม่เป็น JPEG แล้วลองอีกครั้ง ดีกว่าให้ผู้ใช้เจอ error เฉย ๆ
+  let fellBack = false;
   if (!r.success && picked !== file && /webp/i.test(picked.type || '')) {
     try {
       const j = await compressImage(file, 'image/jpeg');
       r = await send(new File([j.blob], (picked.name || 'image').replace(/\.webp$/i, '.jpg'), { type: 'image/jpeg' }));
+      fellBack = true;
     } catch (e) { /* ใช้ผลเดิม */ }
   }
-  if (r.success && r.data?.url) return r.data.url;
+  if (r.success && r.data?.url) {
+    // เก็บสิ่งที่ imgbb "เก็บไว้จริง" ไม่ใช่สิ่งที่เราส่งไป — imgbb อาจแปลงไฟล์เองได้
+    // เอกสาร API ไม่ระบุว่ารองรับชนิดไหนบ้าง จึงต้องอ่านจากคำตอบทุกครั้ง
+    _lastUpload = {
+      ext:  String(r.data.image?.extension || '').toUpperCase(),
+      size: Number(r.data.size) || 0,
+      sent: Math.round((picked.size || 0) / 1024),
+      fellBack,
+    };
+    return r.data.url;
+  }
   throw new Error(r.error?.message || 'อัปโหลดไม่สำเร็จ');
+}
+
+// ผลจริงของการอัปครั้งล่าสุด — ต่อท้ายข้อความแจ้งผลให้เห็นว่าเก็บเป็นชนิดอะไร ขนาดเท่าไร
+let _lastUpload = null;
+function uploadInfo() {
+  if (!_lastUpload) return '';
+  const u = _lastUpload; _lastUpload = null;
+  const warn = u.ext && u.ext !== 'WEBP' && u.sent && Math.round(u.size / 1024) > u.sent * 1.3
+    ? ' ⚠️ imgbb แปลงไฟล์เอง ไฟล์เลยใหญ่ขึ้น' : '';
+  return ` · เก็บเป็น ${u.ext || '?'} ${fmtBytes(u.size)}`
+       + (u.fellBack ? ' (imgbb ไม่รับ WebP จึงใช้ JPEG แทน)' : '') + warn;
 }
 
 async function uploadImg() {
@@ -2547,7 +2570,7 @@ async function uploadImg() {
     if (!url) return;
     document.getElementById('artImg').value = url;
     document.getElementById('imgPreview').innerHTML = `<img src="${url}" style="max-height:120px;border-radius:8px;">`;
-    toast('✅ อัปโหลดรูปสำเร็จ');
+    toast('✅ อัปโหลดรูปสำเร็จ' + uploadInfo());
   } catch(e) { toast('❌ ' + e.message); }
 }
 
@@ -2962,7 +2985,7 @@ async function uploadCoverImg() {
         document.getElementById('wCover').parentNode.appendChild(img);
       }
       img.src = url;
-      toast('✅ อัปโหลดรูปปกแล้ว');
+      toast('✅ อัปโหลดรูปปกแล้ว' + uploadInfo());
     } catch(e) { toast('❌ ' + e.message); }
     if (btn) btn.textContent = '📷 อัปโหลด';
   };
@@ -3661,7 +3684,7 @@ async function uploadPreviewImg() {
         document.getElementById('aPreview').parentNode.appendChild(img);
       }
       img.src = url;
-      toast('✅ อัปโหลดรูป preview แล้ว');
+      toast('✅ อัปโหลดรูป preview แล้ว' + uploadInfo());
     } catch(e) { toast('❌ ' + e.message); }
     if (btn) btn.textContent = '📷 อัปโหลด';
   };
