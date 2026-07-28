@@ -6,7 +6,8 @@
 //   DB           -> D1 database
 //   BUCKET       -> R2 bucket
 // Secrets/Env vars:
-//   AUTH_SECRET  -> สตริงลับ ไว้เซ็น token (ตั้งเอง ยาว ๆ สุ่ม ๆ)
+//   AUTH_SECRET  -> สตริงลับ ไว้เซ็น token (ตั้งเอง ยาว ๆ สุ่ม ๆ) — บังคับ ไม่มีค่า fallback
+//                   ถ้าไม่ตั้ง ครูจะล็อกอินไม่ได้และทุก endpoint ของครูจะคืน 500
 //   ADMIN_PASS   -> รหัสเข้าหน้า admin
 //   ALLOW_SIGNUP -> "1" = เปิดให้ครูสมัครเอง, ไม่ใส่/"0" = ปิด (เริ่มต้นปิด)
 // ============================================================
@@ -103,10 +104,11 @@ async function readToken(token, secret) {
 }
 
 // ดึง username ครูจาก token (ค้างยาว — ไม่ใส่วันหมดอายุ)
-async function currentTeacher(request, env) {
+async function currentTeacher(request, secret) {
+  if (!secret) return null;                 // ไม่มีกุญแจ = ไม่เชื่อ token ใด ๆ ทั้งสิ้น
   const auth = request.headers.get('Authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '');
-  const p = await readToken(token, env.AUTH_SECRET || 'dev-secret');
+  const p = await readToken(token, secret);
   return p?.u || null;
 }
 
@@ -115,7 +117,11 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api\/kb\/?/, '');
   const method = request.method;
-  const SECRET = env.AUTH_SECRET || 'dev-secret';
+  // ตั้งเป็น secret ใน Cloudflare Pages แล้ว จึงไม่มีค่า fallback อีกต่อไป
+  // เดิมถอยไปใช้ 'dev-secret' ซึ่งเปิดเผยอยู่ใน repo สาธารณะ = ใครก็ปลอม token เป็นครูได้
+  // ถ้าตัวแปรนี้หายไปเมื่อไหร่ ให้ปฏิเสธทุกอย่างที่เกี่ยวกับ token ดีกว่ายอมให้ผ่านเงียบ ๆ
+  const SECRET = env.AUTH_SECRET;
+  const noSecret = () => json({ error: 'ระบบยังไม่ได้ตั้งค่า AUTH_SECRET — กรุณาแจ้งผู้ดูแลระบบ' }, 500);
 
   try {
     // ================= สาธารณะ: รูป =================
@@ -129,6 +135,7 @@ export async function onRequest(context) {
     // ================= ครู: ล็อกอิน =================
     // POST /api/login  {username, password}
     if (path === 'login' && method === 'POST') {
+      if (!SECRET) return noSecret();
       const { username, password } = await request.json();
       if (!username || !password) return json({ error: 'กรอกข้อมูลไม่ครบ' }, 400);
       const t = await env.DB.prepare('SELECT * FROM kb_teachers WHERE username=?').bind(username).first();
@@ -144,6 +151,7 @@ export async function onRequest(context) {
     // POST /api/signup {username,name,password}
     if (path === 'signup' && method === 'POST') {
       if (env.ALLOW_SIGNUP !== '1') return json({ error: 'ระบบยังไม่เปิดให้สมัครเอง ติดต่อผู้ดูแล' }, 403);
+      if (!SECRET) return noSecret();
       const { username, name, password } = await request.json();
       if (!username || !password) return json({ error: 'กรอกข้อมูลไม่ครบ' }, 400);
       if (password.length < 6) return json({ error: 'รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัว)' }, 400);
@@ -299,7 +307,8 @@ export async function onRequest(context) {
     }
 
     // ================= ครู (ต้องล็อกอิน) =================
-    const me = await currentTeacher(request, env);
+    if (!SECRET) return noSecret();
+    const me = await currentTeacher(request, SECRET);
     if (!me) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
 
     if (path === 'boards' && method === 'GET') {
