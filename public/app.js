@@ -271,6 +271,15 @@ async function renderHome() {
 
 // ── BLOG ─────────────────────────────────────────────────
 let blogQ = '', blogCat = 'ทั้งหมด', blogPage = 1;
+// มุมมองบล็อก/ตาราง — จำไว้แบบเดียวกับหน้าแอป (`appsPref`) คนละคีย์กันเพราะคนละหน้า
+let _blogView = 'block';
+try { const v = localStorage.getItem('blogView'); if (v === 'block' || v === 'table') _blogView = v; } catch (e) {}
+function setBlogView(v) {
+  _blogView = v;
+  try { localStorage.setItem('blogView', v); } catch (e) {}
+  renderBlog();   // เรียกแบบไม่ส่งอาร์กิวเมนต์ = คงคำค้น หมวด และหน้าเดิมไว้
+}
+
 async function renderBlog(q, cat, page) {
   if (q !== undefined) blogQ = q;
   if (cat !== undefined) blogCat = cat;
@@ -296,10 +305,24 @@ async function renderBlog(q, cat, page) {
         onkeydown="if(event.key==='Enter')renderBlog(this.value,undefined,1)">
       <button class="btn btn-primary" style="padding:9px 18px;" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
     </div>
-    <div class="cat-strip rv2" id="blogCats"></div>
+    <div class="blog-bar rv2">
+      <div class="cat-strip" id="blogCats"></div>
+      <div class="view-toggle">
+        <button class="vt-btn ${_blogView==='block'?'on':''}" onclick="setBlogView('block')" title="มุมมองบล็อก">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span>บล็อก</span>
+        </button>
+        <button class="vt-btn ${_blogView==='table'?'on':''}" onclick="setBlogView('table')" title="มุมมองตาราง">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <span>ตาราง</span>
+        </button>
+      </div>
+    </div>
     ${adSlot()}
     ${arts.length
-      ? `<div class="arts-grid rv2">${arts.map(artCard).join('')}</div>`
+      ? (_blogView === 'table'
+          ? `<div class="rv2">${artTable(arts)}</div>`
+          : `<div class="arts-grid rv2">${arts.map(artCard).join('')}</div>`)
       : `<div class="empty">📭<br>ไม่พบบทความ</div>`}
     ${pages > 1 ? `
     <div class="pagination">
@@ -730,7 +753,7 @@ function renderTableView(items) {
   }).join('');
 
   return `<div style="overflow-x:auto;">
-    <table class="apps-table">
+    <table class="data-table apps-table">
       <thead><tr>
         <th></th><th>ชื่อแอป</th><th class="at-hide-mobile">หมวดหมู่</th><th>ประเภท</th><th class="at-hide-mobile">วันที่</th><th></th>
       </tr></thead>
@@ -1320,12 +1343,50 @@ function renderPrivacy() {
 }
 
 // ── CARD TEMPLATES ───────────────────────────────────────
+// รูปปกบนการ์ด/ในตาราง — กรอบยึดสัดส่วนแนวนอน 16/9 เสมอ เพื่อให้การ์ดทุกใบสูงเท่ากัน
+// รูปแนวนอนเต็มกรอบ (object-fit:cover) · รูปแนวตั้งย่อลงให้เห็นทั้งใบ (contain)
+// ต้องตัดสินตอน onload เพราะฐานข้อมูลเก็บแค่ URL ไม่มีขนาดรูป
+// (บทความที่ไม่มีรูปปกได้กรอบสีเข้ม ✦ แทน — ขาดไม่ได้ ไม่งั้นการ์ดใบนั้นเตี้ยกว่าเพื่อน)
+const ART_TALL = `onload="if(this.naturalHeight>this.naturalWidth)this.classList.add('tall')"`;
+
+function artThumb(a) {
+  if (!a.image_url) return `<div class="art-thumb art-thumb-ph">✦</div>`;
+  return `<div class="art-thumb">
+    <img src="${esc(a.image_url)}" alt="" loading="lazy" ${ART_TALL}
+      onerror="this.parentNode.className='art-thumb art-thumb-ph';this.parentNode.textContent='✦';">
+  </div>`;
+}
+
 function artCard(a) {
   return `<div class="art-card" onclick="go('/article/${a.id}')">
-    <div class="art-meta"><span class="${catTag(a.category)}">${a.category}</span></div>
-    <h3>${a.title}</h3>
-    <p>${a.excerpt||''}</p>
-    <div class="art-date">📅 ${fmt(a.created_at)}</div>
+    ${artThumb(a)}
+    <div class="ac-body">
+      <div class="art-meta"><span class="${catTag(a.category)}">${esc(a.category)}</span></div>
+      <h3>${esc(a.title)}</h3>
+      <p>${esc(a.excerpt||'')}</p>
+      <div class="art-date">📅 ${fmt(a.created_at)}</div>
+    </div>
+  </div>`;
+}
+
+// มุมมองตารางของหน้าบทความ — ให้ข้อมูลชุดเดียวกับการ์ด แต่กวาดตาหาเรื่องที่ต้องการได้เร็วกว่า
+function artTable(arts) {
+  const rows = arts.map(a => `<tr onclick="go('/article/${a.id}')">
+    <td class="rt-thumb">${a.image_url
+      ? `<div class="rt-thumb-box"><img src="${esc(a.image_url)}" alt="" loading="lazy" ${ART_TALL}
+           onerror="this.parentNode.className='rt-thumb-box ph';this.parentNode.textContent='✦';"></div>`
+      : `<div class="rt-thumb-box ph">✦</div>`}</td>
+    <td><div class="rt-title">${esc(a.title)}</div><div class="rt-desc">${esc(a.excerpt||'')}</div></td>
+    <td class="at-hide-mobile"><span class="${catTag(a.category)}">${esc(a.category)}</span></td>
+    <td class="at-hide-mobile at-date">${fmt(a.created_at)}</td>
+  </tr>`).join('');
+  return `<div style="overflow-x:auto;">
+    <table class="data-table arts-table">
+      <thead><tr>
+        <th></th><th>ชื่อบทความ</th><th class="at-hide-mobile">หมวดหมู่</th><th class="at-hide-mobile">วันที่</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>`;
 }
 
@@ -1835,4 +1896,5 @@ window.go = go;
 window.goSearch = goSearch;
 window.toggleNav = toggleNav;
 window.renderBlog = renderBlog;
+window.setBlogView = setBlogView;
 window.submitComment = submitComment;
