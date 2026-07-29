@@ -3,6 +3,8 @@
 // URL: https://kru-ti.com/article/1 (รับทั้ง id ตัวเลข และ slug)
 // ผู้ใช้จริงอ่านหน้านี้ได้เลย หรือกดกลับไปเว็บหลัก (SPA) ก็ได้
 
+import { SHELL_CSS } from '../_shell-css.js';
+
 // โดเมนหลัก — ใช้กับ canonical/og/JSON-LD เท่านั้น ห้ามใช้ origin ของ request
 // ไม่งั้นถ้า crawler เจอหน้านี้ผ่าน eduapps-th.pages.dev มันจะเห็น canonical ชี้กลับ
 // pages.dev เอง กลายเป็นสำเนาที่แข่ง SEO กับ kru-ti.com
@@ -21,11 +23,9 @@ export async function onRequest({ params, env, request }) {
       .prepare(`SELECT * FROM articles WHERE ${col}=? AND published=1`)
       .bind(idOrSlug).all();
     art = results[0] || null;
-    if (art) {
-      // นับวิว (ไม่รอผล)
-      env.DB.prepare(`UPDATE articles SET views=views+1 WHERE ${col}=?`)
-        .bind(idOrSlug).run().catch(() => {});
-    }
+    // ไม่นับวิวตรงนี้ — ย้ายไปนับที่ trackHTML() ท้ายหน้าเหมือนหน้าแอปและใบงาน
+    // เดิมนับฝั่งเซิร์ฟเวอร์ ซึ่งนับ Googlebot/ตัวดึงรูปพรีวิวของ LINE/Facebook ปนมาด้วย
+    // และไม่มีการกันนับซ้ำ (กด F5 = +1 ทุกครั้ง) ตัวเลขจึงสูงกว่าคนอ่านจริงมาก
   } catch (e) { /* DB error → 404 ด้านล่าง */ }
 
   // ── บทความที่เกี่ยวข้อง: หมวดเดียวกัน 3 ชิ้น ──
@@ -158,6 +158,7 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
 <footer>
   <a href="${BASE}/">Kru-ti ครูติ TH</a> — แอปการสอนและบทความ เพื่อครูไทย · © 2568
 </footer>
+${trackHTML('/article/' + art.id)}
 </body>
 </html>`;
 
@@ -167,6 +168,25 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
       'Cache-Control': 'public, max-age=300', // cache 5 นาที
     },
   });
+}
+
+// เก็บสถิติแบบเดียวกับหน้าเว็บหลัก — ใช้ visitor id ตัวเดียวกัน (localStorage '_vid')
+// ไม่งั้นคนที่สลับไปมาระหว่างหน้า SSR กับ SPA จะถูกนับเป็นคนละคน
+// และถ้าไม่มีบรรทัดนี้ คนที่มาจาก Google จะไม่ปรากฏใน Dashboard เลย
+// (สำเนาเดียวกับใน apps/[id].js และ worksheet/[id].js — แก้ที่ไหนต้องแก้ให้ครบทั้งสามที่)
+function trackHTML(path) {
+  return '<script>(function(){var P=' + JSON.stringify(path) + ';'
+    + 'function s(v){try{var b=JSON.stringify({path:P,visitor_id:v});'
+    + 'if(navigator.sendBeacon)navigator.sendBeacon("/api/track",new Blob([b],{type:"application/json"}));'
+    + 'else fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:b,keepalive:true}).catch(function(){});}catch(e){}}'
+    + 'try{var v=localStorage.getItem("_vid"),t=+localStorage.getItem("_vid_ts")||0;'
+    + 'if(v&&(Date.now()-t)<2592000000)return s(v);'
+    + 'var f=[navigator.userAgent,screen.width+"x"+screen.height,Intl.DateTimeFormat().resolvedOptions().timeZone,navigator.language].join("|");'
+    + 'crypto.subtle.digest("SHA-256",new TextEncoder().encode(f)).then(function(b){'
+    + 'var n=Array.from(new Uint8Array(b)).slice(0,8).map(function(x){return x.toString(16).padStart(2,"0")}).join("");'
+    + 'localStorage.setItem("_vid",n);localStorage.setItem("_vid_ts",Date.now());s(n)}).catch(function(){'
+    + 'var n=Math.random().toString(36).slice(2,18);localStorage.setItem("_vid",n);localStorage.setItem("_vid_ts",Date.now());s(n)});'
+    + '}catch(e){}})();<\/script>';
 }
 
 // ── helpers ──────────────────────────────────────────────
@@ -195,31 +215,20 @@ function page404(BASE) {
 }
 
 // CSS ย่อจากธีมเว็บหลัก "กระดานดำ & ดาวทอง" — เฉพาะที่หน้าบทความใช้
-const CSS = `
-:root{--ink:#101c33;--ink-soft:#3d4c68;--gold:#f3ac2e;--gold-bright:#ffc555;--gold-deep:#c47f0e;
---gold-soft:rgba(243,172,46,.13);--chalk:#f5efdf;--mint:#0fa294;--paper:#faf7f1;
---line:#e8e1d3;--slate:#6d7588;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+// เปลือก (แถบเมนู ปุ่มย้อนกลับ ป้ายหมวด ตัวแปรสี) อยู่ที่ functions/_shell-css.js ใช้ร่วมกับ
+// หน้าแอปและใบงาน — แก้ที่นั่นที่เดียวแล้วได้ผลทั้ง 3 หน้า
+const CSS = SHELL_CSS + `
 h1,h2,h3{font-family:'Pridi',serif;font-weight:600;line-height:1.4;}
-nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;}
-.logo{font-family:'Pridi',serif;font-size:1.15rem;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;gap:9px;}
-.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-deep));display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:1rem;}
-.logo em{font-style:normal;font-size:.65rem;color:#7587a5;align-self:flex-start;margin-top:2px;}
-.nav-links{display:flex;gap:2px;}
-.nav-links a{padding:9px 16px;border-radius:9px;font-size:.94rem;font-weight:600;color:#aebad0;text-decoration:none;}
-.nav-links a:hover{color:#fff;background:rgba(255,255,255,.07);}
 /* ตัวถ่วงฝั่งขวา — nav ใช้ space-between ถ้ามีแค่ logo กับ nav-links เมนูจะถูกดันไปชิดขวา
    ไม่ตรงกับเว็บหลักที่มีปุ่มค้นหาคั่นอยู่ทำให้เมนูอยู่กลาง (หน้านี้ไม่มีปุ่มค้นหาเพราะต้องใช้ JS) */
-.nav-right{width:104px;}
-@media(max-width:820px){.nav-links{display:none;}.nav-right{display:none;}}
+.nav-right{width:104px;flex-shrink:0;}
+/* จอแคบ: เก็บตัวถ่วงทิ้งเพื่อคืนที่ให้เมนู แต่ **ไม่ซ่อนเมนู** — เดิมซ่อนที่ 820px
+   ทำให้คนที่เข้าบทความจากมือถือไม่เหลือลิงก์ไปหน้าอื่นเลย (หน้าแอป/ใบงานเลื่อนเมนูได้มาตลอด) */
+@media(max-width:820px){.nav-right{display:none;}}
 /* ความกว้างต้องเท่ากับ .art-wrap ใน public/app.css ไม่งั้นบทความเดียวกันบรรทัดตัดคนละที่ */
 .art-wrap{max-width:820px;margin:0 auto;padding:42px 22px;}
-.back{color:var(--slate);font-size:.9rem;font-weight:600;text-decoration:none;display:inline-block;margin-bottom:18px;}
-.back:hover{color:var(--ink);}
 .art-wrap h1{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:700;line-height:1.42;margin-bottom:16px;}
 .art-info{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--slate);}
-.cat{background:var(--gold-soft);color:var(--gold-deep);padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
 .cover{width:100%;border-radius:14px;margin-bottom:24px;}
 .art-body h2{font-size:1.42rem;font-weight:600;margin:30px 0 11px;}
 .art-body h3{font-size:1.14rem;font-weight:600;margin:22px 0 8px;}
@@ -270,5 +279,4 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
   color:rgba(243,172,46,.08);pointer-events:none;line-height:1;}
 /* ท้ายหน้าจริงเท่านั้น — ห้ามย้ายสองบรรทัดนี้ไปไว้ที่ selector footer เปล่า */
 body>footer{text-align:center;font-size:.85rem;padding:24px 22px;}
-footer a{color:var(--gold-bright);text-decoration:none;font-weight:700;}
 `;

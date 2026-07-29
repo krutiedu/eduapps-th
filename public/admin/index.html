@@ -226,6 +226,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item admin-only" data-page="codes" onclick="nav('codes')" style="display:none;"><span class="ni">🔑</span> รหัสปลดล็อก</div>
     <div class="nav-item admin-only" data-page="kruboard" onclick="nav('kruboard')" style="display:none;"><span class="ni">📋</span> KruBoard</div>
     <div class="nav-item admin-only" data-page="users" onclick="nav('users')" style="display:none;"><span class="ni">👥</span> จัดการผู้ใช้</div>
+    <div class="nav-item admin-only" data-page="images" onclick="nav('images')" style="display:none;"><span class="ni">🗜️</span> แปลงรูปเก่า</div>
     <div class="nav-item admin-only" data-page="settings" onclick="nav('settings')" style="display:none;"><span class="ni">⚙️</span> ตั้งค่าเว็บ</div>
     <div class="sidebar-sec">บัญชีของฉัน</div>
     <div class="nav-item" data-page="profile" onclick="nav('profile')"><span class="ni">👤</span> โปรไฟล์</div>
@@ -841,6 +842,7 @@ function nav(page) {
     kruboard:      renderKruboard,
     users:         renderUsers,
     profile:       renderProfile,
+    images:        renderImages,
     settings:      renderSettings,
   };
   if (views[page]) safeRender(views[page], page);
@@ -1398,7 +1400,7 @@ function artRowsHtml(arr) {
     <td><strong>${a.title.length>45?a.title.slice(0,45)+'…':a.title}</strong></td>
     <td><span class="badge badge-gray">${a.category}</span></td>
     <td>${a.published?'<span class="badge badge-green">✅ เผยแพร่</span>':'<span class="badge badge-orange">📋 แบบร่าง</span>'}</td>
-    <td style="color:#94a3b8">${a.views||0}</td>
+    <td style="color:#94a3b8">${a.view_count||0}</td>
     <td style="color:#94a3b8;font-size:.8rem;white-space:nowrap">${a.created_at?.slice(0,10)||''}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openPinModal('article',${a.id},'${a.title.replace(/'/g,"\\'")}',${a.pinned||0})" title="${a.pinned?'แก้/ยกเลิก pin':'pin หน้าแรก'}">📌${a.pinned?' '+a.pinned:''}</button>
@@ -2517,15 +2519,20 @@ function pickUploadImage(file) {
   });
 }
 
+// ยิงไฟล์ขึ้น imgbb — แยกออกมาเพราะเครื่องมือแปลงรูปเก่า (renderImages) ใช้ตัวเดียวกันนี้
+// แต่ไม่ต้องการกล่องถามขนาดแบบ uploadToImgbb
+async function imgbbSend(key, blob, name) {
+  const fd = new FormData(); fd.append('image', blob, name || blob.name || 'image');
+  const r = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd });
+  return r.json();
+}
+
 async function uploadToImgbb(file) {
   const key = await getImgbbKey();
   if (!key) { alert('⚠️ ยังไม่ได้ตั้งค่า imgbb API Key\nไปที่ ตั้งค่าเว็บ → imgbb API Key ก่อนครับ'); return null; }
   const picked = await pickUploadImage(file);
   if (!picked) return null;                       // ผู้ใช้กดยกเลิก
-  const send = async blob => {
-    const fd = new FormData(); fd.append('image', blob, blob.name || 'image');
-    return fetch(`https://api.imgbb.com/1/upload?key=${key}`, { method:'POST', body:fd }).then(x=>x.json());
-  };
+  const send = blob => imgbbSend(key, blob, blob.name);
   let r = await send(picked);
   // เผื่อ imgbb ไม่รับ WebP — เข้ารหัสใหม่เป็น JPEG แล้วลองอีกครั้ง ดีกว่าให้ผู้ใช้เจอ error เฉย ๆ
   let fellBack = false;
@@ -3915,6 +3922,244 @@ async function downloadBackup() {
   btn.textContent = orig; btn.disabled = false;
 }
 
+// ══════════════════════════════════════════════════════════
+// แปลงรูปเก่า — บีบรูปที่อัปไว้ก่อนมีระบบบีบ แล้วอัปใหม่
+// ══════════════════════════════════════════════════════════
+// ทำในเบราว์เซอร์ เพราะโค้ดบีบรูป (canvas) กับ imgbb API key อยู่ที่หน้านี้อยู่แล้ว
+// i.ibb.co ส่ง `Access-Control-Allow-Origin: *` (ตรวจจริง 29 ก.ค. 2569) จึง fetch
+// รูปเดิมมาวาดลง canvas ได้โดยไม่ติด tainted canvas — ไม่ต้องมี proxy ฝั่ง Worker
+//
+// ใช้ compressImage() ตัวเดียวกับตอนอัปรูปใหม่ ผลลัพธ์จึงเหมือนกับที่ได้ถ้าอัปรูปนั้นวันนี้
+// (IMG_MAX_W 1600 · q .88 · WebP) — ห้ามแยกค่าคงที่ชุดใหม่มาใช้เฉพาะที่นี่
+
+// ต่ำกว่านี้ไม่ติ๊กมาให้ล่วงหน้า — กำไรน้อยแต่เสี่ยงคุณภาพตกจากการเข้ารหัสซ้ำ
+// (ยังติ๊กเองได้ถ้าต้องการ)
+const IMGJOB_MIN_BYTES = 150 * 1024;
+const IMGJOB_LOG_KEY   = '_imgSwapLog';
+let _imgScan = [];        // ผลสแกนล่าสุด [{url, where[], size, ct, state, note}]
+let _imgStop = false;     // ผู้ใช้กดหยุดกลางคัน
+
+const imgLog = () => { try { return JSON.parse(localStorage.getItem(IMGJOB_LOG_KEY) || '[]'); } catch(e) { return []; } };
+function imgLogAdd(entry) {
+  const l = imgLog(); l.push(entry);
+  try { localStorage.setItem(IMGJOB_LOG_KEY, JSON.stringify(l)); } catch(e) {}
+}
+
+async function renderImages() {
+  const logN = imgLog().length;
+  document.getElementById('content').innerHTML = `
+  <div class="page-title">🗜️ แปลงรูปเก่าให้เล็กลง</div>
+  <div class="card">
+    <div class="card-title">ทำอะไร</div>
+    <p style="font-size:.88rem;color:#475569;line-height:1.9;margin-bottom:12px;">
+      รูปที่อัปไว้<strong>ก่อนวันที่ 29 ก.ค. 2569</strong> ยังเป็นไฟล์ดิบที่ไม่ได้บีบ บางใบใหญ่ถึง 2–4 MB
+      ทั้งที่หน้าเว็บแสดงกว้างแค่ ~760 px เครื่องมือนี้จะดึงรูปเดิมมาบีบด้วยวิธีเดียวกับตอนอัปรูปใหม่
+      (กว้างสุด 1600 px · คุณภาพ .88 · WebP — ไม่ปรับพื้นหลัง ไม่ตัดสี) แล้วอัปขึ้น imgbb ใหม่
+      และสลับ URL ให้ทุกที่ที่ใช้รูปนั้นอยู่
+    </p>
+    <div class="alert alert-info" style="align-items:flex-start;">
+      <span>ℹ️</span>
+      <span>รูปเดิมบน imgbb <strong>ไม่ถูกลบ</strong> (imgbb ลบไม่ได้ถ้าไม่ได้เก็บลิงก์ลบไว้ ซึ่งเราไม่ได้เก็บ)
+      ถ้าผลไม่ถูกใจกด “ย้อนกลับ” ได้ทุกเมื่อ เพราะ URL เดิมยังใช้งานได้อยู่</span>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="imgScan()" id="imgScanBtn">🔍 สแกนรูปทั้งเว็บ</button>
+      <button class="btn btn-outline" onclick="downloadBackup()">💾 สำรองข้อมูลก่อน</button>
+      ${logN ? `<button class="btn btn-outline" onclick="imgUndoAll()">↩️ ย้อนกลับทั้งหมด (${logN} ใบ)</button>` : ''}
+    </div>
+  </div>
+  <div id="imgOut"></div>`;
+}
+
+async function imgScan() {
+  const btn = document.getElementById('imgScanBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังสแกน...'; }
+  const out = document.getElementById('imgOut');
+  out.innerHTML = `<div class="card"><div class="empty-state"><div class="spinner2"></div></div></div>`;
+  try {
+    const res = await api.get('/images/scan');
+    if (res.error) throw new Error(res.error);
+    _imgScan = res.images.map(x => ({ ...x, size: 0, ct: '', state: 'wait', note: '' }));
+
+    // ขนาดจริงต้องถาม imgbb เอง — API เราไม่รู้ · HEAD เป็น simple request ไม่ต้อง preflight
+    // และ Content-Length เป็น header ที่ CORS ยอมให้ JS อ่านได้
+    out.innerHTML = `<div class="card"><div class="empty-state">⏳ กำลังวัดขนาดรูป 0/${_imgScan.length}</div></div>`;
+    for (let i = 0; i < _imgScan.length; i += 6) {
+      await Promise.all(_imgScan.slice(i, i + 6).map(async it => {
+        try {
+          const r = await fetch(it.url, { method: 'HEAD' });
+          it.size = Number(r.headers.get('content-length')) || 0;
+          it.ct   = r.headers.get('content-type') || '';
+        } catch (e) { it.note = 'อ่านขนาดไม่ได้'; }
+      }));
+      const el = out.querySelector('.empty-state');
+      if (el) el.textContent = `⏳ กำลังวัดขนาดรูป ${Math.min(i + 6, _imgScan.length)}/${_imgScan.length}`;
+    }
+    _imgScan.sort((a, b) => b.size - a.size);
+    imgRenderTable();
+  } catch (e) {
+    out.innerHTML = `<div class="card"><div class="alert alert-danger">❌ ${escapeHtml(e.message)}</div></div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 สแกนรูปทั้งเว็บ'; }
+  }
+}
+
+// บีบไม่ได้/ไม่ควรบีบ — เหตุผลเดียวกับ pickUploadImage()
+const imgSkipReason = it =>
+  /image\/gif/i.test(it.ct)      ? 'GIF (บีบแล้วภาพเคลื่อนไหวหาย)' :
+  /image\/svg/i.test(it.ct)      ? 'SVG (ไม่ใช่ภาพแรสเตอร์)' :
+  (it.ct && !/^image\//i.test(it.ct)) ? 'ไม่ใช่ไฟล์รูป' : '';
+
+function imgRenderTable() {
+  const tot  = _imgScan.reduce((s, x) => s + x.size, 0);
+  const pick = _imgScan.filter(x => !imgSkipReason(x) && x.size >= IMGJOB_MIN_BYTES);
+  const pickTot = pick.reduce((s, x) => s + x.size, 0);
+  document.getElementById('imgOut').innerHTML = `
+  <div class="card">
+    <div class="card-title">พบรูป ${_imgScan.length} ใบ · รวม ${fmtBytes(tot)}</div>
+    <p style="font-size:.88rem;color:#475569;margin-bottom:12px;">
+      ติ๊กไว้ให้แล้ว <strong>${pick.length} ใบ (${fmtBytes(pickTot)})</strong> — เฉพาะที่ใหญ่กว่า
+      ${fmtBytes(IMGJOB_MIN_BYTES)} เพราะรูปเล็กกว่านั้นบีบแล้วได้กำไรน้อยแต่เสี่ยงคุณภาพตกจากการเข้ารหัสซ้ำ
+      · ถ้าบีบแล้วไม่เล็กลงเกิน 10% ระบบจะข้ามใบนั้นเองและไม่แตะของเดิม
+    </p>
+    <div class="btn-group" style="margin-bottom:14px;">
+      <button class="btn btn-success" onclick="imgRun()" id="imgRunBtn">▶️ เริ่มแปลง</button>
+      <button class="btn btn-danger"  onclick="imgStop()"      id="imgStopBtn" style="display:none;">⏹ หยุด</button>
+      <button class="btn btn-outline" onclick="imgToggleAll(true)">ติ๊กทั้งหมด</button>
+      <button class="btn btn-outline" onclick="imgToggleAll(false)">ล้างการติ๊ก</button>
+    </div>
+    <div id="imgProgress"></div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:34px;"></th><th style="width:64px;">รูป</th><th>ใช้ที่</th><th style="width:88px;">ขนาด</th><th style="width:210px;">ผล</th></tr></thead>
+      <tbody>${_imgScan.map((it, i) => {
+        const skip = imgSkipReason(it);
+        return `<tr id="imgRow${i}">
+          <td>${skip ? '' : `<input type="checkbox" id="imgCk${i}" ${it.size >= IMGJOB_MIN_BYTES ? 'checked' : ''}>`}</td>
+          <td><img src="${escapeHtml(it.url)}" loading="lazy" style="width:52px;height:52px;object-fit:cover;border-radius:6px;background:#f1f5f9;"></td>
+          <td style="font-size:.82rem;color:#475569;line-height:1.7;">
+            ${it.where.map(w => `<div>${imgWhereLabel(w)}</div>`).join('')}
+          </td>
+          <td style="font-weight:700;white-space:nowrap;">${it.size ? fmtBytes(it.size) : '—'}</td>
+          <td id="imgSt${i}" style="font-size:.82rem;color:#94a3b8;">${skip ? '⏭ ' + skip : 'รอ'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+const IMG_TABLE_LABEL = { articles: '📝 บทความ', apps: '🎮 แอป', worksheets: '📄 ใบงาน' };
+const IMG_FIELD_LABEL = { content: 'ในเนื้อหา', image_url: 'รูปปก', preview_image: 'รูปตัวอย่าง', cover_image: 'รูปปก' };
+const imgWhereLabel = w =>
+  `${IMG_TABLE_LABEL[w.t] || w.t} #${w.id} ${escapeHtml((w.title || '').slice(0, 42))}`
+  + ` <span style="color:#94a3b8;">(${IMG_FIELD_LABEL[w.f] || w.f})</span>`;
+
+function imgStop() { _imgStop = true; toast('⏹ จะหยุดหลังรูปใบที่กำลังทำอยู่'); }
+
+function imgToggleAll(on) {
+  _imgScan.forEach((it, i) => {
+    const ck = document.getElementById('imgCk' + i);
+    if (ck && !ck.disabled) ck.checked = on;
+  });
+}
+
+async function imgRun() {
+  const key = await getImgbbKey();
+  if (!key) { toast('❌ ยังไม่ได้ตั้งค่า imgbb API Key'); return; }
+  const todo = _imgScan.map((it, i) => ({ it, i }))
+    .filter(({ it, i }) => document.getElementById('imgCk' + i)?.checked && !imgSkipReason(it));
+  if (!todo.length) { toast('ยังไม่ได้เลือกรูป'); return; }
+  if (!confirm(`จะแปลงรูป ${todo.length} ใบ และสลับ URL ให้ทุกที่ที่ใช้อยู่\n\nรูปเดิมยังอยู่บน imgbb ย้อนกลับได้ — ดำเนินการต่อไหม?`)) return;
+
+  _imgStop = false;
+  document.getElementById('imgRunBtn').disabled = true;
+  document.getElementById('imgStopBtn').style.display = '';
+  let done = 0, failed = 0, skipped = 0, saved = 0;
+  const prog = document.getElementById('imgProgress');
+  const tick = () => prog.innerHTML = `<div class="alert alert-info">⏳ ${done + failed + skipped}/${todo.length} — สำเร็จ ${done} · ข้าม ${skipped} · ล้มเหลว ${failed}${saved ? ' · ประหยัดไป ' + fmtBytes(saved) : ''}</div>`;
+  tick();
+
+  for (const { it, i } of todo) {
+    if (_imgStop) break;
+    const st = document.getElementById('imgSt' + i);
+    const set = (txt, color) => { if (st) { st.textContent = txt; st.style.color = color || '#94a3b8'; } };
+    try {
+      set('⏳ กำลังแปลง...');
+      const r = await imgConvertOne(it, key);
+      if (r.skipped) { skipped++; set('⏭ ' + r.skipped); }
+      else {
+        done++; saved += r.saved;
+        set(`✅ ${fmtBytes(r.before)} → ${fmtBytes(r.after)}`, '#16a34a');
+        const row = document.getElementById('imgRow' + i);
+        const ck  = document.getElementById('imgCk' + i);
+        if (ck) { ck.checked = false; ck.disabled = true; }
+        if (row) row.querySelector('img').src = r.url;
+      }
+    } catch (e) {
+      failed++; set('❌ ' + e.message, '#dc2626');
+    }
+    tick();
+    await new Promise(r => setTimeout(r, 400));   // อย่ายิง imgbb รัวเกินไป
+  }
+
+  document.getElementById('imgRunBtn').disabled = false;
+  document.getElementById('imgStopBtn').style.display = 'none';
+  prog.innerHTML = `<div class="alert alert-success">✅ เสร็จแล้ว — สำเร็จ ${done} · ข้าม ${skipped} · ล้มเหลว ${failed}${saved ? ' · เล็กลงรวม ' + fmtBytes(saved) : ''}${_imgStop ? ' (หยุดกลางคัน)' : ''}</div>`;
+  if (done) toast(`✅ แปลงรูปแล้ว ${done} ใบ ประหยัด ${fmtBytes(saved)}`);
+}
+
+// แปลงรูปใบเดียว: ดึง → บีบ → อัปใหม่ → สลับ URL ในฐานข้อมูล
+async function imgConvertOne(it, key) {
+  let r;
+  // fetch โยน "Failed to fetch" ดิบ ๆ เมื่อเน็ตหลุดหรือรูปหายจาก imgbb — แปลงเป็นข้อความที่อ่านรู้เรื่อง
+  try { r = await fetch(it.url); }
+  catch (e) { throw new Error('ดึงรูปเดิมไม่ได้ (รูปอาจถูกลบจาก imgbb แล้ว)'); }
+  if (!r.ok) throw new Error('โหลดรูปเดิมไม่ได้ (' + r.status + ')');
+  const blob = await r.blob();
+  if (!/^image\//i.test(blob.type)) throw new Error('ไม่ใช่ไฟล์รูป');
+
+  const type = webpOK() ? 'image/webp' : 'image/jpeg';
+  const out  = await compressImage(blob, type);
+  // เกณฑ์เดียวกับตอนอัปรูปใหม่ — ไม่เล็กลงจริงก็ไม่ต้องเปลี่ยน URL ให้เสี่ยงเปล่า ๆ
+  if (out.blob.size >= blob.size * 0.9) return { skipped: 'บีบแล้วไม่เล็กลงเกิน 10%' };
+
+  const base = (it.url.split('/').pop() || 'image').replace(/\.[^.]+$/, '');
+  const name = base + '.' + (webpOK() ? 'webp' : 'jpg');
+  let up = await imgbbSend(key, out.blob, name);
+  // เผื่อ imgbb ไม่รับ WebP ในอนาคต — ทางสำรองเดียวกับ uploadToImgbb()
+  if (!up.success && /webp$/.test(name)) {
+    const j = await compressImage(blob, 'image/jpeg');
+    up = await imgbbSend(key, j.blob, base + '.jpg');
+  }
+  if (!up.success || !up.data?.url) throw new Error(up.error?.message || 'อัปโหลดไม่สำเร็จ');
+  const newUrl = up.data.url;
+
+  // imgbb แปลงไฟล์เองได้ — ถ้าผลจริงไม่เล็กลง อย่าสลับ ปล่อยรูปที่เพิ่งอัปเป็นขยะไปดีกว่า
+  const after = Number(up.data.size) || out.blob.size;
+  if (after >= blob.size * 0.9) return { skipped: `imgbb เก็บเป็น ${up.data.image?.extension || '?'} ${fmtBytes(after)} ไม่เล็กลงพอ` };
+
+  const sw = await api.post('/images/swap', { old: it.url, new: newUrl });
+  if (sw.error) throw new Error('สลับ URL ไม่สำเร็จ: ' + sw.error);
+  imgLogAdd({ old: it.url, new: newUrl, at: new Date().toISOString(), before: blob.size, after });
+  return { url: newUrl, before: blob.size, after, saved: blob.size - after };
+}
+
+async function imgUndoAll() {
+  const log = imgLog();
+  if (!log.length) return;
+  if (!confirm(`จะสลับ URL กลับเป็นรูปเดิมทั้งหมด ${log.length} ใบ\n\nรูปที่บีบแล้วจะไม่ถูกใช้อีก (ยังค้างอยู่บน imgbb เฉย ๆ) — ยืนยันไหม?`)) return;
+  let n = 0, bad = 0;
+  // ย้อนจากรายการล่าสุดไปเก่าสุด — เผื่อเคยแปลงรูปเดิมซ้ำหลายรอบ จะได้กลับไปที่ต้นทางจริง
+  for (const e of [...log].reverse()) {
+    const r = await api.post('/images/swap', { old: e.new, new: e.old });
+    if (r.error) bad++; else n++;
+  }
+  if (!bad) { try { localStorage.removeItem(IMGJOB_LOG_KEY); } catch(e) {} }
+  toast(bad ? `↩️ ย้อนกลับ ${n} ใบ · ล้มเหลว ${bad}` : `↩️ ย้อนกลับครบ ${n} ใบแล้ว`);
+  nav('images');
+}
+
 async function renderSettings() {
   const s = await api.get('/settings/admin');
   let cats = [];
@@ -4257,6 +4502,12 @@ window.kbDoReset = kbDoReset;
 window.kbToggleActive = kbToggleActive;
 window.kbDelTeacher = kbDelTeacher;
 window.kbGenPw = kbGenPw;
+window.renderImages = renderImages;
+window.imgScan = imgScan;
+window.imgRun = imgRun;
+window.imgStop = imgStop;
+window.imgToggleAll = imgToggleAll;
+window.imgUndoAll = imgUndoAll;
 window.nav = nav;
 window.closeModal = closeModal;
 window.toggleSidebar = toggleSidebar;

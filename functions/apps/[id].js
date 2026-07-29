@@ -7,6 +7,8 @@
 //
 // ⚠️ ห้ามใส่ app.url ลงใน HTML ถ้า locked=1 — นั่นคือของที่ขาย
 
+import { SHELL_CSS } from '../_shell-css.js';
+
 const SITE = 'https://kru-ti.com';
 
 export async function onRequest({ params, env, request }) {
@@ -337,29 +339,14 @@ ${footerHTML(BASE)}
   });
 }
 
-const CSS = `
-:root{--ink:#101c33;--ink-soft:#3d4c68;--gold:#f3ac2e;--gold-bright:#ffc555;--gold-deep:#c47f0e;
---gold-soft:rgba(243,172,46,.13);--chalk:#f5efdf;--mint:#0fa294;--paper:#faf7f1;
---line:#e8e1d3;--slate:#6d7588;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Sarabun',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+// เปลือก (แถบเมนู ปุ่มย้อนกลับ ป้ายหมวด ตัวแปรสี) อยู่ที่ functions/_shell-css.js
+// ใช้ร่วมกับหน้าบทความและใบงาน — แก้ที่นั่นที่เดียวแล้วได้ผลทั้ง 3 หน้า
+const CSS = SHELL_CSS + `
 h1,h2{font-family:'Pridi',serif;font-weight:600;line-height:1.4;}
-nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.logo{font-family:'Pridi',serif;font-size:1.15rem;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;gap:9px;flex-shrink:0;}
-.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-deep));display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:1rem;}
-.logo em{font-style:normal;font-size:.65rem;color:#7587a5;align-self:flex-start;margin-top:2px;}
-/* ขนาดตัวอักษร/ระยะขอบต้องตรงกับ .nav-links ใน public/app.css และหน้า SSR อื่น
-   ส่วน overflow-x/nowrap เก็บไว้ เป็นตัวกันเมนูล้นบนจอแคบที่หน้านี้มีอยู่เดิม */
-.nav-links{display:flex;gap:2px;overflow-x:auto;}
-.nav-links a{padding:9px 16px;border-radius:9px;font-size:.94rem;font-weight:600;color:#aebad0;text-decoration:none;white-space:nowrap;}
-.nav-links a:hover{color:#fff;background:rgba(255,255,255,.07);}
 .wrap{max-width:820px;margin:0 auto;padding:38px 22px;}
-.back{color:var(--slate);font-size:.9rem;font-weight:600;text-decoration:none;display:inline-block;margin-bottom:20px;}
-.back:hover{color:var(--ink);}
 .hero{display:flex;gap:20px;align-items:flex-start;margin-bottom:22px;}
 .hero-icon{font-size:3.2rem;line-height:1;background:#fff;border:1px solid var(--line);border-radius:18px;width:86px;height:86px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .badges{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;}
-.cat{background:var(--gold-soft);color:var(--gold-deep);padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
 .vip{background:#fef3c7;color:#92400e;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
 .lock{background:#eef2f7;color:#475569;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
 .free{background:rgba(15,162,148,.12);color:#0b7d72;padding:3px 12px;border-radius:100px;font-size:.73rem;font-weight:700;}
@@ -440,7 +427,6 @@ nav{background:var(--ink);height:62px;padding:0 22px;display:flex;align-items:ce
 .more{padding-top:22px;border-top:1px solid var(--line);display:flex;gap:20px;flex-wrap:wrap;}
 .more a{color:var(--gold-deep);font-weight:700;font-size:.92rem;text-decoration:none;}
 footer{background:var(--ink);color:rgba(255,255,255,.72);padding:24px 22px;text-align:center;font-size:.85rem;margin-top:48px;}
-footer a{color:var(--gold-bright);text-decoration:none;font-weight:700;}
 @media(max-width:560px){
   .hero{gap:14px;}
   .hero-icon{width:64px;height:64px;font-size:2.3rem;border-radius:14px;}

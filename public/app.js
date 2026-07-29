@@ -356,7 +356,7 @@ async function renderArticle(slugOrId) {
       <span class="${catTag(art.category)}">${art.category}</span>
       <span>📅 ${fmt(art.created_at)}</span>
       <span>✍️ ${art.author_name || S.author_name||'ผู้เขียน'}</span>
-      <span>👁 ${art.views||0} ครั้ง</span>
+      <span>👁 ${art.view_count||0} ครั้ง</span>
     </div>
     ${adSlot()}
     ${cover ? `<img class="cover" src="${cover}" alt="${esc(art.title)}">` : ''}

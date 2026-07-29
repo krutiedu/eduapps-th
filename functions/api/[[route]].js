@@ -56,6 +56,7 @@ export async function onRequest(ctx) {
     path.startsWith('/codes') ||
     path.startsWith('/users') ||
     path.startsWith('/analytics') ||
+    path.startsWith('/images') ||
     path === '/backup'
   );
 
@@ -77,7 +78,9 @@ export async function onRequest(ctx) {
     const superOnly = (
       path.startsWith('/codes') ||
       (path.startsWith('/settings') && method !== 'GET') ||
-      path.startsWith('/reports') || path === '/backup' || path.startsWith('/analytics')
+      path.startsWith('/reports') || path === '/backup' || path.startsWith('/analytics') ||
+      // /images แก้ทั้ง articles + apps + worksheets ในคำสั่งเดียว จึงต้องมีสิทธิ์ครบทุกหมวด
+      path.startsWith('/images')
     );
     if (superOnly && sess?.role !== 'super_admin') return err('ไม่มีสิทธิ์เข้าถึงส่วนนี้', 403);
     if (neededPerm && !hasPerm(sess, neededPerm)) return err('ไม่มีสิทธิ์ในหมวดนี้', 403);
@@ -102,6 +105,7 @@ export async function onRequest(ctx) {
     if (path.startsWith('/users'))     return await usersHandler(request, env, segments, method);
     if (path === '/track' && method === 'POST') return await track(request, env);
     if (path.startsWith('/analytics')) return await analytics(request, env, segments, method);
+    if (path.startsWith('/images'))    return await images(request,    env, segments, method);
     if (path === '/upload' && method === 'POST') return await upload(request, env);
     if (path === '/backup' && method === 'GET')  return await backupAll(env);
 
@@ -273,7 +277,7 @@ async function articles(req, env, segs, method) {
     if (cat) { where += ' AND category=?'; wArgs.push(cat); }
     if (q)   { where += ' AND (title LIKE ? OR excerpt LIKE ?)'; wArgs.push('%'+q+'%','%'+q+'%'); }
 
-    const listSql  = `SELECT id,title,slug,category,excerpt,image_url,views,created_at,pinned FROM articles ${where} ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC LIMIT ? OFFSET ?`;
+    const listSql  = `SELECT id,title,slug,category,excerpt,image_url,view_count,created_at,pinned FROM articles ${where} ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC LIMIT ? OFFSET ?`;
     const countSql = `SELECT COUNT(*) as n FROM articles ${where}`;
 
     const [data, count] = await Promise.all([
@@ -286,7 +290,7 @@ async function articles(req, env, segs, method) {
   // GET /articles/admin/list — admin list (includes drafts) — must come BEFORE single GET
   if (segs[1] === 'admin' && segs[2] === 'list' && method === 'GET') {
     const { results } = await env.DB
-      .prepare('SELECT id,title,slug,category,published,views,created_at,pinned FROM articles ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC')
+      .prepare('SELECT id,title,slug,category,published,view_count,created_at,pinned FROM articles ORDER BY (pinned > 0) DESC, pinned ASC, created_at DESC')
       .all();
     return ok({ articles: results });
   }
@@ -307,7 +311,8 @@ async function articles(req, env, segs, method) {
       .prepare(`SELECT * FROM articles WHERE ${col}=? AND published=1`)
       .bind(id).all();
     if (!results[0]) return err('ไม่พบบทความ', 404);
-    await env.DB.prepare(`UPDATE articles SET views=views+1 WHERE ${col}=?`).bind(id).run();
+    // ไม่นับวิวที่นี่ — หน้าเว็บยิง POST /track ให้อยู่แล้ว ซึ่งกันนับซ้ำราย visitor ใน 30 วินาที
+    // เดิมนับตรงนี้ด้วย ทำให้ทุกการเรียก API (รวมสคริปต์และบอต) บวกวิวโดยไม่มีตัวกรอง
     return okCache(results[0]);
   }
 
@@ -973,6 +978,78 @@ async function analytics(req, env, segs, method) {
     _analyticsCachedAt = now;
     return ok({ ...payload, cached: false });
   }
+  return err('ไม่พบ', 404);
+}
+
+
+// ════════════════════════════════════════════════════════
+// IMAGES — เครื่องมือแปลงรูปเก่าที่อัปไว้ก่อนมีการบีบรูป
+// ════════════════════════════════════════════════════════
+// รูปทั้งเว็บฝากไว้ที่ imgbb และรูปที่อัปก่อน 29 ก.ค. 2569 ยังเป็นไฟล์ดิบ
+// (วัดจริง: preview ของแอป+ใบงาน 48 ใบ รวม 20.3 MB เฉลี่ย 433 KB/ใบ)
+// การบีบทำในเบราว์เซอร์ที่หน้า admin เพราะโค้ดบีบรูป (canvas) อยู่ที่นั่นอยู่แล้ว
+// สองเส้นทางนี้เป็นส่วนที่เบราว์เซอร์ทำเองไม่ได้:
+//   scan  = บอกว่ามีรูปอะไร ถูกใช้ที่ไหนบ้าง (ต้องอ่าน content ของบทความซึ่งไม่มีใน API สาธารณะ)
+//   swap  = สลับ URL เก่า→ใหม่ให้ทุกที่ที่อ้างถึงพร้อมกันในคำสั่งเดียว
+//
+// ตั้งใจ **ไม่แตะ articles.updated_at** เพราะ sitemap.xml.js:30 ใช้ค่านั้นเป็น <lastmod>
+// ถ้าบัมพ์ บทความทุกเรื่องจะกลายเป็น "แก้ไขวันนี้" พร้อมกันทั้งที่เนื้อหาเหมือนเดิม
+async function images(req, env, segs, method) {
+
+  // GET /images/scan — รวมรูปทุกใบในฐานข้อมูล พร้อมบอกว่าใครใช้อยู่
+  if (segs[1] === 'scan' && method === 'GET') {
+    const uses = new Map();                       // url → [{ t, id, f, title }]
+    const add = (url, where) => {
+      // เอาเฉพาะ URL ภายนอกจริง ๆ — ข้าม data: และ path ในเว็บเรา (og-image.png ฯลฯ)
+      if (!url || !/^https?:\/\//i.test(url)) return;
+      if (!uses.has(url)) uses.set(url, []);
+      uses.get(url).push(where);
+    };
+
+    const [arts, ap, ws] = await Promise.all([
+      env.DB.prepare('SELECT id,title,image_url,content FROM articles').all(),
+      env.DB.prepare("SELECT id,title,preview_image FROM apps WHERE preview_image != ''").all(),
+      env.DB.prepare("SELECT id,title,cover_image FROM worksheets WHERE cover_image IS NOT NULL AND cover_image != ''").all(),
+    ]);
+
+    for (const a of arts.results) {
+      add(a.image_url, { t: 'articles', id: a.id, f: 'image_url', title: a.title });
+      // regex สร้างใหม่ทุกรอบ ไม่ใช้ตัวที่ประกาศไว้ระดับโมดูล เพราะ /g เก็บ lastIndex ไว้ในตัวเอง
+      const re = /<img[^>]+src=["']([^"']+)["']/gi;
+      const seen = new Set();                     // รูปเดียวกันในบทความเดียว นับครั้งเดียวพอ
+      let m;
+      while ((m = re.exec(a.content || ''))) {
+        if (seen.has(m[1])) continue;
+        seen.add(m[1]);
+        add(m[1], { t: 'articles', id: a.id, f: 'content', title: a.title });
+      }
+    }
+    for (const x of ap.results)  add(x.preview_image, { t: 'apps', id: x.id, f: 'preview_image', title: x.title });
+    for (const x of ws.results)  add(x.cover_image,   { t: 'worksheets', id: x.id, f: 'cover_image', title: x.title });
+
+    return ok({ images: [...uses].map(([url, where]) => ({ url, where })) });
+  }
+
+  // POST /images/swap  { old, new } — สลับ URL ทุกที่ที่อ้างถึง
+  if (segs[1] === 'swap' && method === 'POST') {
+    const b = await req.json();
+    const oldUrl = String(b.old || ''), newUrl = String(b.new || '');
+    if (!/^https?:\/\//i.test(oldUrl) || !/^https?:\/\//i.test(newUrl)) return err('URL ไม่ถูกต้อง');
+    if (oldUrl === newUrl) return err('URL เดิมกับใหม่เป็นตัวเดียวกัน');
+
+    // ใช้ instr() ไม่ใช่ LIKE — `_` ใน URL เป็น wildcard ของ LIKE จะเลือกแถวที่ไม่ได้มี URL นั้นจริง
+    // มาเขียนทับด้วยค่าเดิม (ไม่พัง แต่เปลืองโควตา write ฟรี ๆ)
+    const r = await env.DB.batch([
+      env.DB.prepare('UPDATE articles   SET image_url=?     WHERE image_url=?').bind(newUrl, oldUrl),
+      env.DB.prepare('UPDATE articles   SET content=REPLACE(content,?,?) WHERE instr(content,?)>0').bind(oldUrl, newUrl, oldUrl),
+      env.DB.prepare('UPDATE apps       SET preview_image=? WHERE preview_image=?').bind(newUrl, oldUrl),
+      env.DB.prepare('UPDATE worksheets SET cover_image=?   WHERE cover_image=?').bind(newUrl, oldUrl),
+    ]);
+    const n = r.map(x => x.meta?.changes || 0);
+    if (n[2]) bustAppsPop();                      // preview ของแอปอยู่ใน cache "ยอดนิยม" ด้วย
+    return ok({ ok: true, articles_cover: n[0], articles_content: n[1], apps: n[2], worksheets: n[3] });
+  }
+
   return err('ไม่พบ', 404);
 }
 
