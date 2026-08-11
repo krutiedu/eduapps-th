@@ -158,6 +158,8 @@ tr:hover td{background:#fafafa;}
 .modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;}
 .modal h3{font-size:1.1rem;font-weight:800;margin-bottom:18px;}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;}
+/* ชั้นที่สอง — กล่องที่ต้องซ้อนบนกล่องอื่น (เช่นถามขนาดรูปตอนอัปโหลดจากในฟอร์ม) */
+#modal2 .modal-ov{z-index:300;}
 
 /* TOAST */
 #toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;
@@ -199,6 +201,7 @@ tr:hover td{background:#fafafa;}
 
 <div id="toast"></div>
 <div id="modal"></div>
+<div id="modal2"></div>
 
 <!-- MOBILE HEADER -->
 <div class="mobile-header" id="mobileHeader">
@@ -2491,7 +2494,10 @@ function pickUploadImage(file) {
     const times = (file.size / small.size).toFixed(1);
     const preview = URL.createObjectURL(small);
 
-    document.getElementById('modal').innerHTML = `
+    // ต้องเป็น #modal2 (ชั้นที่สอง) ห้ามใช้ #modal — ตอนอัปโหลดจากในฟอร์มแอป/ใบงาน
+    // ฟอร์มนั้นนั่งอยู่ใน #modal อยู่แล้ว ถ้าเขียนทับ ฟอร์มจะหายทั้งใบ
+    // แล้วโค้ดที่วิ่งกลับมาใส่ URL ก็จะหาช่องไม่เจอ (Cannot set properties of null)
+    document.getElementById('modal2').innerHTML = `
     <div class="modal-ov">
       <div class="modal" style="max-width:460px;">
         <h3>🖼 ขนาดรูปก่อนอัปโหลด</h3>
@@ -2512,7 +2518,12 @@ function pickUploadImage(file) {
         </div>
       </div>
     </div>`;
-    const done = v => { URL.revokeObjectURL(preview); closeModal(); resolve(v); };
+    // ปิดเฉพาะกล่องของตัวเอง — closeModal() จะไปล้าง #modal ที่ฟอร์มเจ้าของงานนั่งอยู่
+    const done = v => {
+      URL.revokeObjectURL(preview);
+      document.getElementById('modal2').innerHTML = '';
+      resolve(v);
+    };
     document.getElementById('_imgSmall').onclick  = () => done(small);
     document.getElementById('_imgOrig').onclick   = () => done(file);
     document.getElementById('_imgCancel').onclick = () => done(null);
@@ -2984,12 +2995,14 @@ async function uploadCoverImg() {
     try {
       const url = await uploadToImgbb(f);
       if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
-      document.getElementById('wCover').value = url;
+      const field = document.getElementById('wCover');
+      if (!field) { if (btn) btn.textContent = '📷 อัปโหลด'; toast('⚠️ ฟอร์มถูกปิดไปแล้ว — รูปอัปขึ้นเรียบร้อย คัดลอก URL นี้ไปวางเอง: ' + url); return; }
+      field.value = url;
       let img = document.querySelector('.cover-thumb');
       if (!img) {
         img = document.createElement('img'); img.className = 'cover-thumb';
         img.style = 'margin-top:8px;width:120px;aspect-ratio:210/297;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;';
-        document.getElementById('wCover').parentNode.appendChild(img);
+        field.parentNode.appendChild(img);
       }
       img.src = url;
       toast('✅ อัปโหลดรูปปกแล้ว' + uploadInfo());
@@ -3683,12 +3696,14 @@ async function uploadPreviewImg() {
     try {
       const url = await uploadToImgbb(f);
       if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
-      document.getElementById('aPreview').value = url;
+      const field = document.getElementById('aPreview');
+      if (!field) { if (btn) btn.textContent = '📷 อัปโหลด'; toast('⚠️ ฟอร์มถูกปิดไปแล้ว — รูปอัปขึ้นเรียบร้อย คัดลอก URL นี้ไปวางเอง: ' + url); return; }
+      field.value = url;
       let img = document.querySelector('.preview-thumb');
       if (!img) {
         img = document.createElement('img'); img.className='preview-thumb';
         img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;';
-        document.getElementById('aPreview').parentNode.appendChild(img);
+        field.parentNode.appendChild(img);
       }
       img.src = url;
       toast('✅ อัปโหลดรูป preview แล้ว' + uploadInfo());
@@ -4277,6 +4292,10 @@ async function saveSettings() {
 // Esc ปิด modal (เตือนถ้ามีข้อมูลกรอกไว้)
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  // ชั้นบนสุดก่อนเสมอ — ถ้ากล่องถามขนาดรูปเปิดค้างอยู่ ต้องยกเลิกอันนั้น
+  // ไม่ใช่ไปปิดฟอร์มที่อยู่ข้างหลัง (งานอัปโหลดยังรอคำตอบจากปุ่มนี้อยู่)
+  const cancel = document.getElementById('_imgCancel');
+  if (cancel) { cancel.click(); return; }
   const modal = document.getElementById('modal');
   const ov = modal && modal.querySelector('.modal-ov');
   if (ov) closeModalSafe({ target: ov }, ov);
