@@ -494,60 +494,166 @@ async function submitComment(articleId) {
 }
 
 // ── APPS PAGE ────────────────────────────────────────────
-let _allApps = [], _appFilter = 'all', _appSort = 'newest', _appQ = '';
-let _appView = 'block', _pageFree = 1, _pageLocked = 1, _pageVip = 1, _pageOther = 1, _pageTable = 1;
+let _allApps = [], _appSort = 'newest', _appQ = '';
+let _appView = 'block', _pageGrid = 1, _pageTable = 1;
 let _popularDays = 30;  // ช่วงเวลานับยอดนิยม: 30/7/0(ทั้งหมด)
+let _appsCache = { key:'', at:0 };  // กันโหลดซ้ำตอนกดปุ่ม back ไป-กลับระหว่างหมวด
 
-// อ่าน preferences จาก localStorage (จำ view + filter ของผู้ใช้)
+// ── ตัวกรอง: เก็บเป็น "ชุดของมิติ" ไม่ใช่ตัวแปรเดียว ──────────────────────
+// เดิมเป็น _appFilter ตัวเดียว จึงกรองได้ทีละอย่าง — สั่ง "แอปคณิตที่ฟรี" ไม่ได้เลย
+// ทั้งที่เป็นคำถามแรกของครูที่ยังไม่มีรหัส
+//
+// ตอนนี้ทุกอย่างที่เกี่ยวกับตัวกรองไล่มาจากลิสต์นี้ทั้งหมด: ปุ่มกรอง, ชิปบอกสถานะ,
+// พารามิเตอร์ใน URL, ตัวเลขบนปุ่ม, ลิงก์ "ดูทั้งหมด" ของแต่ละหมวด
+// **อยากเพิ่มมิติที่สาม (หัวข้อ / ระดับชั้น) = เพิ่ม object ในลิสต์นี้อย่างเดียว
+//   ไม่ต้องรื้อที่อื่น** — ตั้งใจเขียนแบบนี้เพราะรู้ว่าวันหน้าต้องเพิ่มแน่
+const FX_DIMS = [
+  { key:'tier', all:'ทุกประเภท', values: [
+      // พรีเมียมต้องตัด VIP ออก ไม่งั้นแอป VIP จะถูกนับและแสดงซ้ำสองหมวด
+      // (ในฐานข้อมูล แอป VIP ทุกตัวมี locked = 1 อยู่ด้วย)
+      { k:'free',    label:'🆓 ฟรี',      head:'🆓 แอปฟรี',      cls:'mint', match:a => !a.locked },
+      { k:'premium', label:'🔒 พรีเมียม', head:'🔒 แอปพรีเมียม', cls:'',     match:a => !!a.locked && !a.is_vip },
+      { k:'vip',     label:'👑 VIP',      head:'👑 แอป VIP',     cls:'vip',  match:a => !!a.is_vip },
+  ] },
+  { key:'subject', all:'ทุกวิชา', dynamic:true },
+];
+const _fx = { tier:'all', subject:'all' };
+
+// ลำดับวิชาตายตัว เหมือนกันทุกหมวดหลัก — ไม่เรียงตามจำนวน
+// เพราะครูที่เข้าบ่อยจะจำได้ว่าคณิตอยู่บนสุดเสมอ แล้วเลื่อนไปถูกที่โดยไม่ต้องอ่าน
+// วิชาที่ยังไม่มีในลิสต์ (เจ้าของเว็บเพิ่มหมวดใหม่ทีหลัง) ต่อท้ายให้อัตโนมัติ
+const SUBJECT_ORDER = ['คณิตศาสตร์','ภาษาไทย','ภาษาอังกฤษ','วิชาการ','อื่นๆ'];
+const SPLIT_MIN_TIER = 8;  // หมวดหลักที่เล็กกว่านี้ ไม่ต้องซอยย่อยเป็นวิชา
+const SPLIT_MIN_SUB  = 3;  // วิชาที่มีน้อยกว่านี้ ยุบรวมเป็น "วิชาอื่น ๆ" กองเดียว
+
+const appSubject = a => a.category || 'อื่นๆ';
+
+function subjectList() {
+  const seen = [...new Set(_allApps.map(appSubject))];
+  return [
+    ...SUBJECT_ORDER.filter(c => seen.includes(c)),
+    ...seen.filter(c => !SUBJECT_ORDER.includes(c)).sort((a,b) => a.localeCompare(b,'th')),
+  ];
+}
+
+// ค่าที่เลือกได้ของแต่ละมิติ — มิติ subject สร้างจากข้อมูลจริง ที่เหลือคงที่
+function dimValues(d) {
+  if (!d.dynamic) return d.values;
+  return subjectList().map(c => ({ k:c, label:c, head:c, match:a => appSubject(a) === c }));
+}
+
+// แอปตัวนี้ผ่านตัวกรองที่เปิดอยู่ไหม — skipKey ใช้ตอนนับเลขบนปุ่มของมิตินั้นเอง
+// (ปุ่ม "คณิตศาสตร์" ต้องบอกว่ามีกี่ตัว *ในหมวดหลักที่เลือกอยู่* ไม่ใช่ทั้งเว็บ)
+function fxMatch(a, skipKey) {
+  return FX_DIMS.every(d => {
+    if (d.key === skipKey) return true;
+    const v = _fx[d.key];
+    if (!v || v === 'all') return true;
+    const def = dimValues(d).find(x => x.k === v);
+    return def ? def.match(a) : true;
+  });
+}
+const fxActive = () => FX_DIMS.some(d => _fx[d.key] && _fx[d.key] !== 'all');
+const matchQ = a => {
+  const q = _appQ.trim().toLowerCase();
+  if (!q) return true;
+  return (a.title||'').toLowerCase().includes(q) || (a.description||'').toLowerCase().includes(q);
+};
+
+// ── ตัวกรองอยู่ใน URL ไม่ใช่แค่ในหน่วยความจำ ──────────────────────────────
+// จำเป็นจริง ไม่ใช่ของแถม: ถ้าไม่ทำ ครูที่กด "ดูทั้งหมด" เข้าไปในหมวดหนึ่งแล้วกด
+// ปุ่ม back ของเบราว์เซอร์จะหลุดออกจากเว็บไปเลย เพราะไม่มีอะไรบันทึกไว้ว่าเพิ่งเปลี่ยน
+// มุมมอง · ของแถมคือส่งลิงก์ "แอปคณิตที่ฟรี" ให้เพื่อนครูในไลน์ได้
+function fxQS(patch) {
+  const merged = { ..._fx, ...(patch || {}) };
+  const q = new URLSearchParams();
+  FX_DIMS.forEach(d => { const v = merged[d.key]; if (v && v !== 'all') q.set(d.key, v); });
+  return q.toString();   // เข้ารหัสภาษาไทยให้เอง เอาไปใส่ใน onclick ได้ตรง ๆ
+}
+function fxRead(qs) {
+  const q = new URLSearchParams(qs);
+  FX_DIMS.forEach(d => {
+    let v = q.get(d.key) || 'all';
+    if (d.key === 'tier' && v === 'locked') v = 'premium';   // รองรับลิงก์เก่าที่แชร์ไปแล้ว
+    _fx[d.key] = (v === 'all' || dimValues(d).some(x => x.k === v)) ? v : 'all';
+  });
+}
+function fxWrite(push) {
+  const qs = fxQS();
+  const url = '/apps' + (qs ? '?' + qs : '');
+  if (url === location.pathname + location.search) return;
+  history[push ? 'pushState' : 'replaceState']({}, '', url);
+}
+
+// กดปุ่มกรอง / กดลิงก์ "ดูทั้งหมด" — ทางเดียวกันหมด ไม่ต้องสร้างหน้าใหม่
+function applyFx(qs) {
+  fxRead(qs);
+  _pageGrid = _pageTable = 1;
+  fxWrite(true);
+  drawApps();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+// ทำเป็น <a href> จริงเสมอ เพื่อให้กดค้าง/เปิดแท็บใหม่ได้ และ Google เดินตามลิงก์ได้
+// (ตัวดักคลิกลิงก์ของ SPA เช็ค defaultPrevented อยู่แล้ว จึงไม่ทำงานซ้อนกัน)
+function fxLink(patch, text, cls) {
+  const qs = fxQS(patch);
+  return `<a class="${cls}" href="/apps${qs?'?'+qs:''}"
+     onclick="event.preventDefault();applyFx('${qs}')">${text}</a>`;
+}
+
+// อ่าน preferences จาก localStorage — เก็บแค่มุมมองกับการเรียง
+// **ตัวกรองไม่เก็บแล้ว** เพราะย้ายไปอยู่ใน URL ถ้าเก็บทั้งสองที่ เปิด /apps เปล่า ๆ
+// จะเด้งเข้าหมวดที่เคยกรองค้างไว้ ทั้งที่ URL ไม่ได้บอกแบบนั้น
 try {
   const pref = JSON.parse(localStorage.getItem('appsPref') || '{}');
   if (pref.view === 'block' || pref.view === 'table') _appView = pref.view;
-  if (pref.filter) _appFilter = pref.filter;
   if (pref.sort) _appSort = pref.sort;
   if (pref.popularDays !== undefined) _popularDays = pref.popularDays;
 } catch(e) {}
 
 function saveAppsPref() {
-  try { localStorage.setItem('appsPref', JSON.stringify({ view:_appView, filter:_appFilter, sort:_appSort, popularDays:_popularDays })); } catch(e) {}
+  try { localStorage.setItem('appsPref', JSON.stringify({ view:_appView, sort:_appSort, popularDays:_popularDays })); } catch(e) {}
 }
 
-// คำนวณจำนวนแอปต่อหน้าตาม viewport (block view: 3 rows × N cols)
+// จำนวนการ์ดใน 1 แถวของหน้ารวม — ต้องเต็มแถวพอดี ไม่มีใบไหนตกไปบรรทัดที่สอง
+// ตัวเลขคำนวณจากความกว้างการ์ดจริง 258px + ช่องไฟ 15px ในกรอบ .container (1120px)
+// มือถือเป็นแถวเลื่อนแนวนอน จึงใส่ได้มากกว่าที่เห็น — ใบถัดไปโผล่มาครึ่งใบเป็นตัวบอก
+// ว่ายังมีต่อ (ถ้าตัดพอดีขอบใบเดียว ครูจะนึกว่าหมวดนั้นมีแอปเดียว)
+function rowSize() {
+  const w = window.innerWidth;
+  if (w < 600)  return 6;
+  if (w < 850)  return 2;
+  if (w < 1120) return 3;
+  return 4;
+}
+const rowIsSwipe = () => window.innerWidth < 600;
+
+// มุมมองที่กรองแล้ว: 3 แถวต่อหน้า — ที่เดียวที่ยังมีการแบ่งหน้า
 function calcPageSize() {
   const w = window.innerWidth;
-  if (w < 600) return 3;        // มือถือ: 1 col × 3 rows
-  if (w < 900) return 6;        // tablet: 2 col × 3 rows
-  if (w < 1200) return 9;       // เล็ก: 3 col × 3 rows
-  return 12;                    // PC: 4 col × 3 rows
+  if (w < 600)  return 6;
+  if (w < 850)  return 6;
+  if (w < 1120) return 9;
+  return 12;
 }
 
 async function renderApps(openId) {
   const app = document.getElementById('app');
-  app.innerHTML = skCards(9);
-  // ถ้า sort=popular ต้องดึง view_count มาด้วย (ส่ง popular_days)
-  const url = _appSort === 'popular' ? `/apps?popular_days=${_popularDays}` : '/apps';
-  const data = await get(url);
-  _allApps = data.apps || [];
-  // ไม่ reset _appFilter, _appSort, _appView — โหลดจาก localStorage แล้ว
+  // ข้อมูลชุดเดิมยังสดอยู่ก็ใช้ต่อ — ตอนกด back ไป-กลับระหว่างหมวดจะได้ไม่กระพริบ
+  const key = _appSort === 'popular' ? `popular-${_popularDays}` : 'base';
+  if (!(_allApps.length && _appsCache.key === key && Date.now() - _appsCache.at < 60000)) {
+    app.innerHTML = skCards(9);
+    const data = await get(_appSort === 'popular' ? `/apps?popular_days=${_popularDays}` : '/apps');
+    _allApps = data.apps || [];
+    _appsCache = { key, at: Date.now() };
+  }
   _appQ = '';
-  _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1;
+  _pageGrid = _pageTable = 1;
+  fxRead(location.search);          // URL คือแหล่งความจริงของตัวกรอง
 
-  const cats = [...new Set(_allApps.map(a => a.category).filter(Boolean))];
-  const pills = [
-    {k:'all',    label:'ทั้งหมด'},
-    {k:'free',   label:'🆓 ฟรี'},
-    {k:'locked', label:'🔒 พรีเมียม'},
-    {k:'vip',    label:'👑 VIP'},
-    ...cats.map(c => ({k:c, label:c})),
-  ];
-  const pillHTML = pills.map(p =>
-    `<span class="cat-pill" data-k="${esc(p.k)}"
-      onclick="setAppFilter('${p.k.replace(/'/g,"\\'")}')">${p.label}</span>`
-  ).join('');
-
-  // ค่า sort ปัจจุบันสำหรับ popular: รวม sort+days เป็น 'popular-30' / 'popular-7' / 'popular-0'
   const sortVal = _appSort === 'popular' ? `popular-${_popularDays}` : _appSort;
   const sortHTML = `
-    <select onchange="setAppSort(this.value)"
+    <select onchange="setAppSort(this.value)" aria-label="เรียงลำดับแอป"
       style="padding:8px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:'Sarabun',sans-serif;
              font-size:.88rem;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;outline:none;">
       <option value="newest" ${sortVal==='newest'?'selected':''}>🕐 ล่าสุด</option>
@@ -560,11 +666,11 @@ async function renderApps(openId) {
 
   const viewToggleHTML = `
     <div class="view-toggle">
-      <button class="vt-btn ${_appView==='block'?'on':''}" onclick="setAppView('block')" title="มุมมองบล็อก">
+      <button data-v="block" class="vt-btn ${_appView==='block'?'on':''}" onclick="setAppView('block')" title="มุมมองบล็อก">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span>บล็อก</span>
       </button>
-      <button class="vt-btn ${_appView==='table'?'on':''}" onclick="setAppView('table')" title="มุมมองตาราง">
+      <button data-v="table" class="vt-btn ${_appView==='table'?'on':''}" onclick="setAppView('table')" title="มุมมองตาราง">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         <span>ตาราง</span>
       </button>
@@ -583,7 +689,8 @@ async function renderApps(openId) {
       ยังไม่มีรหัส? <a href="/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
     </p>` : '';
 
-  // ── วาด shell ครั้งเดียว — search/filter/redeem อยู่นิ่ง ไม่ถูก re-render ──
+  // ── วาด shell ครั้งเดียว — search/redeem อยู่นิ่ง ไม่ถูก re-render ──
+  // (ปุ่มกรองวาดใหม่ได้ เพราะไม่ใช่ช่องกรอก จึงไม่ทำให้คีย์บอร์ดมือถือเด้งปิด)
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
     <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -600,7 +707,7 @@ async function renderApps(openId) {
       <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
         oninput="filterApps(this.value)">
     </div>
-    <div class="cat-strip rv2" id="appPills" style="margin-bottom:20px;">${pillHTML}</div>
+    <div class="fx-pills rv2" id="appPills"></div>
     ${redeemHTML}
     ${adSlot()}
     <div id="appsContent"></div>
@@ -625,17 +732,8 @@ async function renderApps(openId) {
   }
 }
 
-// วาดเฉพาะกริดแอป — ไม่แตะ input/search (กัน keyboard เด้งบนมือถือ)
-function drawApps() {
-  const cont = document.getElementById('appsContent');
-  if (!cont) return;
-
-  // sync สถานะ active ของ pills โดยไม่ rebuild (กัน reflow)
-  document.querySelectorAll('#appPills .cat-pill').forEach(el => {
-    el.classList.toggle('active', el.dataset.k === _appFilter);
-  });
-
-  const sorted = [..._allApps].sort((a, b) => {
+function sortApps(list) {
+  return [...list].sort((a, b) => {
     if (_appSort === 'oldest') return (a.created_at||'') > (b.created_at||'') ? 1 : -1;
     if (_appSort === 'name')   return (a.title||'').localeCompare(b.title||'', 'th');
     if (_appSort === 'popular') {
@@ -646,64 +744,137 @@ function drawApps() {
     }
     return (a.created_at||'') < (b.created_at||'') ? 1 : -1;
   });
-
-  let filtered = sorted;
-  if (_appFilter === 'free')        filtered = sorted.filter(a => !a.locked);
-  else if (_appFilter === 'locked') filtered = sorted.filter(a => a.locked);
-  else if (_appFilter === 'vip')    filtered = sorted.filter(a => a.is_vip);
-  else if (_appFilter !== 'all')    filtered = sorted.filter(a => a.category === _appFilter);
-
-  if (_appQ.trim()) {
-    const q = _appQ.trim().toLowerCase();
-    filtered = filtered.filter(a =>
-      (a.title||'').toLowerCase().includes(q) ||
-      (a.description||'').toLowerCase().includes(q)
-    );
-  }
-
-  if (filtered.length === 0) {
-    cont.innerHTML = `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`;
-    return;
-  }
-
-  // ── TABLE VIEW ──
-  if (_appView === 'table') {
-    cont.innerHTML = renderTableView(filtered);
-    return;
-  }
-
-  // ── BLOCK VIEW ──
-  const pageSize = calcPageSize();
-
-  // เมื่อ filter = all → แยกกลุ่ม free + locked + pagination แยก
-  if (_appFilter === 'all') {
-    const free   = filtered.filter(a => !a.locked);
-    const locked = filtered.filter(a =>  a.locked);
-    let content = '';
-    if (free.length > 0)   content += renderBlockGroup('แอปฟรี', 'mint', 'var(--mint-soft)', 'var(--mint)', free, _pageFree, pageSize, 'free');
-    if (locked.length > 0) content += renderBlockGroup('แอปพรีเมียม', '', 'var(--gold-soft)', 'var(--gold-deep)', locked, _pageLocked, pageSize, 'locked');
-    cont.innerHTML = content;
-  }
-  // filter เฉพาะ → แสดงกลุ่มเดียว + pagination
-  else {
-    const groupKey = _appFilter === 'vip' ? 'vip' : 'other';
-    const page = groupKey === 'vip' ? _pageVip : _pageOther;
-    cont.innerHTML = `<div class="apps-grid">${filtered.slice((page-1)*pageSize, page*pageSize).map(appCard).join('')}</div>
-      ${pagerHTML(filtered.length, page, pageSize, groupKey)}`;
-  }
 }
 
-// render section ใน block view + pagination ของ section นั้น
-function renderBlockGroup(title, titleClass, badgeBg, badgeColor, items, page, pageSize, groupKey) {
-  const slice = items.slice((page-1)*pageSize, page*pageSize);
-  return `<div style="margin-bottom:30px;">
-    <h2 class="sec-title ${titleClass}" style="font-size:1.18rem;margin-bottom:14px;">${title} <span style="background:${badgeBg};color:${badgeColor};padding:2px 11px;border-radius:100px;font-size:.76rem;font-family:'Sarabun';vertical-align:middle;">${items.length}</span></h2>
-    <div class="apps-grid">${slice.map(appCard).join('')}</div>
-    ${pagerHTML(items.length, page, pageSize, groupKey)}
+// ปุ่มกรองสองแถว แยกตามมิติ — เดิมเอา ฟรี/พรีเมียม/VIP ไปปนกับชื่อวิชาในแถวเดียวกัน
+// ทั้งที่เป็นคนละเรื่อง แล้วยังเลือกได้ทีละอันอีก
+// ตัวเลขบนปุ่มนับจากตัวกรองมิติอื่นที่เปิดอยู่จริง ("คณิตศาสตร์ 12" ตอนกรองแอปฟรี
+// ไม่ใช่ 43 ของทั้งเว็บ) — ครูจึงรู้ก่อนกดว่าคุ้มไหม และไม่มีทางกดแล้วเจอหน้าว่าง
+function pillsHTML() {
+  return FX_DIMS.map(d => {
+    const cur = _fx[d.key] || 'all';
+    const pool = _allApps.filter(a => fxMatch(a, d.key) && matchQ(a));
+    let out = `<span class="cat-pill ${cur==='all'?'active':''}"
+       onclick="applyFx('${fxQS({[d.key]:'all'})}')">${d.all}</span>`;
+    for (const v of dimValues(d)) {
+      const n = pool.filter(v.match).length;
+      if (!n && cur !== v.k) continue;      // ไม่มีของ = ไม่ต้องมีปุ่ม
+      out += `<span class="cat-pill ${cur===v.k?'active':''}"
+         onclick="applyFx('${fxQS({[d.key]:v.k})}')">${esc(v.label)} <b>${n}</b></span>`;
+    }
+    return `<div class="cat-strip">${out}</div>`;
+  }).join('');
+}
+
+// แถบบอกว่ากำลังกรองอะไรอยู่ + ทางกลับ
+// ปุ่มกรองที่ active เป็นแค่สีเข้มขึ้น ซึ่งบนมือถือที่ปุ่มเลื่อนหลุดขอบจอไปแล้วจะ
+// มองไม่เห็นเลยว่ากรองอะไรค้างไว้ — แถบนี้อยู่เหนือผลลัพธ์เสมอ ปิดได้ทีละอัน
+function fxBar(count) {
+  const chips = FX_DIMS.map(d => {
+    const v = _fx[d.key];
+    if (!v || v === 'all') return '';
+    const def = dimValues(d).find(x => x.k === v);
+    return `<span class="fx-chip">${esc(def ? def.label : v)}
+      <button onclick="applyFx('${fxQS({[d.key]:'all'})}')" aria-label="เอาตัวกรองนี้ออก">✕</button></span>`;
+  }).join('');
+  const qChip = _appQ.trim()
+    ? `<span class="fx-chip">🔍 ${esc(_appQ.trim())}
+        <button onclick="clearAppQ()" aria-label="ล้างคำค้น">✕</button></span>` : '';
+  if (!chips && !qChip) return '';
+  return `<div class="fx-bar">
+    ${fxLink({tier:'all',subject:'all'}, '← ดูทุกหมวด', 'fx-back')}
+    <div class="fx-chips">${chips}${qChip}</div>
+    <span class="fx-count">พบ ${count} แอป</span>
   </div>`;
 }
 
-// pagination component
+// วาดเฉพาะกริดแอป + ปุ่มกรอง — ไม่แตะช่องค้นหา (กัน keyboard เด้งบนมือถือ)
+function drawApps() {
+  const cont = document.getElementById('appsContent');
+  if (!cont) return;
+  const pills = document.getElementById('appPills');
+  if (pills) pills.innerHTML = pillsHTML();
+
+  const filtered = sortApps(_allApps).filter(a => fxMatch(a) && matchQ(a));
+  const bar = fxBar(filtered.length);
+
+  if (!filtered.length) { cont.innerHTML = bar + `<div class="empty">📭<br>ไม่พบแอปที่ตรงกัน</div>`; return; }
+  if (_appView === 'table') { cont.innerHTML = bar + renderTableView(filtered); return; }
+
+  // พอเริ่มกรองหรือพิมพ์ค้นหา → ยุบหัวข้อทิ้งทั้งหมด เหลือลิสต์เดียว
+  // ไม่งั้นพิมพ์ "เศษส่วน" จะได้ผลลัพธ์ 6 ตัวกระจายอยู่ใต้หัวข้อ 3 อัน อ่านยากกว่าเดิม
+  if (fxActive() || _appQ.trim()) {
+    const pageSize = calcPageSize();
+    const totalPages = Math.ceil(filtered.length / pageSize);
+    if (_pageGrid > totalPages) _pageGrid = 1;
+    cont.innerHTML = bar +
+      `<div class="apps-grid">${filtered.slice((_pageGrid-1)*pageSize, _pageGrid*pageSize).map(appCard).join('')}</div>` +
+      pagerHTML(filtered.length, _pageGrid, pageSize, 'grid');
+    return;
+  }
+  cont.innerHTML = renderOverview(filtered);
+}
+
+// ── หน้ารวม: หมวดหลัก (ฟรี/พรีเมียม/VIP) → หมวดย่อยตามวิชา → แถวตัวอย่าง ──
+// แต่ละแถวโชว์แถวเดียวจบแล้วมีลิงก์ "ดูทั้งหมด" ไม่มีเลขหน้าซ้อนอยู่ข้างใน
+// เพราะการมีทั้งเลขหน้าและลิงก์ดูทั้งหมดในกล่องเดียวกัน คือทางเดินสองทางที่ไปที่เดียวกัน
+// ผู้ใช้ต้องหยุดคิดว่ากดอันไหนดี (คำตอบคือไม่ต่างกัน) — เลขหน้าย้ายไปอยู่มุมมองที่กรองแล้ว
+function renderOverview(items) {
+  const n = rowSize(), swipe = rowIsSwipe();
+  const rowAttr = swipe
+    ? `class="app-row swipe"`
+    : `class="app-row" style="grid-template-columns:repeat(${n},1fr);"`;
+  const row = list => `<div ${rowAttr}>${list.slice(0, n).map(appCard).join('')}</div>`;
+
+  let html = '';
+  for (const t of FX_DIMS[0].values) {
+    const group = items.filter(t.match);
+    if (!group.length) continue;
+    html += `<section class="ov-tier">
+      <div class="sec-head">
+        <h2 class="sec-title ${t.cls}">${t.head} <span class="sec-count">${group.length}</span></h2>
+        ${fxLink({tier:t.k, subject:'all'}, `ดูทั้งหมด ${group.length} →`, 'sec-more')}
+      </div>`;
+
+    // ซอยเป็นวิชาเฉพาะตอนที่คุ้ม — หมวดที่มีไม่กี่ตัว ถ้าใส่หัวข้อ+ป้ายนับ+ลิงก์ครบชุด
+    // จะเปลืองที่มากกว่าตัวการ์ดเอง (แอป VIP มี 5 ตัว ไม่ต้องซอย)
+    if (group.length > SPLIT_MIN_TIER) {
+      for (const g of subGroups(group)) {
+        html += `<div class="ov-sub">
+          <div class="ov-sub-head">
+            <h3>${esc(g.label)} <span class="sec-count sm">${g.items.length}</span></h3>
+            ${g.items.length > n
+              ? fxLink({tier:t.k, subject:g.k || 'all'},
+                       `ดูทั้งหมด ${g.k ? g.items.length : group.length} →`, 'sec-more sm')
+              : ''}
+          </div>
+          ${row(g.items)}
+        </div>`;
+      }
+    } else {
+      html += row(group);
+    }
+    html += `</section>`;
+  }
+  return html;
+}
+
+// แบ่งวิชาในหมวดหลัก — วิชาที่มีน้อยกว่า SPLIT_MIN_SUB ยุบรวมเป็นกองเดียว
+// ถ้าเหลือกองเล็กแค่วิชาเดียว ใช้ชื่อวิชาจริงดีกว่าเรียกมันว่า "วิชาอื่น ๆ"
+// กฎนี้ปรับตัวเองตามข้อมูล — วันหน้าแอปภาษาอังกฤษครบ 3 ตัว มันจะแยกออกมาเอง
+function subGroups(items) {
+  const big = [], small = [];
+  for (const c of subjectList()) {
+    const list = items.filter(a => appSubject(a) === c);
+    if (!list.length) continue;
+    (list.length >= SPLIT_MIN_SUB ? big : small).push({ k:c, label:c, items:list });
+  }
+  if (small.length === 1) big.push(small[0]);
+  else if (small.length > 1) big.push({ k:null, label:'วิชาอื่น ๆ', items: small.flatMap(g => g.items) });
+  return big;
+}
+
+// pagination — เหลือที่เดียวคือมุมมองที่กรองแล้ว (block) กับมุมมองตาราง
 function pagerHTML(total, current, pageSize, groupKey) {
   const totalPages = Math.ceil(total / pageSize);
   if (totalPages <= 1) return '';
@@ -730,7 +901,6 @@ function renderTableView(items) {
   const slice = items.slice((_pageTable-1)*perPage, _pageTable*perPage);
 
   const rows = slice.map(a => {
-    const pid = `p_${a.id}`;
     const raw = sessionStorage.getItem('unlocked_'+a.id);
     const storedUrl = (raw && raw.startsWith('http')) ? raw : null;
     const isLocked = a.locked && !storedUrl;
@@ -788,9 +958,21 @@ async function redeemAll() {
   }
 }
 
-function filterApps(q)   { _appQ      = q; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; drawApps(); }
-function setAppFilter(f) { _appFilter = f; _pageFree = _pageLocked = _pageVip = _pageOther = _pageTable = 1; saveAppsPref(); drawApps(); }
-function setAppSort(s)   {
+function filterApps(q) { _appQ = q; _pageGrid = _pageTable = 1; drawApps(); }
+function clearAppQ() {
+  _appQ = '';
+  const el = document.getElementById('appSearch');
+  if (el) el.value = '';
+  _pageGrid = _pageTable = 1;
+  drawApps();
+}
+// ลิงก์เก่าที่เขียนไว้ในบทความยังเรียกชื่อนี้อยู่ — แปลงให้เป็นตัวกรองแบบใหม่
+function setAppFilter(f) {
+  if (!f || f === 'all') { applyFx(''); return; }
+  const tiers = { free:'free', locked:'premium', premium:'premium', vip:'vip' };
+  applyFx(fxQS(tiers[f] ? { tier:tiers[f], subject:'all' } : { tier:'all', subject:f }));
+}
+function setAppSort(s) {
   const wasPopular = _appSort === 'popular';
   // parse 'popular-30' / 'popular-7' / 'popular-0' → sort='popular' + days
   if (s.startsWith('popular-')) {
@@ -800,17 +982,19 @@ function setAppSort(s)   {
     _appSort = s;
   }
   saveAppsPref();
-  // ถ้าเข้า/ออกจาก popular → ต้อง re-fetch จาก backend
-  if (_appSort === 'popular' || wasPopular) renderApps();
+  // ถ้าเข้า/ออกจาก popular → ต้อง re-fetch จาก backend (view_count มากับ query นั้น)
+  if (_appSort === 'popular' || wasPopular) { _appsCache = { key:'', at:0 }; renderApps(); }
   else drawApps();
 }
-function setAppView(v)   { _appView   = v; saveAppsPref(); renderApps(); }
+// สลับมุมมองไม่ต้องโหลดใหม่ทั้งหน้าแล้ว — ข้อมูลอยู่ในมือครบ
+function setAppView(v) {
+  _appView = v; saveAppsPref(); _pageGrid = _pageTable = 1;
+  // ปุ่มสลับมุมมองอยู่ในเปลือกหน้าที่ไม่ได้วาดใหม่ ต้องสลับไฮไลต์ให้เอง
+  document.querySelectorAll('.vt-btn').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  drawApps();
+}
 function gotoPage(group, p) {
-  if (group === 'free') _pageFree = p;
-  else if (group === 'locked') _pageLocked = p;
-  else if (group === 'vip') _pageVip = p;
-  else if (group === 'other') _pageOther = p;
-  else if (group === 'table') _pageTable = p;
+  if (group === 'table') _pageTable = p; else _pageGrid = p;
   drawApps();
   // scroll ขึ้นบน section
   document.getElementById('appsContent')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1891,6 +2075,8 @@ window.closeLockModal = closeLockModal;
 window.submitLock = submitLock;
 window.filterApps = filterApps;
 window.setAppFilter = setAppFilter;
+window.applyFx = applyFx;
+window.clearAppQ = clearAppQ;
 window.setAppSort = setAppSort;
 window.go = go;
 window.goSearch = goSearch;

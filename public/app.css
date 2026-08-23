@@ -262,6 +262,55 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .apps-box .sec-sub{color:#8fa0bf;}
 .apps-box .sec-more{color:var(--gold-bright);}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px;}
+/* ── หน้าคลังแอป: หมวดหลัก → หมวดย่อย → แถวตัวอย่าง ────────────────────
+   หน้ารวมเป็น "หน้าตัวอย่าง" ไม่ใช่หน้าไล่อ่าน แต่ละหมวดจึงโชว์แถวเดียวจบ
+   แล้วมีลิงก์ดูทั้งหมด — เลขหน้าอยู่ในมุมมองที่กรองแล้วที่เดียว */
+.ov-tier{margin-bottom:34px;}
+.ov-tier .sec-head{margin-bottom:14px;}
+.ov-tier .sec-title{font-size:1.34rem;}
+.sec-title.vip::before{background:linear-gradient(180deg,#c084fc,#7c3aed);}
+.sec-count{display:inline-block;vertical-align:middle;background:var(--gold-soft);color:var(--gold-deep);
+  padding:2px 11px;border-radius:100px;font-family:'Sarabun',sans-serif;font-size:.76rem;font-weight:700;margin-left:3px;}
+.sec-title.mint .sec-count{background:var(--mint-soft);color:var(--mint);}
+.sec-title.vip .sec-count{background:#f3e8ff;color:#7c3aed;}
+.sec-count.sm{background:var(--paper);color:var(--slate);font-size:.72rem;padding:1px 9px;border:1px solid var(--line);}
+.sec-more.sm{font-size:.83rem;}
+.ov-sub{margin-bottom:22px;}
+.ov-sub:last-child{margin-bottom:0;}
+.ov-sub-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;margin-bottom:10px;}
+.ov-sub-head h3{font-family:'Pridi',serif;font-size:1.02rem;font-weight:600;color:var(--ink-soft);}
+
+/* แถวตัวอย่าง — จำนวนคอลัมน์ตั้งจาก JS ให้เต็มแถวพอดี ไม่มีใบตกบรรทัดสอง */
+.app-row{display:grid;gap:15px;}
+/* มือถือ: เลื่อนแนวนอนแทนการตัดทิ้ง ใบถัดไปโผล่ ~22% เป็นตัวบอกว่ายังมีต่อ
+   ยืดขอบออกไปชนขอบจอด้วย margin ติดลบ ให้การ์ดใบแรกเริ่มตรงกับข้อความด้านบน */
+@media(max-width:599px){
+  .app-row.swipe{grid-auto-flow:column;grid-auto-columns:78%;overflow-x:auto;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;margin:0 -22px;padding:2px 22px 8px;scrollbar-width:none;}
+  .app-row.swipe::-webkit-scrollbar{display:none;}
+  .app-row.swipe>*{scroll-snap-align:start;}
+}
+
+/* ── ปุ่มกรองสองแถว: ประเภท / วิชา ── */
+.fx-pills{margin-bottom:20px;}
+.fx-pills .cat-strip{margin-bottom:9px;}
+.fx-pills .cat-strip:last-child{margin-bottom:0;}
+.cat-pill b{font-weight:800;font-size:.82em;opacity:.5;margin-left:1px;}
+.cat-pill.active b{opacity:.8;}
+
+/* ── แถบบอกว่ากำลังกรองอะไรอยู่ + ทางกลับ ──
+   ต้องอยู่เหนือผลลัพธ์เสมอ เพราะบนมือถือปุ่มกรองที่ active เลื่อนหลุดขอบจอไปแล้ว */
+.fx-bar{display:flex;align-items:center;flex-wrap:wrap;gap:9px 14px;margin-bottom:18px;
+  padding:11px 15px;background:var(--card);border:1.5px solid var(--line);border-radius:13px;}
+.fx-back{font-size:.88rem;font-weight:800;color:var(--gold-deep);text-decoration:none;white-space:nowrap;}
+.fx-back:hover{text-decoration:underline;}
+.fx-chips{display:flex;flex-wrap:wrap;gap:7px;flex:1;}
+.fx-chip{display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--gold-bright);
+  padding:5px 6px 5px 13px;border-radius:100px;font-size:.83rem;font-weight:700;}
+.fx-chip button{border:none;background:rgba(255,255,255,.17);color:inherit;width:19px;height:19px;padding:0;
+  border-radius:50%;cursor:pointer;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center;}
+.fx-chip button:hover{background:rgba(255,255,255,.34);}
+.fx-count{font-size:.85rem;font-weight:700;color:var(--slate);white-space:nowrap;}
 /* ── ใบงาน ── */
 .ws-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
 .ws-viewtoggle{display:flex;gap:5px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;}
