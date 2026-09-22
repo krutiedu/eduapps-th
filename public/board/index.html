@@ -79,6 +79,16 @@
   .newcard{border:1.5px dashed var(--line);background:transparent;border-radius:var(--r);display:grid;place-items:center;min-height:150px;color:var(--ink-soft);font-weight:600;gap:8px;transition:border-color .15s,color .15s}
   .newcard:hover{border-color:var(--chalk);color:var(--chalk)}
   .newcard .plus{width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:22px}
+  .storage-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .storage-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .storage-title{font-size:14px;font-weight:700}.storage-detail{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .storage-value{font-size:14px;font-weight:700;white-space:nowrap;text-align:right}
+  .storage-track{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:12px 0 9px}
+  .storage-fill{display:block;height:100%;min-width:2px;border-radius:inherit;background:var(--ok);transition:width .45s ease}
+  .storage-card.warn .storage-fill{background:var(--star)}.storage-card.danger .storage-fill{background:var(--marker)}
+  .storage-note{font-size:11.5px;color:var(--ink-soft);line-height:1.45}
+  .storage-alert{font-size:12.5px;font-weight:600;color:#946600;margin-top:7px}
+  .storage-card.danger .storage-alert{color:var(--marker)}
   .empty{text-align:center;padding:50px 20px;color:var(--ink-soft)}.empty .big{font-size:40px;margin-bottom:8px}
   .field{margin-bottom:16px}.field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
   .field input,.field select,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);transition:border-color .15s,box-shadow .15s}
@@ -243,14 +253,15 @@ async function api(path, opts = {}) {
 }
 
 /* ---- image compression (ของจริง) ----
-   2 โหมด: มาตรฐาน (ใบงาน/ลายมือ — ปรับพื้นกระดาษให้ขาวเรียบ ไฟล์เล็กมาก)
-   กับ งานศิลปะ (คงสีและเฉดทุกอย่าง ลดแค่ความละเอียดที่เกินจำเป็น)
+   มีทั้งโหมดสีมาตรฐาน, ประหยัดพื้นที่, งานศิลปะ และคงคุณภาพต้นฉบับ
    ปรับจูนตัวเลขทั้งหมดได้ที่ IMG_MODES ที่เดียว */
 const IMG_MODES = {
-  std:  { label:'มาตรฐาน', hint:'ลายมือจาง ดินสออ่อน หรือถ่ายในที่แสงน้อย',        maxW:1200, q:.80, paper:true,  autoGray:true  },
-  lean: { label:'ประหยัด', hint:'ภาพถ่ายเอกสาร ตัวหนังสือชัด — กินพื้นที่น้อยที่สุด',
-          rec:'แนะนำ',                                                             maxW:1200, q:.68, paper:true,  autoGray:true  },
+  std:  { label:'สีมาตรฐาน', hint:'คงสีเดิม · ลดขนาดภาพและบีบอัดไฟล์', rec:'แนะนำ', maxW:1200, q:.80, paper:false, autoGray:false },
+  lean: { label:'ประหยัดพื้นที่', hint:'พื้นกระดาษขาวและอาจแปลงเป็นขาวดำเพื่อให้ไฟล์เล็กที่สุด',
+                                                                                   maxW:1200, q:.68, paper:true,  autoGray:true  },
   art:  { label:'งานศิลปะ', hint:'ภาพวาด งานสี ที่ต้องดูรายละเอียด', icon:'🎨 ',    maxW:1600, q:.88, paper:false, autoGray:false },
+  original: { label:'คงคุณภาพต้นฉบับ', hint:'ไม่ลดความละเอียด · คงสีและรายละเอียด · บีบอัดเป็น WebP คุณภาพสูง', icon:'✨ ',
+                                                                                   maxW:Infinity, q:.92, paper:false, autoGray:false, webpOnly:true },
 };
 let _imgMode = 'std';   // ค่าเริ่มต้นต้องเป็น std เสมอ (รีเซ็ตทุกครั้งที่เปิดหน้าส่งงาน)
 
@@ -321,6 +332,7 @@ function maybeGray(d){
 function compress(file, mode = _imgMode) {
   const M = IMG_MODES[mode] || IMG_MODES.std;
   return new Promise((res, rej) => {
+    if (M.webpOnly && !webpOK()) return rej(new Error('เบราว์เซอร์นี้ไม่รองรับ WebP กรุณาเลือกโหมดสีมาตรฐาน'));
     const img = new Image();
     const src = URL.createObjectURL(file);
     img.onload = () => {
@@ -336,7 +348,10 @@ function compress(file, mode = _imgMode) {
         if (M.autoGray) maybeGray(id.data);
         ctx.putImageData(id, 0, 0);
       }
-      try{ const b=canvasBlob(c,imgType(),M.q); res({ blob:b, kb:Math.round(b.size/1024) }); }
+      try{
+        const type=M.webpOnly?'image/webp':imgType(),b=canvasBlob(c,type,M.q);
+        res({ blob:b, kb:Math.round(b.size/1024), ext:type==='image/webp'?'webp':'jpg' });
+      }
       catch(err){ rej(new Error('ย่อรูปไม่สำเร็จ ลองใหม่อีกครั้ง')); }
     };
     img.onerror = () => { URL.revokeObjectURL(src); rej(new Error('เปิดไฟล์รูปนี้ไม่ได้')); };
@@ -344,6 +359,7 @@ function compress(file, mode = _imgMode) {
   });
 }
 const fmtKB = kb => kb >= 1024 ? (kb/1024).toFixed(1)+' MB' : kb+' KB';
+const fmtBytes = n => n >= 1e9 ? (n/1e9).toFixed(2)+' GB' : n >= 1e6 ? (n/1e6).toFixed(1)+' MB' : n >= 1e3 ? Math.round(n/1e3)+' KB' : n+' B';
 // เดานามสกุลจาก URL ของรูป เพื่อตั้งชื่อไฟล์ตอนดาวน์โหลดให้ถูก (งานเก่าเป็น .jpg งานใหม่เป็น .webp)
 const urlExt = u => { const m=/\.([a-z0-9]{3,4})(?:$|[?#])/i.exec(decodeURIComponent(u||'')); return m ? m[1].toLowerCase() : 'jpg'; };
 
@@ -430,7 +446,10 @@ function enterBoard(mode){const c=$('#bc').value.trim();closeModal();if(c)go((mo
 /* ---- teacher home ---- */
 async function teacherHome(){
   setWho('ครู · '+(_name||_user));loading();
-  let data;try{data=await api('/boards')}catch(e){return toast(e.message)}
+  let data,storage=null;
+  try{
+    [data,storage]=await Promise.all([api('/boards'),api('/storage').catch(()=>null)]);
+  }catch(e){return toast(e.message)}
   let cards='';
   for(const b of data.boards){
     const total=b.roster||b.submitted||0;
@@ -448,8 +467,23 @@ async function teacherHome(){
         <div class="pnum"><span>ความคืบหน้าการตรวจ</span><span>${pct}%</span></div>
       </button></div>`;
   }
+  let storageCard='';
+  if(storage){
+    const rawPct=storage.quota_bytes?storage.bytes/storage.quota_bytes*100:0;
+    const pct=Math.min(100,Math.max(0,rawPct));
+    const level=rawPct>=85?'danger':rawPct>=70?'warn':'';
+    const alert=rawPct>=85?'⚠️ พื้นที่ฟรีใกล้เต็ม ควรลบกระดานเก่าหรือสำรองรูปก่อน':rawPct>=70?'พื้นที่ใช้งานเกิน 70% แล้ว ควรวางแผนลบงานเก่า':'';
+    const counted=storage.complete?'':`อย่างน้อย `;
+    storageCard=`<div class="storage-card ${level}">
+      <div class="storage-top"><div><div class="storage-title">พื้นที่เก็บรูป KruBoard</div><div class="storage-detail">${storage.objects.toLocaleString('th-TH')} ไฟล์ใน R2</div></div>
+      <div class="storage-value">${counted}${fmtBytes(storage.bytes)} / 10 GB</div></div>
+      <div class="storage-track" role="progressbar" aria-label="พื้นที่เก็บรูปที่ใช้" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i class="storage-fill" style="width:${pct}%"></i></div>
+      <div class="storage-note">โควตาฟรี 10 GB-month ของ R2 Standard ใช้ร่วมกันทั้งบัญชี Cloudflare ตัวเลขนี้นับจาก bucket ของ KruBoard และอัปเดตไม่เกินทุก 5 นาที</div>
+      ${alert?`<div class="storage-alert">${alert}</div>`:''}</div>`;
+  }
   app.innerHTML=`<div class="wrap"><div class="page">
     <div class="phead"><div><h2>กระดานของฉัน</h2><div class="sub">การบ้านแต่ละชิ้นคือกระดานหนึ่งใบ · มีเฉพาะของคุณ</div></div></div>
+    ${storageCard}
     <div class="grid"><button class="newcard" onclick="go('new')"><span class="plus">+</span>สร้างการบ้านใหม่</button>${cards}</div>
     ${data.boards.length?'':'<div class="empty"><div class="big">📋</div>ยังไม่มีกระดาน — เริ่มสร้างการบ้านชิ้นแรกได้ที่ปุ่มด้านบน</div>'}
   </div></div>`;
@@ -852,7 +886,7 @@ function pvSel(i){_pvImg=i;renderPeerViewer()}
 function closePeerViewer(){const el=document.getElementById('viewer');if(el)el.remove();document.body.style.overflow=''}
 
 /* ---- student submit ---- */
-// รูปที่เลือกไว้แต่ยังไม่ส่ง: [{file, out:{std:{blob,kb,url}, art:{...}}}]
+// รูปที่เลือกไว้แต่ยังไม่ส่ง: [{file, out:{std:{blob,kb,url,ext}, original:{...}}}]
 // เก็บ File ต้นฉบับไว้ด้วย เพื่อให้สลับโหมดแล้วบีบใหม่จากของเดิมได้ (File เป็นแค่ handle ไม่กิน RAM)
 let _pendingShots=[];
 const shotOut = s => s.out[_imgMode];
@@ -905,12 +939,15 @@ function renderShots(){
   </div>`}).join('');
   row.classList.toggle('off',_pendingShots.length>=MAX_IMGS);
   if(!_pendingShots.length){info.textContent='ยังไม่ได้แนบรูป — ต้องแนบอย่างน้อย 1 รูป';return}
-  // ขนาดของแต่ละโหมดโชว์อยู่บนปุ่มแล้ว ตรงนี้เหลือแค่ยอดรวมของโหมดที่เลือกอยู่ + คำเตือนโหมดศิลปะ
+  // ขนาดของแต่ละโหมดโชว์อยู่บนปุ่มแล้ว ตรงนี้เหลือยอดรวม + คำเตือนโหมดไฟล์ใหญ่
   const kb=_pendingShots.reduce((a,s)=>a+(shotOut(s)?.kb||0),0);
   const head=`แนบแล้ว <b>${_pendingShots.length}</b> / ${MAX_IMGS} รูป · รวม <b>${fmtKB(kb)}</b>`;
-  info.innerHTML=_imgMode==='art'
-    ? head+`<span class="warn">โหมดงานศิลปะไฟล์ใหญ่กว่าปกติหลายเท่า ทำให้พื้นที่เก็บงานเต็มเร็วขึ้น — เลือกเมื่อครูสั่งงานที่ต้องดูสีและรายละเอียดจริง ๆ</span>`
-    : head;
+  const warn=_imgMode==='art'
+    ? 'โหมดงานศิลปะไฟล์ใหญ่กว่าปกติ ทำให้พื้นที่เก็บงานเต็มเร็วขึ้น — เลือกเมื่อครูสั่งงานที่ต้องดูสีและรายละเอียดจริง ๆ'
+    : _imgMode==='original'
+    ? 'โหมดคงคุณภาพต้นฉบับไม่ลดความละเอียด ไฟล์อาจใหญ่และใช้เวลาส่งนานกว่า เหมาะกับงานที่ต้องซูมดูรายละเอียด'
+    : '';
+  info.innerHTML=head+(warn?`<span class="warn">${warn}</span>`:'');
 }
 async function setImgMode(m){
   if(m===_imgMode||!IMG_MODES[m])return;
@@ -952,7 +989,7 @@ async function submitWork(id){
   if(_pendingShots.some(s=>!shotOut(s)))return toast('ยังแปลงรูปไม่เสร็จ รอสักครู่แล้วลองใหม่');
   $('#subBtn').disabled=true;$('#subBtn').textContent=`กำลังส่ง ${n} รูป…`;
   const fd=new FormData();fd.append('board',id);fd.append('no',no);fd.append('name',name);
-  _pendingShots.forEach((s,i)=>fd.append('file',shotOut(s).blob,`work-${i+1}.${imgExt()}`));
+  _pendingShots.forEach((s,i)=>{const o=shotOut(s);fd.append('file',o.blob,`work-${i+1}.${o.ext||imgExt()}`)});
   try{await api('/submit',{method:'POST',body:fd,noAuth:true})}
   catch(e){$('#subBtn').disabled=false;$('#subBtn').textContent='ส่งงาน';return toast(e.message)}
   clearShots();

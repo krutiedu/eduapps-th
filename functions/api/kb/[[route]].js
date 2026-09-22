@@ -18,6 +18,29 @@ const now = () => Date.now();
 const enc = new TextEncoder();
 const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 
+// R2 Standard มีพื้นที่ฟรี 10 GB-month ต่อบัญชี Cloudflare (ใช้ร่วมกันทุก bucket)
+// เกจใน KruBoard นับเฉพาะ bucket ที่ bind เป็น BUCKET จึงเป็นตัวเตือน ไม่ใช่ใบแจ้งค่าบริการ
+const R2_FREE_BYTES = 10_000_000_000;
+const STORAGE_CACHE_MS = 5 * 60 * 1000;
+let storageCache = null;
+
+async function bucketUsage(env) {
+  if (storageCache && now() - storageCache.at < STORAGE_CACHE_MS) return storageCache.data;
+  let cursor, bytes = 0, objects = 0, pages = 0, complete = true;
+  do {
+    const listed = await env.BUCKET.list({ limit: 1000, cursor });
+    bytes += listed.objects.reduce((sum, obj) => sum + (obj.size || 0), 0);
+    objects += listed.objects.length;
+    pages++;
+    if (listed.truncated && pages >= 45) { complete = false; break; }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+  const data = { bytes, objects, quota_bytes: R2_FREE_BYTES, complete, checked_at: now() };
+  storageCache = { at: now(), data };
+  return data;
+}
+const clearStorageCache = () => { storageCache = null; };
+
 // ---------- รูปแนบหลายใบ ----------
 // จำนวนรูปสูงสุดที่นักเรียนแนบได้ต่อการส่ง 1 ครั้ง
 // แก้ที่นี่ที่เดียวพอ — หน้าส่งงานอ่านค่านี้จาก GET /board/:id (field max_imgs)
@@ -222,6 +245,7 @@ export async function onRequest(context) {
           INSERT INTO kb_subs (id,board,no,name,img_key,status,created) VALUES (?,?,?,?,?, 'wait', ?)
           ON CONFLICT(board,no) DO UPDATE SET name=excluded.name, img_key=excluded.img_key, status='wait', score=NULL, comment=NULL, created=excluded.created, reviewed=NULL
         `).bind(uid(), board, no, name, packKeys(keys), now()).run();
+        clearStorageCache();
       } catch (err) {
         // อัปขึ้น R2 แล้วแต่เขียนฐานข้อมูลไม่สำเร็จ — เก็บกวาดรูปที่เพิ่งอัปทิ้ง
         // ไม่งั้นกลายเป็นรูปกำพร้าที่ลบผ่านหน้าเว็บไม่ได้อีกเลย (งานชุดเดิมยังไม่ถูกแตะ)
@@ -300,6 +324,7 @@ export async function onRequest(context) {
         await env.DB.prepare('DELETE FROM kb_subs WHERE board IN (SELECT id FROM kb_boards WHERE owner=?)').bind(username).run();
         await env.DB.prepare('DELETE FROM kb_boards WHERE owner=?').bind(username).run();
         await env.DB.prepare('DELETE FROM kb_teachers WHERE username=?').bind(username).run();
+        clearStorageCache();
         return json({ ok: true });
       }
 
@@ -310,6 +335,11 @@ export async function onRequest(context) {
     if (!SECRET) return noSecret();
     const me = await currentTeacher(request, SECRET);
     if (!me) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+
+    // พื้นที่รูปทั้งหมดใน R2 bucket ของ KruBoard — cache 5 นาทีเพื่อลด ListObjects
+    if (path === 'storage' && method === 'GET') {
+      return json(await bucketUsage(env));
+    }
 
     if (path === 'boards' && method === 'GET') {
       const { results } = await env.DB.prepare(`
@@ -350,6 +380,7 @@ export async function onRequest(context) {
       // ลบ subs และ board
       await env.DB.prepare('DELETE FROM kb_subs WHERE board=?').bind(id).run();
       await env.DB.prepare('DELETE FROM kb_boards WHERE id=?').bind(id).run();
+      clearStorageCache();
       return json({ ok: true });
     }
 
@@ -373,6 +404,7 @@ export async function onRequest(context) {
       // ลบรูปใน R2 ก่อน (ไม่ block ถ้าลบไม่ได้)
       await delKeys(env, imgKeys(s.img_key));
       await env.DB.prepare('DELETE FROM kb_subs WHERE id=?').bind(sid).run();
+      clearStorageCache();
       return json({ ok: true });
     }
 
