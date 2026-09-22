@@ -1,0 +1,25 @@
+{
+  // Local-only configuration. Keep pages_build_output_dir out of this file so
+  // the Cloudflare Dashboard remains the production source of truth.
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "eduapps-th-local",
+  "compatibility_date": "2026-05-03",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "eduapps-db-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "preview_database_id": "DB"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "kruti-board-local",
+      "preview_bucket_name": "kruti-board-local"
+    }
+  ],
+  "vars": {
+    "ALLOW_SIGNUP": "0"
+  }
+}
