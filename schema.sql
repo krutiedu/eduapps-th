@@ -117,6 +117,14 @@ CREATE TABLE IF NOT EXISTS access_codes (
   worksheet_ids TEXT    DEFAULT '[]'
 );
 
+-- ลิงก์สั้นของโรงเรียน: config เดิมใช้ token เดิมเสมอ
+CREATE TABLE IF NOT EXISTS school_short_links (
+  token       TEXT PRIMARY KEY,
+  config_hash TEXT NOT NULL UNIQUE,
+  config_json TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 
 -- ═══ ผู้ใช้และเซสชัน ════════════════════════════════════════
 

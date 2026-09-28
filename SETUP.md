@@ -57,8 +57,8 @@ Cloudflare Dashboard ทั้งหมด (ดูขั้นที่ 5)
 2. คลิก **Create database** → ตั้งชื่อ `eduapps-db` → **Create**
 3. เข้าไปใน database ที่สร้าง → แท็บ **Console**
 4. เปิดไฟล์ `schema.sql` คัดลอก**ทั้งไฟล์**มาวางในช่อง Console → **Execute**
-5. ตรวจว่าสำเร็จ: พิมพ์ `/tables` แล้ว Execute ต้องเห็น 13 ตาราง
-   (`articles`, `apps`, `worksheets`, `access_codes`, `comments`, `reports`,
+5. ตรวจว่าสำเร็จ: พิมพ์ `/tables` แล้ว Execute ต้องเห็น 14 ตาราง
+   (`articles`, `apps`, `worksheets`, `access_codes`, `school_short_links`, `comments`, `reports`,
    `users`, `settings`, `sessions`, `page_views`, `kb_boards`, `kb_subs`, `kb_teachers`)
 
 > `schema.sql` ทุกคำสั่งเป็น `IF NOT EXISTS` — รันซ้ำกับฐานข้อมูลที่มีข้อมูลอยู่แล้วได้

@@ -38,3 +38,9 @@
 5. merge เข้า `main` เมื่อผลทดสอบถูกต้อง เพื่อให้ Cloudflare Pages deploy production อัตโนมัติ
 
 Cloudflare Pages project ของเว็บนี้ชื่อ `kruticom` ก่อนแก้การตั้งค่า production ด้วย Wrangler ให้ล็อกอิน Cloudflare และดาวน์โหลดค่าปัจจุบันจาก Dashboard ด้วย `wrangler pages download config kruticom` แล้วตรวจเทียบก่อนเสมอ ไฟล์ `wrangler.jsonc` ชุดนี้ตั้งใจใช้เฉพาะ local และไม่มี `pages_build_output_dir` จึงไม่ควรใช้ deploy production
+
+## ลิงก์สั้นของโรงเรียน ปพ.5–ปพ.6
+
+ก่อน deploy โค้ดที่มี `/api/school-links` และ `/s/:token` ครั้งแรก ให้รัน `migration-school-short-links.sql` กับ D1 production (`eduapps-db`) เพียงครั้งเดียวผ่าน Cloudflare Dashboard → D1 → Console จากนั้น deploy เว็บหลักและแอป `pp5-40s.pages.dev` ตามลำดับ
+
+ตาราง `school_short_links` มี `config_hash` แบบ unique: config เดิมได้ token เดิมเสมอ ส่วน config ที่เปลี่ยนจะได้ token ใหม่ การเปิด `/s/:token` ใช้การค้นด้วย primary key และส่ง 302 ไป URL แอปที่มี `#fbcfg=` โดยไม่แสดงหน้า iframe
