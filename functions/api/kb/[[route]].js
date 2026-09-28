@@ -42,9 +42,7 @@ async function bucketUsage(env) {
 const clearStorageCache = () => { storageCache = null; };
 
 // ---------- รูปแนบหลายใบ ----------
-// จำนวนรูปสูงสุดที่นักเรียนแนบได้ต่อการส่ง 1 ครั้ง
-// แก้ที่นี่ที่เดียวพอ — หน้าส่งงานอ่านค่านี้จาก GET /board/:id (field max_imgs)
-const MAX_IMGS = 10;
+// ไม่จำกัดจำนวนรูปต่อการส่ง 1 ครั้ง แต่ยังตรวจขนาดไฟล์เพื่อป้องกัน request ที่ใหญ่ผิดปกติ
 // เพดานขนาดไฟล์ฝั่ง server — หน้าเว็บย่อรูปให้ก่อนส่งอยู่แล้ว
 // (โหมดมาตรฐาน ~100 KB · โหมดงานศิลปะ ~400-600 KB ต่อใบ)
 // ค่านี้ไว้กันคนที่ยิง API ตรงด้วยไฟล์เต็มขนาด ไม่ได้ไว้ดักผู้ใช้ปกติ
@@ -77,7 +75,7 @@ function withImgs(s) {
 
 // ลบรูปใน R2 เป็นชุด — R2 รับ array ได้ถึง 1000 คีย์ต่อ 1 call
 // ⚠️ ห้ามเปลี่ยนกลับไปวนลบทีละใบ: Workers free plan จำกัด subrequest 50 ครั้งต่อ 1 request
-// ห้อง 40 คน × 10 รูป = 400 ครั้ง → ครูจะลบกระดานไม่ผ่าน
+// กระดานที่มีรูปจำนวนมากอาจเกินเพดาน subrequest หากวนลบทีละใบ
 // ยอมกลืน error เหมือนเดิม เพื่อไม่ให้ครูลบกระดานไม่ได้เพราะรูปใบเดียวมีปัญหา
 async function delKeys(env, keys) {
   const list = [...new Set((keys || []).filter(Boolean))];
@@ -192,8 +190,7 @@ export async function onRequest(context) {
       const id = path.slice(6);
       const b = await env.DB.prepare('SELECT id,title,room,peer FROM kb_boards WHERE id=?').bind(id).first();
       if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
-      // หน้าส่งงานใช้ max_imgs คุม UI — จะได้ไม่ต้องแก้ตัวเลขซ้ำใน 2 ไฟล์
-      return json({ ...b, max_imgs: MAX_IMGS });
+      return json(b);
     }
 
     // GET /peer/:boardId — นักเรียนดูงานเพื่อน (เฉพาะกระดานที่ peer=1)
@@ -217,7 +214,6 @@ export async function onRequest(context) {
       const files = form.getAll('file').filter(f => f && typeof f.stream === 'function');
       if (!board || !no || !files.length) return json({ error: 'ข้อมูลไม่ครบ' }, 400);
       if (!name) return json({ error: 'กรุณากรอกชื่อ - สกุล' }, 400);
-      if (files.length > MAX_IMGS) return json({ error: `แนบรูปได้สูงสุด ${MAX_IMGS} รูป` }, 400);
       const b = await env.DB.prepare('SELECT id,roster FROM kb_boards WHERE id=?').bind(board).first();
       if (!b) return json({ error: 'ไม่พบกระดาน' }, 404);
       // เลขที่ต้องอยู่ในช่วงที่เป็นไปได้จริง
