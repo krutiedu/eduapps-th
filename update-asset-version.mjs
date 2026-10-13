@@ -12,6 +12,12 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const hash = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').slice(0, 8);
+// Update the shared information-page import before hashing app.js.
+const vInfo = hash('public/info-pages.mjs');
+const appPath = 'public/app.js';
+const appBefore = fs.readFileSync(appPath, 'utf8');
+const appAfter = appBefore.replace(/\/info-pages\.mjs\?v=[a-f0-9]+/g, `/info-pages.mjs?v=${vInfo}`);
+if (appAfter !== appBefore) fs.writeFileSync(appPath, appAfter);
 const vCss = hash('public/app.css');
 const vJs  = hash('public/app.js');
 

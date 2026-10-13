@@ -10,6 +10,9 @@ export async function onRequest({ env }) {
   // หมายเหตุ: Google ไม่ index URL ที่มี # (fragment) — ใส่เฉพาะ URL จริงที่มีหน้า SSR รองรับ
   const staticPages = [
     { url: `${BASE}/`,           priority: '1.0', freq: 'daily'  },
+    { url: `${BASE}/blog`,       priority: '0.9', freq: 'daily'  },
+    { url: `${BASE}/about`,      priority: '0.5', freq: 'monthly' },
+    { url: `${BASE}/privacy`,    priority: '0.3', freq: 'monthly' },
     { url: `${BASE}/apps`,       priority: '0.9', freq: 'weekly' },
     { url: `${BASE}/worksheets`, priority: '0.9', freq: 'weekly' },
   ];

@@ -39,6 +39,22 @@
 
 Cloudflare Pages project ของเว็บนี้ชื่อ `kruticom` ก่อนแก้การตั้งค่า production ด้วย Wrangler ให้ล็อกอิน Cloudflare และดาวน์โหลดค่าปัจจุบันจาก Dashboard ด้วย `wrangler pages download config kruticom` แล้วตรวจเทียบก่อนเสมอ ไฟล์ `wrangler.jsonc` ชุดนี้ตั้งใจใช้เฉพาะ local และไม่มี `pages_build_output_dir` จึงไม่ควรใช้ deploy production
 
+## ตรวจความพร้อมสำหรับ AdSense
+
+หน้า `/`, `/blog`, `/about` และ `/privacy` ส่งเนื้อหาใน HTML จาก Pages Functions เพื่อให้อ่านได้ก่อน JavaScript โหลด หน้าข้อมูลใช้ `public/info-pages.mjs` ร่วมกับการนำทางในเบราว์เซอร์ เมื่อแก้ไฟล์นี้หรือ `app.js` ให้รัน `node update-asset-version.mjs` ก่อน commit ด้วย
+
+ทดสอบกับฐานข้อมูลจำลองแยกจากข้อมูล local เดิม:
+
+```powershell
+wrangler d1 execute eduapps-db-local --local --persist-to .wrangler/adsense-test --file schema.sql
+wrangler d1 execute eduapps-db-local --local --persist-to .wrangler/adsense-test --file tests/adsense-fixture.sql
+wrangler pages dev public --port 8792 --persist-to .wrangler/adsense-test
+```
+
+ใน terminal อีกหน้าต่าง รัน `node tests/adsense-readiness.mjs` เพื่อตรวจ HTML โดยไม่ใช้ JavaScript, บทความฉบับร่าง, การแบ่งหน้า/ค้นหา, escaping, sitemap, ads.txt และการตอบ 503 เมื่อฐานข้อมูลขัดข้อง
+
+หลังเผยแพร่ ตรวจว่า `https://kru-ti.com/ads.txt` แสดง Publisher ID ตรงกับบัญชี AdSense และตรวจเนื้อหาหน้าเว็บด้วย URL Inspection ใน Search Console ก่อนกด Request review ใน AdSense การแก้ส่วนเทคนิคไม่ได้รับประกันผลอนุมัติ และหน้าที่มีเพียงปุ่มดาวน์โหลดหรือเปิดแอปยังควรเพิ่มวิธีใช้ ตัวอย่างกิจกรรม และข้อมูลจากผู้สร้าง
+
 ## ลิงก์สั้นของโรงเรียน ปพ.5–ปพ.6
 
 ก่อน deploy โค้ดที่มี `/api/school-links` และ `/s/:token` ครั้งแรก ให้รัน `migration-school-short-links.sql` กับ D1 production (`eduapps-db`) เพียงครั้งเดียวผ่าน Cloudflare Dashboard → D1 → Console จากนั้น deploy เว็บหลักและแอป `pp5-40s.pages.dev` ตามลำดับ

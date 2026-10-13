@@ -2,7 +2,15 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 
-# ห้าม crawl API endpoints
+# อนุญาตเฉพาะข้อมูลสาธารณะที่ใช้เรนเดอร์หน้าเว็บ
 Disallow: /api/
+Allow: /api/settings$
+Allow: /api/articles$
+Allow: /api/articles?
+Allow: /api/articles/
+Disallow: /api/articles/admin
+Allow: /api/apps$
+Allow: /api/apps?
+Allow: /api/worksheets$
 
 Sitemap: https://kru-ti.com/sitemap.xml
