@@ -182,7 +182,7 @@ tr:hover td{background:#fafafa;}
 .code-picker-vip input{margin-top:4px;flex-shrink:0;}
 .code-picker-vip small{display:block;color:#92400e;font-size:.76rem;margin-top:3px;}
 .code-picker-count{font-size:.84rem;font-weight:700;color:#15223c;margin-bottom:10px;}
-.code-picker-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;margin-bottom:12px;}
+.code-picker-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,.8fr);gap:10px;margin-bottom:12px;}
 .code-picker-filters .form-input{min-width:0;}
 .code-picker-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
 .code-picker-toolbar .flt-chips{gap:5px;}
@@ -192,9 +192,13 @@ tr:hover td{background:#fafafa;}
 .code-picker-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:52px;border-bottom:1px solid #e2e8f0;cursor:pointer;}
 .code-picker-row:has(input:checked){background:#f8fafc;}
 .code-picker-row input{width:16px;height:16px;flex-shrink:0;accent-color:#2563eb;}
-.code-picker-row>span{min-width:0;}
+.code-picker-row>span{min-width:0;flex:1;}
 .code-picker-title{display:block;font-size:.87rem;overflow-wrap:anywhere;}
 .code-picker-meta{display:block;font-size:.74rem;color:#64748b;margin-top:2px;}
+.code-picker-tier{flex-shrink:0;font-size:.72rem;white-space:nowrap;border-radius:20px;padding:2px 7px;}
+.code-picker-tier-free{background:#dcfce7;color:#166534;}
+.code-picker-tier-premium{background:#fff7ed;color:#9a3412;}
+.code-picker-tier-vip{background:#f3e8ff;color:#6b21a8;}
 .code-picker-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:.8rem;color:#64748b;}
 .code-picker-pages{display:flex;align-items:center;gap:9px;}
 .code-picker-pages .btn:disabled{opacity:.4;cursor:default;}
@@ -204,7 +208,8 @@ tr:hover td{background:#fafafa;}
   .code-modal-tabs{padding:0 16px 12px;}
   .code-modal-body{padding:14px 16px;}
   .code-modal .modal-footer{padding:12px 16px;}
-  .code-picker-filters{grid-template-columns:minmax(0,1fr);}
+  .code-picker-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .code-picker-filters>label:first-child{grid-column:1 / -1;}
   .code-picker-filters .form-input{font-size:16px;}
   .code-modal-summary{width:100%;}
   .code-modal-actions{margin-left:auto;}
@@ -3303,13 +3308,16 @@ function createCodePicker(items, value, kind, readOnly = false) {
   const ids = codeIds(value);
   const allFuture = ids.includes('all');
   const selected = new Set(allFuture ? items.filter(item => item.locked).map(item => String(item.id)) : ids);
-  const available = items.filter(item => item.locked || selected.has(String(item.id))).map(item => ({...item, id:String(item.id)}));
+  const available = items.map(item => ({...item, id:String(item.id), selectable:!!item.locked || selected.has(String(item.id))}));
   // รักษาสิทธิ์ที่เคยบันทึกไว้ แม้แอปจะถูกซ่อน ปลดล็อก หรือลบภายหลัง
   selected.forEach(id => {
-    if (!available.some(item => item.id === id)) available.push({id, title:`${kind === 'apps' ? 'แอป' : 'ใบงาน'} #${id}`, missing:true});
+    if (!available.some(item => item.id === id)) available.push({id, title:`${kind === 'apps' ? 'แอป' : 'ใบงาน'} #${id}`, missing:true, selectable:true});
   });
   available.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'th', {numeric:true, sensitivity:'base'}));
-  return {items:available, selected, allFuture, kind, readOnly, query:'', category:'', selectedOnly:false, page:1, pageSize:6, manualSelection:null};
+  return {items:available, selected, allFuture, kind, readOnly, query:'', category:'', tier:'', selectionFilter:'all', page:1, pageSize:6, manualSelection:null};
+}
+function codePickerTier(item) {
+  return item.missing ? '' : item.is_vip ? 'vip' : item.locked ? 'premium' : 'free';
 }
 function codePickerMarkup(picker, id) {
   const unit = picker.kind === 'apps' ? 'แอป' : 'ใบงาน';
@@ -3322,9 +3330,10 @@ function codePickerMarkup(picker, id) {
     <div class="code-picker-filters">
       <label><span class="form-label">ค้นหาชื่อ${unit}</span><input class="form-input" type="search" data-picker-search placeholder="ค้นหาชื่อ${unit}..." autocomplete="off"></label>
       <label><span class="form-label">หมวดหมู่</span><select class="form-input" data-picker-category><option value="">ทุกหมวด</option>${categories.map(cat => `<option value="${codeEscape(cat)}">${codeEscape(cat)}</option>`).join('')}</select></label>
+      <label><span class="form-label">ประเภท</span><select class="form-input" data-picker-tier><option value="">ทุกประเภท</option><option value="free">🆓 ฟรี</option><option value="premium">🔒 พรีเมียม</option>${picker.kind === 'apps' ? '<option value="vip">👑 VIP</option>' : ''}</select></label>
     </div>
     <div class="code-picker-toolbar">
-      <div class="flt-chips"><button type="button" class="flt-chip on" data-picker-all aria-pressed="true">ทั้งหมด</button>${picker.readOnly ? '' : '<button type="button" class="flt-chip" data-picker-selected aria-pressed="false">เลือกแล้ว</button>'}</div>
+      <div class="flt-chips"><button type="button" class="flt-chip on" data-picker-all aria-pressed="true">ทั้งหมด</button>${picker.readOnly ? '' : '<button type="button" class="flt-chip" data-picker-selected aria-pressed="false">เลือกแล้ว</button><button type="button" class="flt-chip" data-picker-unselected aria-pressed="false">ยังไม่เลือก</button>'}</div>
       ${picker.readOnly ? '' : '<button type="button" class="code-picker-bulk" data-picker-bulk></button>'}
     </div>
     <div class="code-picker-list" data-picker-list></div>
@@ -3335,8 +3344,9 @@ function codePickerMarkup(picker, id) {
 }
 function filteredCodePickerItems(picker) {
   const query = picker.query.trim().toLocaleLowerCase('th');
-  return picker.items.filter(item => (!picker.selectedOnly || picker.selected.has(item.id))
+  return picker.items.filter(item => (picker.selectionFilter === 'all' || picker.selected.has(item.id) === (picker.selectionFilter === 'selected'))
     && (!picker.category || (item.category || 'อื่นๆ') === picker.category)
+    && (!picker.tier || codePickerTier(item) === picker.tier)
     && (!query || (item.title || '').toLocaleLowerCase('th').includes(query)));
 }
 function renderCodePicker(picker) {
@@ -3349,22 +3359,29 @@ function renderCodePicker(picker) {
   picker.page = Math.min(Math.max(1, picker.page), pages);
   const start = (picker.page - 1) * picker.pageSize;
   const focusId = root.contains(document.activeElement) ? document.activeElement.dataset.pickerItem : null;
-  get('list').innerHTML = results.length ? results.slice(start, start + picker.pageSize).map(item => `<label class="code-picker-row">
-    <input type="checkbox" data-picker-item="${codeEscape(item.id)}" ${picker.selected.has(item.id) ? 'checked' : ''} ${picker.readOnly || picker.allFuture ? 'disabled' : ''}>
-    <span><span class="code-picker-title">${codeEscape(item.icon || (picker.kind === 'apps' ? '🎮' : '📄'))} ${codeEscape(item.title)}</span><span class="code-picker-meta">${codeEscape(item.category || 'อื่นๆ')}${item.missing ? ' · ไม่พบในรายการปัจจุบัน' : !item.locked ? ' · ปัจจุบันเปิดใช้ฟรี' : ''}</span></span>
-  </label>`).join('') : `<div class="code-picker-empty">${picker.items.length ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : `ยังไม่มี${unit}ที่ล็อก`}</div>`;
-  if (focusId) [...root.querySelectorAll('[data-picker-item]')].find(input => input.dataset.pickerItem === focusId)?.focus();
+  const tierLabels = {free:'🆓 ฟรี', premium:'🔒 พรีเมียม', vip:'👑 VIP'};
+  get('list').innerHTML = results.length ? results.slice(start, start + picker.pageSize).map(item => {
+    const tier = codePickerTier(item);
+    return `<label class="code-picker-row">
+    <input type="checkbox" data-picker-item="${codeEscape(item.id)}" ${picker.selected.has(item.id) ? 'checked' : ''} ${picker.readOnly || picker.allFuture || !item.selectable ? 'disabled' : ''}>
+    <span><span class="code-picker-title">${codeEscape(item.icon || (picker.kind === 'apps' ? '🎮' : '📄'))} ${codeEscape(item.title)}</span><span class="code-picker-meta">${codeEscape(item.category || 'อื่นๆ')}${item.missing ? ' · ไม่พบในรายการปัจจุบัน' : !item.locked ? ' · เปิดใช้ฟรี ไม่ต้องใช้รหัส' : ''}</span></span>
+    ${tier ? `<small class="code-picker-tier code-picker-tier-${tier}">${tierLabels[tier]}</small>` : ''}
+  </label>`;
+  }).join('') : `<div class="code-picker-empty">${picker.items.length ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : `ยังไม่มี${unit}ในระบบ`}</div>`;
+  if (focusId) ([...root.querySelectorAll('[data-picker-item]')].find(input => input.dataset.pickerItem === focusId) || get(picker.selectionFilter))?.focus();
   get('count').textContent = picker.allFuture ? `ทุก${unit}ที่ล็อก · รวมรายการใหม่ในอนาคต (ปัจจุบัน ${picker.selected.size} ${unit})` : `${picker.readOnly ? 'ปลดล็อก' : 'เลือกแล้ว'} ${picker.selected.size} / ${picker.items.length} ${unit}`;
   get('all').textContent = `ทั้งหมด (${picker.items.length})`;
-  get('all').classList.toggle('on', !picker.selectedOnly);
-  get('all').setAttribute('aria-pressed', String(!picker.selectedOnly));
+  for (const filter of ['all', 'selected', 'unselected']) {
+    get(filter)?.classList.toggle('on', picker.selectionFilter === filter);
+    get(filter)?.setAttribute('aria-pressed', String(picker.selectionFilter === filter));
+  }
   if (get('selected')) {
     get('selected').textContent = `เลือกแล้ว (${picker.selected.size})`;
-    get('selected').classList.toggle('on', picker.selectedOnly);
-    get('selected').setAttribute('aria-pressed', String(picker.selectedOnly));
-    const remove = results.length > 0 && results.every(item => picker.selected.has(item.id));
-    get('bulk').textContent = `${remove ? 'เอาผลค้นหาออก' : 'เลือกผลค้นหา'} (${results.length})`;
-    get('bulk').disabled = picker.allFuture || !results.length;
+    get('unselected').textContent = `ยังไม่เลือก (${picker.items.length - picker.selected.size})`;
+    const selectable = results.filter(item => item.selectable);
+    const remove = selectable.length > 0 && selectable.every(item => picker.selected.has(item.id));
+    get('bulk').textContent = `${remove ? 'เอาผลค้นหาออก' : 'เลือกผลค้นหา'} (${selectable.length})`;
+    get('bulk').disabled = picker.allFuture || !selectable.length;
   }
   get('results').textContent = results.length ? `${start + 1}–${Math.min(start + picker.pageSize, results.length)} จาก ${results.length} ${unit}` : `0 ${unit}`;
   get('page').textContent = `${picker.page} / ${pages}`;
@@ -3377,19 +3394,21 @@ function bindCodePicker(picker, id) {
   const get = name => picker.root.querySelector('[data-picker-' + name + ']');
   get('search').addEventListener('input', event => { picker.query = event.target.value; picker.page = 1; renderCodePicker(picker); });
   get('category').addEventListener('change', event => { picker.category = event.target.value; picker.page = 1; renderCodePicker(picker); });
-  get('all').addEventListener('click', () => { picker.selectedOnly = false; picker.page = 1; renderCodePicker(picker); });
-  get('selected')?.addEventListener('click', () => { picker.selectedOnly = true; picker.page = 1; renderCodePicker(picker); });
+  get('tier').addEventListener('change', event => { picker.tier = event.target.value; picker.page = 1; renderCodePicker(picker); });
+  for (const filter of ['all', 'selected', 'unselected']) {
+    get(filter)?.addEventListener('click', () => { picker.selectionFilter = filter; picker.page = 1; renderCodePicker(picker); });
+  }
   get('prev').addEventListener('click', () => { picker.page--; renderCodePicker(picker); });
   get('next').addEventListener('click', () => { picker.page++; renderCodePicker(picker); });
   get('list').addEventListener('change', event => {
     const id = event.target.dataset.pickerItem;
-    if (!id || picker.readOnly || picker.allFuture) return;
+    if (!id || picker.readOnly || picker.allFuture || !picker.items.some(item => item.id === id && item.selectable)) return;
     event.target.checked ? picker.selected.add(id) : picker.selected.delete(id);
     renderCodePicker(picker);
   });
   get('bulk')?.addEventListener('click', () => {
     if (picker.readOnly || picker.allFuture) return;
-    const results = filteredCodePickerItems(picker);
+    const results = filteredCodePickerItems(picker).filter(item => item.selectable);
     const remove = results.every(item => picker.selected.has(item.id));
     results.forEach(item => remove ? picker.selected.delete(item.id) : picker.selected.add(item.id));
     renderCodePicker(picker);

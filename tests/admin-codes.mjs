@@ -15,12 +15,13 @@ for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) new
 
 const apps = Array.from({length:100}, (_, index) => ({
   id:index + 1, title:`แอป ${String(index + 1).padStart(3, '0')}`, icon:'🎮',
-  category:index % 2 ? 'ภาษาอังกฤษ' : 'คณิตศาสตร์', locked:1,
+  category:index % 2 ? 'ภาษาอังกฤษ' : 'คณิตศาสตร์', locked:1, is_vip:index % 5 === 0 ? 1 : 0,
 }));
 apps[0].title += ' <img src=x onerror="window.codeTestXss=true">';
 apps[0].category = 'หมวด "พิเศษ" <b>ทดสอบ</b>';
 apps.push({id:101, title:'แอปเดิมที่เปิดใช้ฟรี', category:'อื่นๆ', locked:0});
 const worksheets = Array.from({length:12}, (_, index) => ({id:index + 1, title:`ใบงาน ${String(index + 1).padStart(3, '0')}`, category:'แบบฝึกหัด', locked:1}));
+worksheets.push({id:13, title:'ใบงานฟรี', category:'แบบฝึกหัด', locked:0});
 const originalExpiry = '2027-10-18T12:34:17.000Z';
 const codes = [
   {id:1, code:'TEST01', label:'ชุด "ทดสอบ" <b>ข้อความ</b>', app_ids:JSON.stringify([1,'20',65,101,999]), worksheet_ids:JSON.stringify([1,10,888]), expires_at:originalExpiry, active:1},
@@ -107,6 +108,33 @@ try {
   await page.locator('#codeTab-info').press('ArrowRight');
   assert.equal(await page.locator('#codeTab-apps').getAttribute('aria-selected'), 'true');
   assert.match(await field(picker, 'count').innerText(), /5 \/ 102/);
+  // Unselected combines with tier/category/search, updates immediately, and retains hidden selections.
+  await field(picker, 'unselected').click();
+  assert.equal(await field(picker, 'unselected').getAttribute('aria-pressed'), 'true');
+  assert.equal(await picker.locator('[data-picker-item]:checked').count(), 0);
+  await field(picker, 'tier').selectOption('vip');
+  await field(picker, 'category').selectOption('ภาษาอังกฤษ');
+  await field(picker, 'search').fill('006');
+  assert.equal(await picker.locator('.code-picker-tier-vip').count(), 1);
+  await picker.locator('[data-picker-item="6"]').click(); // The row disappears from the unselected view immediately.
+  assert.equal(await picker.locator('[data-picker-item]').count(), 0);
+  assert.match(await field(picker, 'unselected').innerText(), /96/);
+  await field(picker, 'all').click();
+  assert.equal(await picker.locator('[data-picker-item="6"]').isChecked(), true);
+  await field(picker, 'tier').selectOption('premium');
+  assert.equal(await picker.locator('[data-picker-item]').count(), 0, 'Premium excludes VIP');
+  await field(picker, 'tier').selectOption('vip');
+  await field(picker, 'selected').click();
+  await picker.locator('[data-picker-item="6"]').click(); // The row disappears from the selected view immediately.
+  assert.equal(await picker.locator('[data-picker-item]').count(), 0);
+  await field(picker, 'all').click();
+  await field(picker, 'search').fill('');
+  await field(picker, 'category').selectOption('');
+  await field(picker, 'tier').selectOption('free');
+  assert.equal(await picker.locator('[data-picker-item="101"]').isChecked(), true, 'Legacy free-app permission is retained');
+  assert.equal(await picker.locator('.code-picker-tier-free').count(), 1);
+  await field(picker, 'tier').selectOption('');
+  assert.match(await field(picker, 'count').innerText(), /5 \/ 102/);
   await field(picker, 'next').click();
   assert.match(await field(picker, 'page').innerText(), /2 \/ 17/);
   await field(picker, 'search').fill('020');
@@ -131,11 +159,24 @@ try {
   await page.locator('#cCode').fill('NEW100');
   await page.locator('#cLabel').fill('ทุกแอปปัจจุบัน');
   await page.locator('#codeTab-apps').click();
+  await field(picker, 'tier').selectOption('free');
+  assert.equal(await picker.locator('[data-picker-item="101"]').isDisabled(), true);
+  assert.match(await picker.innerText(), /ไม่ต้องใช้รหัส/);
+  assert.equal(await field(picker, 'bulk').isDisabled(), true);
+  await field(picker, 'tier').selectOption('');
   await field(picker, 'bulk').click();
   assert.equal(await field(picker, 'vip').isChecked(), false);
-  assert.match(await field(picker, 'count').innerText(), /100 \/ 100/);
+  assert.match(await field(picker, 'count').innerText(), /100 \/ 101/);
   await page.locator('#codeTab-worksheets').click();
+  await field(wsPicker, 'unselected').click();
+  await field(wsPicker, 'tier').selectOption('free');
+  assert.equal(await wsPicker.locator('[data-picker-item="13"]').isDisabled(), true);
+  assert.equal(await field(wsPicker, 'bulk').isDisabled(), true);
+  await field(wsPicker, 'tier').selectOption('premium');
   await field(wsPicker, 'bulk').click();
+  assert.equal(await wsPicker.locator('[data-picker-item]').count(), 0);
+  await field(wsPicker, 'selected').click();
+  assert.equal(await wsPicker.locator('[data-picker-item]:checked').count(), 6);
   await save();
   assert.equal(lastSaved.app_ids.length, 100);
   assert.equal(lastSaved.worksheet_ids.length, 12);
@@ -144,7 +185,7 @@ try {
 
   // Bulk selection applies only to the matching results, including the selected-only view.
   await edit(3);
-  assert.match(await field(picker, 'count').innerText(), /0 \/ 100/);
+  assert.match(await field(picker, 'count').innerText(), /0 \/ 101/);
   await field(picker, 'search').fill('090');
   await field(picker, 'category').selectOption('คณิตศาสตร์');
   assert.equal(await field(picker, 'bulk').isDisabled(), true);
@@ -217,7 +258,7 @@ try {
   await page.locator('#cCode').fill('FUTURE01');
   await page.locator('#cLabel').fill('VIP สำหรับรายการใหม่');
   await page.locator('#codeTab-apps').click();
-  assert.match(await picker.innerText(), /ยังไม่มีแอปที่ล็อก/);
+  assert.match(await picker.innerText(), /ยังไม่มีแอปในระบบ/);
   assert.equal(await field(picker, 'bulk').isDisabled(), true);
   await field(picker, 'vip').check();
   await save();
@@ -225,7 +266,7 @@ try {
   assert.deepEqual(lastSaved.worksheet_ids, []);
   assert.equal(await page.evaluate(() => window.codeTestXss), undefined);
   assert.deepEqual(errors, []);
-  console.log('PASS: 100-app summaries; search/categories/pages; preserved selections, expiry and legacy VIP; explicit current/all-future permissions; API failures; desktop/mobile layout.');
+  console.log('PASS: 100-app summaries; selected/unselected and free/premium/VIP filters combined with search/categories/pages; preserved permissions and expiry; API failures; desktop/mobile layout.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
