@@ -39,6 +39,12 @@
 
 Cloudflare Pages project ของเว็บนี้ชื่อ `kruticom` ก่อนแก้การตั้งค่า production ด้วย Wrangler ให้ล็อกอิน Cloudflare และดาวน์โหลดค่าปัจจุบันจาก Dashboard ด้วย `wrangler pages download config kruticom` แล้วตรวจเทียบก่อนเสมอ ไฟล์ `wrangler.jsonc` ชุดนี้ตั้งใจใช้เฉพาะ local และไม่มี `pages_build_output_dir` จึงไม่ควรใช้ deploy production
 
+## ทดสอบหน้าจัดการรหัสปลดล็อก
+
+รัน `node tests/admin-codes.mjs` เมื่อแก้ตัวเลือกแอปหรือใบงาน ต้องมีแพ็กเกจ Playwright และ Chromium ในเครื่อง การทดสอบเปิดเซิร์ฟเวอร์จำลองชั่วคราวและใช้ข้อมูล 100 แอป ไม่เชื่อมต่อฐานข้อมูลหรือ API จริง ตรวจการค้นหา หมวดหมู่ การแบ่งหน้า สิทธิ์ที่เลือก การบันทึก VIP และหน้าจอมือถือ
+
+หากใช้ Playwright จาก runtime ภายนอก ให้ตั้ง `PLAYWRIGHT_MODULE_PATH` เป็นโฟลเดอร์แพ็กเกจ และใช้ `PLAYWRIGHT_CHANNEL=msedge` เพื่อทดสอบผ่าน Microsoft Edge ที่ติดตั้งอยู่ได้ หลังแก้หน้า admin ให้รัน `node update-asset-version.mjs` ก่อน commit เพื่ออัปเดต `public/version.txt`
+
 ## ตรวจความพร้อมสำหรับ AdSense
 
 หน้า `/`, `/blog`, `/about` และ `/privacy` ส่งเนื้อหาใน HTML จาก Pages Functions เพื่อให้อ่านได้ก่อน JavaScript โหลด หน้าข้อมูลใช้ `public/info-pages.mjs` ร่วมกับการนำทางในเบราว์เซอร์ เมื่อแก้ไฟล์นี้หรือ `app.js` ให้รัน `node update-asset-version.mjs` ก่อน commit ด้วย

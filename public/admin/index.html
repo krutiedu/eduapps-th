@@ -161,6 +161,55 @@ tr:hover td{background:#fafafa;}
 /* ชั้นที่สอง — กล่องที่ต้องซ้อนบนกล่องอื่น (เช่นถามขนาดรูปตอนอัปโหลดจากในฟอร์ม) */
 #modal2 .modal-ov{z-index:300;}
 
+/* รหัสปลดล็อก: สรุปในตารางและตัวเลือกรายการที่รองรับหลายร้อยแอป */
+.code-app-summary{width:280px;max-width:100%;}
+.code-app-link{display:block;border:0;background:none;color:#1d4ed8;font:inherit;font-weight:700;text-align:left;cursor:pointer;}
+.code-app-previews{display:flex;align-items:center;gap:5px;margin-top:6px;max-width:280px;}
+.code-app-preview{display:block;min-width:0;max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#f1f5f9;border-radius:5px;padding:2px 6px;font-size:.75rem;}
+.code-app-more{font-size:.78rem;color:#64748b;white-space:nowrap;}
+.code-modal{max-width:820px;max-height:88vh;max-height:88dvh;padding:0;display:flex;flex-direction:column;overflow:hidden;}
+.code-modal-head{padding:20px 24px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.code-modal-head h3{margin:0;}
+.code-modal-sub{font-size:.82rem;color:#64748b;margin-top:4px;overflow-wrap:anywhere;}
+.code-modal-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:0 24px 12px;border-bottom:1px solid #e2e8f0;}
+.code-modal-tabs button[aria-selected="true"]{background:#15223c;color:#fff;border-color:#15223c;}
+.code-modal-body{padding:18px 24px;overflow-y:auto;min-height:0;}
+.code-modal [hidden]{display:none!important;}
+.code-modal .modal-footer{flex-shrink:0;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 24px;margin:0;background:#fff;}
+.code-modal-actions{display:flex;gap:8px;}
+.code-modal-summary{font-size:.82rem;color:#475569;}
+.code-picker-vip{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #fde68a;background:#fffbeb;border-radius:8px;margin-bottom:14px;font-size:.86rem;cursor:pointer;}
+.code-picker-vip input{margin-top:4px;flex-shrink:0;}
+.code-picker-vip small{display:block;color:#92400e;font-size:.76rem;margin-top:3px;}
+.code-picker-count{font-size:.84rem;font-weight:700;color:#15223c;margin-bottom:10px;}
+.code-picker-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;margin-bottom:12px;}
+.code-picker-filters .form-input{min-width:0;}
+.code-picker-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.code-picker-toolbar .flt-chips{gap:5px;}
+.code-picker-bulk{border:0;background:none;color:#1d4ed8;font:inherit;font-size:.8rem;cursor:pointer;padding:6px 0;}
+.code-picker-bulk:disabled{color:#94a3b8;cursor:default;}
+.code-picker-list{border-top:1px solid #e2e8f0;}
+.code-picker-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:52px;border-bottom:1px solid #e2e8f0;cursor:pointer;}
+.code-picker-row:has(input:checked){background:#f8fafc;}
+.code-picker-row input{width:16px;height:16px;flex-shrink:0;accent-color:#2563eb;}
+.code-picker-row>span{min-width:0;}
+.code-picker-title{display:block;font-size:.87rem;overflow-wrap:anywhere;}
+.code-picker-meta{display:block;font-size:.74rem;color:#64748b;margin-top:2px;}
+.code-picker-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:.8rem;color:#64748b;}
+.code-picker-pages{display:flex;align-items:center;gap:9px;}
+.code-picker-pages .btn:disabled{opacity:.4;cursor:default;}
+.code-picker-empty{padding:26px 10px;text-align:center;font-size:.86rem;color:#64748b;}
+@media(max-width:600px){
+  .code-modal-head{padding:16px 16px 12px;}
+  .code-modal-tabs{padding:0 16px 12px;}
+  .code-modal-body{padding:14px 16px;}
+  .code-modal .modal-footer{padding:12px 16px;}
+  .code-picker-filters{grid-template-columns:minmax(0,1fr);}
+  .code-picker-filters .form-input{font-size:16px;}
+  .code-modal-summary{width:100%;}
+  .code-modal-actions{margin-left:auto;}
+}
+
 /* TOAST */
 #toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;
        padding:10px 18px;border-radius:8px;font-size:.88rem;font-weight:700;
@@ -3159,7 +3208,7 @@ async function renderCodes() {
     <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
       <li>สร้างรหัส → กำหนดว่าปลดล็อกแอปไหนบ้าง → แชร์รหัสให้ผู้ที่จ่ายเงิน</li>
       <li>รหัสเดียวสามารถปลดล็อกได้หลายแอปพร้อมกัน</li>
-      <li>ตั้ง "ปลดทุกแอป" สำหรับแพ็กเกจ VIP ที่เข้าถึงได้ทุกอย่าง</li>
+      <li>เปิด "VIP" เมื่อต้องการรวมแอปที่ล็อกและแอปใหม่ในอนาคต หรือเลือกเป็นรายการเพื่อให้สิทธิ์เฉพาะแอปปัจจุบัน</li>
       <li>ตั้งวันหมดอายุสำหรับรหัสแบบรายเดือน/รายปี</li>
       <li>ปิดรหัสได้ทันทีโดยไม่ต้องลบ</li>
     </ul>
@@ -3168,14 +3217,29 @@ async function renderCodes() {
   filterCodes();
 }
 
-function codeAppNames(ids) {
-  if (!ids) return '-';
-  let arr = []; try { arr = JSON.parse(ids); } catch {}
-  if (arr.includes('all')) return '🌟 ทุกแอปที่ล็อก';
-  return arr.map(id => {
-    const a = (window._codesApps||[]).find(x=>x.id===parseInt(id)||x.id===id);
-    return a ? a.icon+' '+a.title : id;
-  }).join(', ') || '-';
+function codeIds(value) {
+  let ids = value;
+  if (typeof ids === 'string') { try { ids = JSON.parse(ids); } catch { ids = []; } }
+  return Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+}
+function codeEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function codeAppsSummary(c) {
+  const ids = codeIds(c.app_ids);
+  const all = ids.includes('all');
+  const apps = window._codesApps || [];
+  const count = all ? apps.filter(a => a.locked).length : ids.length;
+  if (!all && !count) return '<span class="code-app-more">ไม่ได้เลือกแอป</span>';
+  const previews = ids.slice(0, 2).map(id => {
+    const app = apps.find(a => String(a.id) === id);
+    const title = app?.title || 'แอป #' + id;
+    return `<span class="code-app-preview" title="${codeEscape(title)}">${codeEscape(title)}</span>`;
+  }).join('');
+  return `<div class="code-app-summary">
+    <button type="button" class="code-app-link" onclick="openCodeApps(${Number(c.id)})" aria-label="ดูรายชื่อแอปในรหัส ${codeEscape(c.code)}">${all ? '🌟 ทุกแอป · รวมแอปใหม่' : count + ' แอป · ดูรายชื่อ'}</button>
+    <div class="code-app-previews">${all ? `<span class="code-app-more">ปัจจุบัน ${count} แอปที่ล็อก</span>` : previews + (count > 2 ? `<span class="code-app-more">+${count - 2}</span>` : '')}</div>
+  </div>`;
 }
 function codeExpLabel(exp) {
   if (!exp) return '<span style="color:#059669;font-weight:700;">ไม่หมดอายุ</span>';
@@ -3195,9 +3259,9 @@ function codeIsAllApps(c) {
 function codeRowsHtml(arr) {
   if (!arr.length) return `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบรหัสที่ตรงกับเงื่อนไข</td></tr>`;
   return arr.map(c=>`<tr style="${!c.active?'opacity:.5;':''}">
-    <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${c.code}</code></td>
-    <td><strong>${c.label}</strong></td>
-    <td style="font-size:.82rem;max-width:200px;">${codeAppNames(c.app_ids)}</td>
+    <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${codeEscape(c.code)}</code></td>
+    <td><strong>${codeEscape(c.label)}</strong></td>
+    <td>${codeAppsSummary(c)}</td>
     <td>${codeExpLabel(c.expires_at)}</td>
     <td>${c.active
       ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
@@ -3205,7 +3269,7 @@ function codeRowsHtml(arr) {
     <td style="white-space:nowrap;">
       <button class="btn btn-outline btn-sm" title="สร้างอีเมลส่งรหัสให้ลูกค้า" onclick="openEmailModal(${c.id})">📧</button>
       <button class="btn btn-outline btn-sm" style="margin-left:4px;" title="ร่างข้อความ Messenger ส่งรหัสให้ลูกค้า" onclick="openMsgrModal(${c.id})">💬</button>
-      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})">✏️</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})" aria-label="แก้ไขรหัส ${codeEscape(c.code)}">✏️</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${String(c.code).replace(/'/g,"\\'")}')">🗑</button>
     </td>
   </tr>`).join('');
@@ -3234,50 +3298,176 @@ function filterCodes() {
   if (cnt) cnt.textContent = `${out.length} / ${(window._codesAll||[]).length} รหัส`;
 }
 
-// ── ช่อง "เลือกทั้งหมด" สำหรับแอป/ใบงานในรหัสปลดล็อก ──
-// ติ๊ก master → ติ๊กช่องย่อยทั้งหมด (ช่องย่อยยังแก้ได้ เอาออกบางช่องได้)
-function cToggleAll(childClass, on) {
-  document.querySelectorAll('.' + childClass).forEach(cb => cb.checked = on);
+// เก็บรายการที่เลือกแยกจาก DOM เพื่อไม่ให้การค้นหา/แบ่งหน้าทำสิทธิ์เดิมหาย
+function createCodePicker(items, value, kind, readOnly = false) {
+  const ids = codeIds(value);
+  const allFuture = ids.includes('all');
+  const selected = new Set(allFuture ? items.filter(item => item.locked).map(item => String(item.id)) : ids);
+  const available = items.filter(item => item.locked || selected.has(String(item.id))).map(item => ({...item, id:String(item.id)}));
+  // รักษาสิทธิ์ที่เคยบันทึกไว้ แม้แอปจะถูกซ่อน ปลดล็อก หรือลบภายหลัง
+  selected.forEach(id => {
+    if (!available.some(item => item.id === id)) available.push({id, title:`${kind === 'apps' ? 'แอป' : 'ใบงาน'} #${id}`, missing:true});
+  });
+  available.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'th', {numeric:true, sensitivity:'base'}));
+  return {items:available, selected, allFuture, kind, readOnly, query:'', category:'', selectedOnly:false, page:1, pageSize:6, manualSelection:null};
 }
-// อัปเดต master ตามช่องย่อย: ครบทุกช่อง=ติ๊ก, บางช่อง=ขีดกลาง (indeterminate), ไม่มี=ไม่ติ๊ก
-function cSyncMaster(childClass, masterId) {
-  const kids = [...document.querySelectorAll('.' + childClass)];
-  const master = document.getElementById(masterId);
-  if (!master) return;
-  const n = kids.filter(k => k.checked).length;
-  master.checked = kids.length > 0 && n === kids.length;
-  master.indeterminate = n > 0 && n < kids.length;
+function codePickerMarkup(picker, id) {
+  const unit = picker.kind === 'apps' ? 'แอป' : 'ใบงาน';
+  const categories = [...new Set(picker.items.map(item => item.category || 'อื่นๆ'))].sort((a,b) => a.localeCompare(b, 'th'));
+  return `<div class="code-picker" id="${id}">
+    ${picker.readOnly ? '' : `<label class="code-picker-vip"><input type="checkbox" data-picker-vip ${picker.allFuture ? 'checked' : ''}>
+      <span><strong>${picker.kind === 'apps' ? '🌟 VIP' : '📄 ทุกใบงาน'} · รวมทุก${unit}ที่ล็อกและรายการใหม่ในอนาคต</strong>
+      <small>ปิดตัวเลือกนี้เพื่อให้สิทธิ์เฉพาะรายการที่เลือก แม้จะเลือกครบทุก${unit}ในปัจจุบัน</small></span></label>`}
+    <div class="code-picker-count" data-picker-count aria-live="polite"></div>
+    <div class="code-picker-filters">
+      <label><span class="form-label">ค้นหาชื่อ${unit}</span><input class="form-input" type="search" data-picker-search placeholder="ค้นหาชื่อ${unit}..." autocomplete="off"></label>
+      <label><span class="form-label">หมวดหมู่</span><select class="form-input" data-picker-category><option value="">ทุกหมวด</option>${categories.map(cat => `<option value="${codeEscape(cat)}">${codeEscape(cat)}</option>`).join('')}</select></label>
+    </div>
+    <div class="code-picker-toolbar">
+      <div class="flt-chips"><button type="button" class="flt-chip on" data-picker-all aria-pressed="true">ทั้งหมด</button>${picker.readOnly ? '' : '<button type="button" class="flt-chip" data-picker-selected aria-pressed="false">เลือกแล้ว</button>'}</div>
+      ${picker.readOnly ? '' : '<button type="button" class="code-picker-bulk" data-picker-bulk></button>'}
+    </div>
+    <div class="code-picker-list" data-picker-list></div>
+    <div class="code-picker-pagination"><span data-picker-results aria-live="polite"></span><div class="code-picker-pages">
+      <button type="button" class="btn btn-outline btn-sm" data-picker-prev aria-label="${unit}หน้าก่อนหน้า">‹</button><span data-picker-page></span><button type="button" class="btn btn-outline btn-sm" data-picker-next aria-label="${unit}หน้าถัดไป">›</button>
+    </div></div>
+  </div>`;
+}
+function filteredCodePickerItems(picker) {
+  const query = picker.query.trim().toLocaleLowerCase('th');
+  return picker.items.filter(item => (!picker.selectedOnly || picker.selected.has(item.id))
+    && (!picker.category || (item.category || 'อื่นๆ') === picker.category)
+    && (!query || (item.title || '').toLocaleLowerCase('th').includes(query)));
+}
+function renderCodePicker(picker) {
+  const root = picker.root;
+  if (!root?.isConnected) return;
+  const get = name => root.querySelector('[data-picker-' + name + ']');
+  const unit = picker.kind === 'apps' ? 'แอป' : 'ใบงาน';
+  const results = filteredCodePickerItems(picker);
+  const pages = Math.max(1, Math.ceil(results.length / picker.pageSize));
+  picker.page = Math.min(Math.max(1, picker.page), pages);
+  const start = (picker.page - 1) * picker.pageSize;
+  const focusId = root.contains(document.activeElement) ? document.activeElement.dataset.pickerItem : null;
+  get('list').innerHTML = results.length ? results.slice(start, start + picker.pageSize).map(item => `<label class="code-picker-row">
+    <input type="checkbox" data-picker-item="${codeEscape(item.id)}" ${picker.selected.has(item.id) ? 'checked' : ''} ${picker.readOnly || picker.allFuture ? 'disabled' : ''}>
+    <span><span class="code-picker-title">${codeEscape(item.icon || (picker.kind === 'apps' ? '🎮' : '📄'))} ${codeEscape(item.title)}</span><span class="code-picker-meta">${codeEscape(item.category || 'อื่นๆ')}${item.missing ? ' · ไม่พบในรายการปัจจุบัน' : !item.locked ? ' · ปัจจุบันเปิดใช้ฟรี' : ''}</span></span>
+  </label>`).join('') : `<div class="code-picker-empty">${picker.items.length ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : `ยังไม่มี${unit}ที่ล็อก`}</div>`;
+  if (focusId) [...root.querySelectorAll('[data-picker-item]')].find(input => input.dataset.pickerItem === focusId)?.focus();
+  get('count').textContent = picker.allFuture ? `ทุก${unit}ที่ล็อก · รวมรายการใหม่ในอนาคต (ปัจจุบัน ${picker.selected.size} ${unit})` : `${picker.readOnly ? 'ปลดล็อก' : 'เลือกแล้ว'} ${picker.selected.size} / ${picker.items.length} ${unit}`;
+  get('all').textContent = `ทั้งหมด (${picker.items.length})`;
+  get('all').classList.toggle('on', !picker.selectedOnly);
+  get('all').setAttribute('aria-pressed', String(!picker.selectedOnly));
+  if (get('selected')) {
+    get('selected').textContent = `เลือกแล้ว (${picker.selected.size})`;
+    get('selected').classList.toggle('on', picker.selectedOnly);
+    get('selected').setAttribute('aria-pressed', String(picker.selectedOnly));
+    const remove = results.length > 0 && results.every(item => picker.selected.has(item.id));
+    get('bulk').textContent = `${remove ? 'เอาผลค้นหาออก' : 'เลือกผลค้นหา'} (${results.length})`;
+    get('bulk').disabled = picker.allFuture || !results.length;
+  }
+  get('results').textContent = results.length ? `${start + 1}–${Math.min(start + picker.pageSize, results.length)} จาก ${results.length} ${unit}` : `0 ${unit}`;
+  get('page').textContent = `${picker.page} / ${pages}`;
+  get('prev').disabled = picker.page === 1;
+  get('next').disabled = picker.page === pages;
+  updateCodeModalSummary();
+}
+function bindCodePicker(picker, id) {
+  picker.root = document.getElementById(id);
+  const get = name => picker.root.querySelector('[data-picker-' + name + ']');
+  get('search').addEventListener('input', event => { picker.query = event.target.value; picker.page = 1; renderCodePicker(picker); });
+  get('category').addEventListener('change', event => { picker.category = event.target.value; picker.page = 1; renderCodePicker(picker); });
+  get('all').addEventListener('click', () => { picker.selectedOnly = false; picker.page = 1; renderCodePicker(picker); });
+  get('selected')?.addEventListener('click', () => { picker.selectedOnly = true; picker.page = 1; renderCodePicker(picker); });
+  get('prev').addEventListener('click', () => { picker.page--; renderCodePicker(picker); });
+  get('next').addEventListener('click', () => { picker.page++; renderCodePicker(picker); });
+  get('list').addEventListener('change', event => {
+    const id = event.target.dataset.pickerItem;
+    if (!id || picker.readOnly || picker.allFuture) return;
+    event.target.checked ? picker.selected.add(id) : picker.selected.delete(id);
+    renderCodePicker(picker);
+  });
+  get('bulk')?.addEventListener('click', () => {
+    if (picker.readOnly || picker.allFuture) return;
+    const results = filteredCodePickerItems(picker);
+    const remove = results.every(item => picker.selected.has(item.id));
+    results.forEach(item => remove ? picker.selected.delete(item.id) : picker.selected.add(item.id));
+    renderCodePicker(picker);
+  });
+  get('vip')?.addEventListener('change', event => {
+    picker.allFuture = event.target.checked;
+    if (picker.allFuture) {
+      picker.manualSelection = new Set(picker.selected);
+      picker.selected = new Set(picker.items.filter(item => item.locked).map(item => item.id));
+    } else if (picker.manualSelection) {
+      picker.selected = picker.manualSelection;
+      picker.manualSelection = null;
+    }
+    renderCodePicker(picker);
+  });
+  renderCodePicker(picker);
+}
+function updateCodeModalSummary() {
+  const summary = document.getElementById('cSelectionSummary');
+  const state = window._codeModalState;
+  if (!summary || !state) return;
+  const label = (picker, unit) => picker.allFuture ? `ทุก${unit} + รายการใหม่` : `${picker.selected.size} ${unit}`;
+  summary.textContent = label(state.apps, 'แอป') + ' · ' + label(state.worksheets, 'ใบงาน');
+}
+function openCodeApps(id) {
+  const c = (window._codesAll || []).find(code => Number(code.id) === Number(id));
+  if (!c) return;
+  const ids = codeIds(c.app_ids);
+  const items = (window._codesApps || []).filter(item => ids.includes('all') ? item.locked : ids.includes(String(item.id)));
+  const picker = createCodePicker(items, ids, 'apps', true);
+  document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event, this)">
+    <div class="modal code-modal" role="dialog" aria-modal="true" aria-labelledby="codeAppsTitle">
+      <div class="code-modal-head"><div><h3 id="codeAppsTitle">🎮 แอปที่ปลดล็อกได้</h3><p class="code-modal-sub">${codeEscape(c.code)} · ${codeEscape(c.label)}</p></div><button type="button" class="btn btn-outline btn-sm" onclick="closeModal()" aria-label="ปิดรายชื่อแอป">✕</button></div>
+      <div class="code-modal-body">${codePickerMarkup(picker, 'codeAppsDetail')}</div>
+      <div class="modal-footer"><span class="code-modal-summary">ดูรายชื่อแอปในรหัสนี้</span><button type="button" class="btn btn-outline" onclick="closeModal()">ปิด</button></div>
+    </div></div>`;
+  bindCodePicker(picker, 'codeAppsDetail');
+  document.querySelector('#codeAppsDetail [data-picker-search]').focus();
 }
 
-function openCodeModal(id) {
-  Promise.all([api.get('/codes'), api.get('/worksheets/admin/list').catch(()=>({worksheets:[]}))]).then(([d, wd]) => {
-    const c = id ? (d.codes||[]).find(x=>x.id===id) : null;
-    let appIds = [];
-    try { appIds = JSON.parse(c?.app_ids || '[]'); } catch {}
-    let wsIds = [];
-    try { wsIds = JSON.parse(c?.worksheet_ids || '[]'); } catch {}
-    const allApps = window._allApps || [];
-    const lockedApps = allApps.filter(a => a.locked);
-    const lockedWs = (wd.worksheets || []).filter(w => w.locked);
-
+async function openCodeModal(id) {
+  try {
+    const [d, ad, wd] = await Promise.all([api.get('/codes'), api.get('/apps/admin/list'), api.get('/worksheets/admin/list')]);
+    const c = id ? (d.codes || []).find(x => Number(x.id) === Number(id)) : null;
+    if (id && !c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
+    window._allApps = ad.apps || [];
+    window._codesApps = ad.apps || [];
+    const state = {
+      apps:createCodePicker(ad.apps || [], c?.app_ids, 'apps'),
+      worksheets:createCodePicker(wd.worksheets || [], c?.worksheet_ids, 'worksheets'),
+      originalExpiry:c?.expires_at || null,
+    };
+    window._codeModalState = state;
+    const expiry = c?.expires_at ? new Date(c.expires_at) : null;
+    state.expiryInput = expiry ? new Date(expiry.getTime() - expiry.getTimezoneOffset() * 60000).toISOString().slice(0,16) : '';
     document.getElementById('modal').innerHTML = `
     <div class="modal-ov" onclick="closeModalSafe(event, this)">
-      <div class="modal" style="max-width:520px;">
-        <h3>${c ? '✏️ แก้ไขรหัส' : '🔑 สร้างรหัสใหม่'}</h3>
+      <div class="modal code-modal" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle">
+        <div class="code-modal-head"><div><h3 id="codeModalTitle">${c ? '✏️ แก้ไขรหัส' : '🔑 สร้างรหัสใหม่'}</h3>${c ? `<p class="code-modal-sub">${codeEscape(c.code)} · ${codeEscape(c.label)}</p>` : ''}</div><button type="button" class="btn btn-outline btn-sm" onclick="closeModalSafe({target:this.closest('.modal-ov')},this.closest('.modal-ov'))" aria-label="ปิดหน้าต่างแก้ไขรหัส">✕</button></div>
+        <div class="code-modal-tabs" role="tablist" aria-label="ข้อมูลรหัสปลดล็อก">
+          ${[['info','ข้อมูลรหัส'],['apps','🎮 แอป'],['worksheets','📄 ใบงาน']].map(([key,label]) => `<button type="button" class="btn btn-outline btn-sm" id="codeTab-${key}" role="tab" aria-controls="codePanel-${key}" data-code-tab="${key}" aria-selected="false">${label}</button>`).join('')}
+        </div>
+        <div class="code-modal-body">
+        <div id="codePanel-info" role="tabpanel" aria-labelledby="codeTab-info" hidden>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">รหัส (ตัวพิมพ์ใหญ่/ตัวเลข)</label>
-            <input type="text" class="form-input" id="cCode" value="${c?.code||''}"
+            <label class="form-label" for="cCode">รหัส (ตัวพิมพ์ใหญ่/ตัวเลข)</label>
+            <input type="text" class="form-input" id="cCode" value="${codeEscape(c?.code)}"
               placeholder="เช่น VIP2025, PREMIUM1" style="font-weight:700;letter-spacing:1px;text-transform:uppercase;"
               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
           </div>
           <div class="form-group">
-            <label class="form-label">ชื่อแพ็กเกจ</label>
-            <input type="text" class="form-input" id="cLabel" value="${c?.label||''}" placeholder="เช่น VIP รายเดือน">
+            <label class="form-label" for="cLabel">ชื่อแพ็กเกจ</label>
+            <input type="text" class="form-input" id="cLabel" value="${codeEscape(c?.label)}" placeholder="เช่น VIP รายเดือน">
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">อายุการใช้งานรหัส</label>
+          <label class="form-label" for="cDuration">อายุการใช้งานรหัส</label>
           <select class="form-input" id="cDuration" onchange="onDurationChange()">
             <option value="">ไม่หมดอายุ (ใช้ได้ตลอด)</option>
             <option value="1">1 วัน</option>
@@ -3292,63 +3482,53 @@ function openCodeModal(id) {
             นับจากเวลาที่กดบันทึก — เช่น เลือก 7 วัน รหัสจะหมดอายุอีก 7 วันข้างหน้าพอดี (รวมเวลา ไม่ใช่แค่สิ้นวัน)
           </p>
           <input type="datetime-local" class="form-input" id="cExpiry" style="display:${c?.expires_at ? '' : 'none'};margin-top:8px;"
-            value="${c?.expires_at ? c.expires_at.slice(0,16) : ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">แอปที่ปลดล็อก</label>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
-              <input type="checkbox" id="cAll" onchange="cToggleAll('cAppCb', this.checked)">
-              🌟 เลือกทุกแอปที่ล็อก (VIP)
-            </label>
-            <div id="cAppList" style="display:flex;flex-direction:column;gap:6px;">
-              ${lockedApps.length
-                ? lockedApps.map(a=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
-                    <input type="checkbox" class="cAppCb" value="${a.id}"
-                      ${(appIds.includes('all')||appIds.includes(a.id)||appIds.includes(String(a.id)))?'checked':''}
-                      onchange="cSyncMaster('cAppCb','cAll')">
-                    ${a.icon} ${a.title}
-                  </label>`).join('')
-                : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีแอปที่ล็อก</span>'
-              }
-            </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">ใบงานที่ปลดล็อก</label>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-weight:700;">
-              <input type="checkbox" id="cWsAll" onchange="cToggleAll('cWsCb', this.checked)">
-              📄 เลือกทุกใบงานที่ล็อก
-            </label>
-            <div id="cWsList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
-              ${lockedWs.length
-                ? lockedWs.map(w=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;">
-                    <input type="checkbox" class="cWsCb" value="${w.id}"
-                      ${(wsIds.includes('all')||wsIds.includes(w.id)||wsIds.includes(String(w.id)))?'checked':''}
-                      onchange="cSyncMaster('cWsCb','cWsAll')">
-                    📄 ${w.title}
-                  </label>`).join('')
-                : '<span style="color:#94a3b8;font-size:.85rem;">ยังไม่มีใบงานที่ล็อก</span>'
-              }
-            </div>
-          </div>
+            value="${state.expiryInput}" aria-label="วันและเวลาหมดอายุ">
         </div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;font-size:.92rem;">
           <input type="checkbox" id="cActive" ${c ? (c.active?'checked':'') : 'checked'}>
           <span>เปิดใช้งานรหัสนี้</span>
         </label>
+        </div>
+        <div id="codePanel-apps" role="tabpanel" aria-labelledby="codeTab-apps" hidden>${codePickerMarkup(state.apps, 'cAppsPicker')}</div>
+        <div id="codePanel-worksheets" role="tabpanel" aria-labelledby="codeTab-worksheets" hidden>${codePickerMarkup(state.worksheets, 'cWorksheetsPicker')}</div>
+        </div>
         <div class="modal-footer">
-          <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveCode(${c?.id||'null'})">💾 บันทึก</button>
+          <span class="code-modal-summary" id="cSelectionSummary" aria-live="polite"></span>
+          <div class="code-modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+          <button type="button" class="btn btn-primary" id="cSave" onclick="saveCode(${c?.id||'null'})">💾 บันทึก</button></div>
         </div>
       </div>
     </div>`;
 
-    // ตั้งสถานะ master "เลือกทั้งหมด" ให้ตรงกับช่องย่อยตอนเปิด (ติ๊กครบ=ติ๊ก, บางส่วน=ขีดกลาง)
-    cSyncMaster('cAppCb', 'cAll');
-    cSyncMaster('cWsCb', 'cWsAll');
-  });
+    bindCodePicker(state.apps, 'cAppsPicker');
+    bindCodePicker(state.worksheets, 'cWorksheetsPicker');
+    onDurationChange();
+    const tabs = [...document.querySelectorAll('[data-code-tab]')];
+    const activate = key => {
+      tabs.forEach(tab => {
+        const active = tab.dataset.codeTab === key;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+        document.getElementById('codePanel-' + tab.dataset.codeTab).hidden = !active;
+      });
+      document.querySelector('.code-modal-body').scrollTop = 0;
+    };
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activate(tab.dataset.codeTab));
+      tab.addEventListener('keydown', event => {
+        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        if (!step && !['Home','End'].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[tabs.length - 1] : tabs[(index + step + tabs.length) % tabs.length];
+        activate(next.dataset.codeTab); next.focus();
+      });
+    });
+    activate(c ? 'apps' : 'info');
+    if (c) document.querySelector('[data-code-tab="apps"]').focus();
+    else document.getElementById('cCode').focus();
+  } catch (error) {
+    if (error.status !== 401) toast('❌ เปิดหน้าต่างรหัสไม่สำเร็จ: ' + error.message);
+  }
 }
 
 // สลับช่องกำหนดวันเอง + ปรับ hint ตาม dropdown
@@ -3370,22 +3550,19 @@ function onDurationChange() {
 async function saveCode(id) {
   const code  = document.getElementById('cCode').value.trim();
   const label = document.getElementById('cLabel').value.trim();
-  if (!code || !label) { alert('กรุณาใส่รหัสและชื่อแพ็กเกจ'); return; }
-  // ติ๊กครบทุกช่อง → เก็บเป็น 'all' (VIP: แอป/ใบงานที่เพิ่มใหม่ทีหลังก็ปลดให้ด้วย)
-  // เอาออกบางช่อง → เก็บเป็นรายการ id ที่เลือก
-  const appBoxes = [...document.querySelectorAll('.cAppCb')];
-  const appChecked = appBoxes.filter(cb => cb.checked).map(cb => parseInt(cb.value));
-  const appIds = (appBoxes.length > 0 && appChecked.length === appBoxes.length) ? ['all'] : appChecked;
-
-  const wsBoxes = [...document.querySelectorAll('.cWsCb')];
-  const wsChecked = wsBoxes.filter(cb => cb.checked).map(cb => parseInt(cb.value));
-  const wsIds = (wsBoxes.length > 0 && wsChecked.length === wsBoxes.length) ? ['all'] : wsChecked;
+  if (!code || !label) { document.getElementById('codeTab-info').click(); alert('กรุณาใส่รหัสและชื่อแพ็กเกจ'); return; }
+  const state = window._codeModalState;
+  if (!state) return;
+  // เลือกครบในปัจจุบันยังคงเป็นรายการ id; ให้สิทธิ์รายการใหม่เฉพาะเมื่อเลือก VIP ชัดเจน
+  const selectedIds = picker => picker.allFuture ? ['all'] : [...picker.selected].map(value => Number.isSafeInteger(Number(value)) ? Number(value) : value);
+  const appIds = selectedIds(state.apps);
+  const wsIds = selectedIds(state.worksheets);
   // คำนวณวันหมดอายุจาก dropdown อายุ หรือกำหนดเอง
   const dur = document.getElementById('cDuration').value;
   let expires_at = null;
   if (dur === 'custom') {
     const v = document.getElementById('cExpiry').value;
-    expires_at = v ? new Date(v).toISOString() : null;
+    expires_at = v === state.expiryInput ? state.originalExpiry : v ? new Date(v).toISOString() : null;
   } else if (dur) {
     // now + N วัน (รวมเวลาเต็ม ไม่ใช่แค่สิ้นวัน)
     expires_at = new Date(Date.now() + parseInt(dur) * 86400000).toISOString();
@@ -3395,12 +3572,15 @@ async function saveCode(id) {
     expires_at,
     active: document.getElementById('cActive').checked,
   };
+  const saveButton = document.getElementById('cSave');
+  if (saveButton.disabled) return;
+  saveButton.disabled = true;
   const res = id && id !== 'null'
     ? await api.put('/codes/'+id, body)
     : await api.post('/codes', body);
-  if (res.error) { toast('❌ '+res.error); return; }
+  if (res.error) { saveButton.disabled = false; toast('❌ '+res.error); return; }
   closeModal(); toast('✅ บันทึกรหัสแล้ว');
-  renderCodes();
+  await safeRender(renderCodes, 'codes');
 }
 
 async function delCode(id, code) {
@@ -4301,12 +4481,16 @@ document.addEventListener('keydown', e => {
   if (ov) closeModalSafe({ target: ov }, ov);
 });
 
-function closeModal() { document.getElementById('modal').innerHTML = ''; }
+function closeModal() {
+  document.getElementById('modal').innerHTML = '';
+  window._codeModalState = null;
+}
 
 // ปิด modal เมื่อคลิกพื้นที่ว่าง — แต่เตือนก่อนถ้ามีการกรอกข้อมูลแล้ว (กันข้อมูลหาย)
 function closeModalSafe(event, el) {
   if (event.target !== el) return; // คลิกในเนื้อหา modal ไม่ปิด
   const modal = document.getElementById('modal');
+  if (modal.querySelector('#codeAppsDetail')) { closeModal(); return; }
   // เก็บค่าจาก input/textarea/contenteditable ที่ผู้ใช้กรอก
   const fields = modal.querySelectorAll('input, textarea, [contenteditable="true"]');
   let hasData = false;
@@ -4475,8 +4659,7 @@ window.uploadCoverImg = uploadCoverImg;
 window.addCat = addCat;
 window.removeCat = removeCat;
 window.openCodeModal = openCodeModal;
-window.cToggleAll = cToggleAll;
-window.cSyncMaster = cSyncMaster;
+window.openCodeApps = openCodeApps;
 window.openEmailModal = openEmailModal;
 window.filterCodes = filterCodes;
 window.setCodeStatus = setCodeStatus;
