@@ -16,7 +16,8 @@ const hash = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).diges
 const vInfo = hash('public/info-pages.mjs');
 const appPath = 'public/app.js';
 const appBefore = fs.readFileSync(appPath, 'utf8');
-const appAfter = appBefore.replace(/\/info-pages\.mjs\?v=[a-f0-9]+/g, `/info-pages.mjs?v=${vInfo}`);
+const appAfter = appBefore.replace(/\/info-pages\.mjs\?v=[a-f0-9]+/g, `/info-pages.mjs?v=${vInfo}`)
+  .replace(/\/exam-pages\.mjs\?v=[a-f0-9]+/g, `/exam-pages.mjs?v=${hash('public/exam-pages.mjs')}`);
 if (appAfter !== appBefore) fs.writeFileSync(appPath, appAfter);
 const vCss = hash('public/app.css');
 const vJs  = hash('public/app.js');

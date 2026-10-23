@@ -62,6 +62,31 @@ CREATE TABLE IF NOT EXISTS apps (
   view_count    INTEGER DEFAULT 0
 );
 
+-- แอปข้อสอบ: วิชามี ID คงที่เพื่อรักษาสิทธิ์แม้เปลี่ยนชื่อ
+CREATE TABLE IF NOT EXISTS exam_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  icon TEXT NOT NULL DEFAULT '📚',
+  description TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS exam_apps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL REFERENCES exam_categories(id),
+  title TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '📝',
+  description TEXT NOT NULL DEFAULT '',
+  url TEXT NOT NULL,
+  preview_image TEXT NOT NULL DEFAULT '',
+  locked INTEGER NOT NULL DEFAULT 1,
+  lock_code TEXT NOT NULL DEFAULT '',
+  visible INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  view_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_exam_apps_category ON exam_apps(category_id, visible, sort_order);
+
 -- ใบงาน (ค่าเริ่มต้นคือ locked=1 — ใบงานใหม่ต้องใช้รหัส เว้นแต่ตั้งเป็นฟรี)
 CREATE TABLE IF NOT EXISTS worksheets (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,7 +139,9 @@ CREATE TABLE IF NOT EXISTS access_codes (
   expires_at    TEXT,
   active        INTEGER DEFAULT 1,
   created_at    TEXT    DEFAULT (datetime('now')),
-  worksheet_ids TEXT    DEFAULT '[]'
+  worksheet_ids TEXT    DEFAULT '[]',
+  exam_app_ids TEXT NOT NULL DEFAULT '[]',
+  exam_category_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 -- ลิงก์สั้นของโรงเรียน: config เดิมใช้ token เดิมเสมอ

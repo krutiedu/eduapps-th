@@ -51,6 +51,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /info-pages.mjs
   Cache-Control: public, max-age=0, must-revalidate
+/exam-pages.mjs
+  Cache-Control: public, max-age=0, must-revalidate
 
 # Security headers — ใช้ได้ทุกหน้า
 /*

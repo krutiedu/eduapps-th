@@ -84,7 +84,7 @@ function route() {
   // track ทุกหน้า (non-blocking)
   trackPageView(h);
   document.querySelectorAll('.nav-links a').forEach(a =>
-    a.classList.toggle('active', a.dataset.r === h || (h==='/' && a.dataset.r==='/')));
+    a.classList.toggle('active', a.dataset.r === h || (a.dataset.r === '/exam-apps' && h.startsWith('/exam-apps/')) || (h==='/' && a.dataset.r==='/')));
   document.getElementById('navLinks').classList.remove('open');
   const _cs = document.getElementById('crownSlot');
   if (_cs && h !== '/' && h !== '') _cs.innerHTML = '';
@@ -116,6 +116,9 @@ function route() {
     Math.min(100000, Math.max(1, parseInt(query.get('page'), 10) || 1)));
   else if (h.startsWith('/article/'))view = () => renderArticle(h.slice(9));
   else if (h === '/apps')            view = () => renderApps(query.get('open'));
+  else if (h === '/exam-apps')       view = () => renderExamApps();
+  else if (/^\/exam-apps\/category\/\d+$/.test(h)) view = () => renderExamApps(h.split('/')[3]);
+  else if (/^\/exam-apps\/\d+$/.test(h)) view = () => renderExamDetail(h.split('/')[2]);
   // /worksheets?open=5 — มาจากปุ่มในหน้า /worksheet/5 ให้เปิดรายละเอียดใบงานนั้นเลย
   else if (h === '/worksheets')      view = () => query.get('open')
                                        ? renderWorksheetDetail(query.get('open'))
@@ -159,7 +162,9 @@ const go = path => {
 let _focusSearch = false;
 function goSearch() {
   const h = location.pathname.replace(/\/+$/, '') || '/';
-  if (h === '/apps') {
+  if (h.startsWith('/exam-apps')) {
+    document.getElementById('examSearch')?.focus();
+  } else if (h === '/apps') {
     document.getElementById('appSearch')?.focus();
   } else if (h === '/blog') {
     document.getElementById('blogSearch')?.focus();
@@ -657,6 +662,102 @@ function calcPageSize() {
   return 12;
 }
 
+// Keep codes in this tab and recheck them on navigation; do not persist unlocked URLs.
+const examUI = () => import('/exam-pages.mjs?v=05d0718a');
+let _examGrants = new Map();
+function examSavedCodes() {
+  try { const codes = JSON.parse(sessionStorage.getItem('exam_codes') || '[]'); return Array.isArray(codes) ? codes.filter(c => typeof c === 'string') : []; }
+  catch { return []; }
+}
+async function examRedeem(path, body) {
+  const response = await fetch(API + '/exam-apps/' + path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'ปลดล็อกไม่สำเร็จ');
+  return data;
+}
+async function restoreExamGrants() {
+  const grants = new Map();
+  await Promise.all(examSavedCodes().map(async code => {
+    try {
+      const data = await examRedeem('unlock-all',{code});
+      for (const app of data.unlocked || []) grants.set(String(app.id),{url:app.url,code});
+    } catch { /* An invalid/expired code does not grant access. */ }
+  }));
+  _examGrants = grants;
+}
+function bindExamUnlock(onUnlocked) {
+  const form = document.getElementById('examUnlockForm');
+  if (!form) return;
+  form.addEventListener('submit',async event => {
+    event.preventDefault();
+    const code = form.elements.code.value.trim();
+    if (!code) return;
+    const msg = form.querySelector('#examUnlockMsg'), button = form.querySelector('button');
+    button.disabled = true;
+    msg.textContent = 'กำลังตรวจสอบรหัส...';
+    try {
+      const body = {code};
+      if (form.dataset.category) body.category_id = Number(form.dataset.category);
+      const data = await examRedeem(form.dataset.app ? form.dataset.app + '/unlock' : 'unlock-all',body);
+      const list = form.dataset.app ? [{id:form.dataset.app,url:data.url}] : data.unlocked;
+      list.forEach(a => _examGrants.set(String(a.id),{url:a.url,code}));
+      sessionStorage.setItem('exam_codes',JSON.stringify([...new Set([...examSavedCodes(),code])]));
+      msg.textContent = `✅ ปลดล็อกสำเร็จ ${list.length} แอปข้อสอบ`;
+      onUnlocked();
+    } catch (error) { msg.textContent = error.message || 'เชื่อมต่อไม่ได้ กรุณาลองใหม่'; }
+    finally { button.disabled = false; }
+  });
+}
+async function renderExamApps(categoryId) {
+  const path = location.pathname;
+  const [ui,data,cats] = await Promise.all([examUI(),get('/exam-apps'),get('/exam-apps/categories'),restoreExamGrants()]);
+  if (location.pathname !== path) return;
+  const category = categoryId ? cats.categories.find(c => String(c.id) === String(categoryId)) : null;
+  if (categoryId && !category) return render404('ไม่พบหมวดวิชานี้');
+  const app = document.getElementById('app');
+  delete app.dataset.serverRendered;
+  app.innerHTML = ui.examListHTML(data.apps,cats.categories,category,new Set(_examGrants.keys()));
+  setPageMeta({title:category ? 'ข้อสอบวิชา' + category.name : 'แอปข้อสอบ',desc:category?.description || 'รวมเว็บแอปข้อสอบ แยกตามวิชา',url:SITE + path});
+  const search = document.getElementById('examSearch');
+  const draw = () => {
+    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,search.value,new Set(_examGrants.keys()));
+  };
+  search.addEventListener('input',draw);
+  bindExamUnlock(draw);
+}
+async function renderExamDetail(id) {
+  const path = location.pathname;
+  let ui,data;
+  try { [ui,data] = await Promise.all([examUI(),get('/exam-apps/' + id),restoreExamGrants()]); }
+  catch (error) { if (error.status === 404) return render404('ไม่พบแอปข้อสอบ'); throw error; }
+  if (location.pathname !== path) return;
+  const item = data.app, app = document.getElementById('app');
+  setPageMeta({title:item.title,desc:item.description,url:SITE + path,image:item.preview_image || undefined});
+  const draw = () => {
+    delete app.dataset.serverRendered;
+    const grant = _examGrants.get(String(id));
+    const url = ui.examWebURL(item.locked ? grant?.url : item.url);
+    app.innerHTML = ui.examDetailHTML(item,!!url);
+    bindExamUnlock(draw);
+    if (!url) return;
+    document.getElementById('examExternal').href = url;
+    document.getElementById('examLaunch').addEventListener('click',async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const destination = item.locked ? (await examRedeem(id + '/unlock',{code:grant.code})).url : url;
+        openAppViewer(ui.examWebURL(destination),item.title,item.icon);
+      } catch (error) {
+        _examGrants.delete(String(id));
+        draw();
+        const msg = document.getElementById('examUnlockMsg');
+        if (msg) msg.textContent = error.message;
+      } finally { button.disabled = false; }
+    });
+  };
+  draw();
+}
+
 async function renderApps(openId) {
   const app = document.getElementById('app');
   // ข้อมูลชุดเดิมยังสดอยู่ก็ใช้ต่อ — ตอนกด back ไป-กลับระหว่างหมวดจะได้ไม่กระพริบ
@@ -1022,7 +1123,7 @@ function gotoPage(group, p) {
 
 // ── ABOUT ─────────────────────────────────────────────────
 async function renderAbout() {
-  const { aboutContent } = await import('/info-pages.mjs?v=c2423568');
+  const { aboutContent } = await import('/info-pages.mjs?v=86324961');
   if (location.pathname.replace(/\/+$/, '') !== '/about') return;
   document.getElementById('app').innerHTML = aboutContent(S);
   delete document.getElementById('app').dataset.serverRendered;
@@ -1419,7 +1520,7 @@ function renderBuy() {
 
 // ── PRIVACY POLICY ────────────────────────────────────────
 async function renderPrivacy() {
-  const { privacyContent } = await import('/info-pages.mjs?v=c2423568');
+  const { privacyContent } = await import('/info-pages.mjs?v=86324961');
   if (location.pathname.replace(/\/+$/, '') !== '/privacy') return;
   document.getElementById('app').innerHTML = privacyContent(S);
   delete document.getElementById('app').dataset.serverRendered;

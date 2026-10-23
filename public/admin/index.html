@@ -276,6 +276,7 @@ tr:hover td{background:#fafafa;}
     <div class="nav-item" data-page="articles" data-perm="articles" onclick="nav('articles')"><span class="ni">📝</span> บทความทั้งหมด</div>
     <div class="nav-item" data-page="new-article" data-perm="articles" onclick="nav('new-article')"><span class="ni">✏️</span> เขียนบทความใหม่</div>
     <div class="nav-item" data-page="apps" data-perm="apps" onclick="nav('apps')"><span class="ni">🎮</span> จัดการแอป</div>
+    <div class="nav-item" data-page="exam-apps" data-perm="apps" onclick="nav('exam-apps')"><span class="ni">📝</span> แอปข้อสอบ / วิชา</div>
     <div class="nav-item" data-page="worksheets" data-perm="worksheets" onclick="nav('worksheets')"><span class="ni">📄</span> จัดการใบงาน</div>
     <div class="nav-item" data-page="comments" data-perm="comments" onclick="nav('comments')"><span class="ni">💬</span> ความคิดเห็น</div>
     <div class="nav-item admin-only" data-page="reports" onclick="nav('reports')" style="display:none;"><span class="ni">🛠️</span> แจ้งปัญหา</div>
@@ -870,7 +871,7 @@ function showAdmin() {
 // ── NAVIGATION ────────────────────────────────────────────
 let currentPage = '';
 // หน้าที่ "จำ" ได้ — เปิด admin ครั้งหน้าจะเด้งกลับมาที่นี่
-const REMEMBER_PAGES = new Set(['dash','articles','apps','worksheets','comments','reports','kruboard','codes','users','settings']);
+const REMEMBER_PAGES = new Set(['dash','articles','apps','exam-apps','worksheets','comments','reports','kruboard','codes','users','settings']);
 
 function nav(page) {
   // ออกจากหน้าเขียนบทความ → บันทึกร่างทันที (กันข้อมูลหายตอนสลับเมนูเร็วๆ)
@@ -892,6 +893,7 @@ function nav(page) {
     articles:      renderArticles,
     'new-article': () => renderArticleEditor(null),
     apps:          renderApps,
+    'exam-apps':   renderExamAdmin,
     worksheets:    renderWorksheets,
     comments:      renderComments,
     reports:       renderReports,
@@ -2677,6 +2679,103 @@ async function saveArticle() {
 // ══════════════════════════════════════════════════════════
 // APPS
 // ══════════════════════════════════════════════════════════
+async function renderExamAdmin(tab = 'apps') {
+  const data = await api.get('/exam-apps/admin/list');
+  window._examAdmin = data;
+  const e = codeEscape;
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+      <h1 class="page-title" style="margin:0;">📝 แอปข้อสอบ</h1>
+      <a class="btn btn-outline" href="/exam-apps" target="_blank" rel="noopener">ดูหน้าเว็บ ↗</a>
+    </div>
+    <div class="flt-chips" style="margin-bottom:20px;">
+      <button class="flt-chip ${tab === 'apps' ? 'on' : ''}" onclick="renderExamAdmin('apps')">แอปข้อสอบ (${data.apps.length})</button>
+      <button class="flt-chip ${tab === 'categories' ? 'on' : ''}" onclick="renderExamAdmin('categories')">หมวดวิชา (${data.categories.length})</button>
+    </div>
+    ${tab === 'categories' ? `<div class="card">
+      <div class="card-title">จัดการหมวดวิชา <button class="btn btn-primary btn-sm" onclick="openExamCategory(null)">+ เพิ่มวิชา</button></div>
+      <p style="color:#64748b;margin-bottom:16px;">เปลี่ยนชื่อวิชาได้โดยสิทธิ์ปลดล็อกเดิมยังอยู่ ลบได้เมื่อไม่มีแอปในวิชานั้น</p>
+      <div class="table-wrap"><table><thead><tr><th>วิชา</th><th>แอปทั้งหมด</th><th>ลำดับ</th><th>จัดการ</th></tr></thead><tbody>
+      ${data.categories.map(c => `<tr><td><a href="/exam-apps/category/${Number(c.id)}" target="_blank" rel="noopener">${e(c.icon)} ${e(c.name)}</a><p>${e(c.description)}</p></td><td>${data.apps.filter(a => Number(a.category_id) === Number(c.id)).length}</td><td>${Number(c.sort_order)}</td><td><button class="btn btn-outline btn-sm" onclick="openExamCategory(${Number(c.id)})">แก้ไข</button> <button class="btn btn-danger btn-sm" onclick="deleteExamItem('categories',${Number(c.id)})">ลบ</button></td></tr>`).join('') || '<tr><td colspan="4">ยังไม่มีวิชา กด “เพิ่มวิชา” เพื่อเริ่มต้น</td></tr>'}
+      </tbody></table></div></div>` : `<div class="card">
+      <div class="card-title">รายการแอปข้อสอบ <button class="btn btn-primary btn-sm" onclick="openExamApp(null)" ${!data.categories.length ? 'disabled' : ''}>+ เพิ่มแอปข้อสอบ</button></div>
+      ${!data.categories.length ? '<div class="alert alert-info">เริ่มจากแท็บ “หมวดวิชา” เพื่อเพิ่มวิชาก่อนลงแอปข้อสอบ</div>' : ''}
+      <div class="flt-bar"><input class="form-input" style="flex:1;min-width:160px;" type="search" id="examAdminSearch" placeholder="ค้นหาข้อสอบ..." oninput="filterExamAdmin()" aria-label="ค้นหาข้อสอบ">
+      <select class="flt-select" id="examAdminCategory" onchange="filterExamAdmin()" aria-label="กรองวิชา"><option value="">ทุกวิชา</option>${data.categories.map(c => `<option value="${Number(c.id)}">${e(c.name)}</option>`).join('')}</select>
+      <select class="flt-select" id="examAdminStatus" onchange="filterExamAdmin()" aria-label="กรองสถานะ"><option value="">ทุกสถานะ</option><option value="visible">แสดง</option><option value="hidden">ซ่อน</option><option value="locked">ล็อก</option><option value="free">ฟรี</option></select></div>
+      <div class="table-wrap"><table><thead><tr><th>ข้อสอบ</th><th>วิชา</th><th>สถานะ</th><th>ลำดับ</th><th>จัดการ</th></tr></thead><tbody id="examAdminRows"></tbody></table></div>
+      <p id="examAdminCount" style="margin-top:12px;color:#64748b;"></p>
+    </div>`}`;
+  if (tab === 'apps') filterExamAdmin();
+}
+function filterExamAdmin() {
+  const q = document.getElementById('examAdminSearch').value.trim().toLocaleLowerCase('th');
+  const category = document.getElementById('examAdminCategory').value, status = document.getElementById('examAdminStatus').value;
+  const apps = window._examAdmin.apps.filter(a => (!q || `${a.title} ${a.description}`.toLocaleLowerCase('th').includes(q))
+    && (!category || String(a.category_id) === category)
+    && (!status || (status === 'visible' ? a.visible : status === 'hidden' ? !a.visible : status === 'locked' ? a.locked : !a.locked)));
+  document.getElementById('examAdminRows').innerHTML = apps.map(a => `<tr>
+    <td><a href="/exam-apps/${Number(a.id)}" target="_blank" rel="noopener">${codeEscape(a.icon)} ${codeEscape(a.title)}</a></td><td>${codeEscape(a.category)}</td>
+    <td>${a.visible ? '👁 แสดง' : '🙈 ซ่อน'} · ${a.locked ? '🔒 ล็อก' : '🆓 ฟรี'}</td><td>${Number(a.sort_order)}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openExamApp(${Number(a.id)})">แก้ไข</button> <button class="btn btn-danger btn-sm" onclick="deleteExamItem('apps',${Number(a.id)})">ลบ</button></td>
+  </tr>`).join('') || '<tr><td colspan="5">ไม่พบแอปข้อสอบ</td></tr>';
+  document.getElementById('examAdminCount').textContent = `${apps.length} / ${window._examAdmin.apps.length} แอปข้อสอบ`;
+}
+function openExamCategory(id) {
+  const c = window._examAdmin.categories.find(c => Number(c.id) === Number(id));
+  const e = codeEscape;
+  document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event,this)"><form class="modal" id="examCategoryForm" onsubmit="event.preventDefault();saveExamCategory(${id || 'null'})">
+    <h3>${c ? 'แก้ไขวิชา' : 'เพิ่มวิชา'}</h3>
+    <label class="form-group" style="display:block;">ชื่อวิชา *<input class="form-input" name="name" value="${e(c?.name)}" required maxlength="100"></label>
+    <label class="form-group" style="display:block;">ไอคอน<input class="form-input" name="icon" value="${e(c?.icon || '📚')}"></label>
+    <label class="form-group" style="display:block;">คำอธิบาย<textarea class="form-ta" name="description">${e(c?.description)}</textarea></label>
+    <label class="form-group" style="display:block;">ลำดับ (เลขน้อยอยู่ก่อน)<input class="form-input" type="number" name="sort_order" value="${Number(c?.sort_order) || 0}"></label>
+    <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal()">ยกเลิก</button><button class="btn btn-primary" type="submit">บันทึกวิชา</button></div>
+    <p data-exam-error role="alert" style="color:#dc2626;"></p></form></div>`;
+}
+async function saveExamCategory(id) {
+  const form = document.getElementById('examCategoryForm'), body = Object.fromEntries(new FormData(form));
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  const res = id ? await api.put('/exam-apps/categories/' + id,body) : await api.post('/exam-apps/categories',body);
+  button.disabled = false;
+  if (res.error) { form.querySelector('[data-exam-error]').textContent = res.error; return; }
+  closeModal(); toast('✅ บันทึกวิชาแล้ว'); await safeRender(() => renderExamAdmin('categories'),'exam-apps');
+}
+function openExamApp(id) {
+  const a = window._examAdmin.apps.find(a => Number(a.id) === Number(id)), e = codeEscape;
+  document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event,this)"><form class="modal" id="examAppForm" onsubmit="event.preventDefault();saveExamApp(${id || 'null'})">
+    <h3>${a ? 'แก้ไขแอปข้อสอบ' : 'เพิ่มแอปข้อสอบ'}</h3>
+    <label class="form-group" style="display:block;">ชื่อแอปข้อสอบ *<input class="form-input" name="title" value="${e(a?.title)}" required></label>
+    <div class="form-row"><label class="form-group">วิชา *<select class="form-input" name="category_id" required>${window._examAdmin.categories.map(c => `<option value="${Number(c.id)}" ${Number(a?.category_id) === Number(c.id) ? 'selected' : ''}>${e(c.name)}</option>`).join('')}</select></label>
+    <label class="form-group">ไอคอน<input class="form-input" name="icon" value="${e(a?.icon || '📝')}"></label></div>
+    <label class="form-group" style="display:block;">คำอธิบาย<textarea class="form-ta" name="description">${e(a?.description)}</textarea></label>
+    <label class="form-group" style="display:block;">URL เว็บแอปข้อสอบ *<input class="form-input" type="url" name="url" value="${e(a?.url)}" placeholder="https://..." required></label>
+    <label class="form-group" style="display:block;">URL รูปตัวอย่าง<input class="form-input" type="url" name="preview_image" value="${e(a?.preview_image)}" placeholder="https://..."></label>
+    <label class="form-group" style="display:block;">ลำดับ (เลขน้อยอยู่ก่อน)<input class="form-input" type="number" name="sort_order" value="${Number(a?.sort_order) || 0}"></label>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin:16px 0;"><label><input type="checkbox" name="visible" ${a?.visible !== 0 ? 'checked' : ''}> แสดงบนเว็บ</label><label><input type="checkbox" name="locked" ${a?.locked !== 0 ? 'checked' : ''}> ล็อกด้วยรหัส</label></div>
+    <label class="form-group" style="display:block;">รหัสเฉพาะแอป (เว้นว่างเพื่อใช้รหัสกลาง)<input class="form-input" name="lock_code" value="${e(a?.lock_code)}" autocomplete="off"></label>
+    <p style="color:#64748b;font-size:.85rem;">กำหนดสิทธิ์ทุกข้อสอบ / รายวิชา / รายแอป ได้ที่เมนู “รหัสปลดล็อก” → แท็บ “แอปข้อสอบ”</p>
+    <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal()">ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึกข้อสอบ</button></div>
+    <p data-exam-error role="alert" style="color:#dc2626;"></p></form></div>`;
+}
+async function saveExamApp(id) {
+  const form = document.getElementById('examAppForm'), body = Object.fromEntries(new FormData(form));
+  body.visible = form.elements.visible.checked; body.locked = form.elements.locked.checked;
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  const res = id ? await api.put('/exam-apps/' + id,body) : await api.post('/exam-apps',body);
+  button.disabled = false;
+  if (res.error) { form.querySelector('[data-exam-error]').textContent = res.error; return; }
+  closeModal(); toast('✅ บันทึกแอปข้อสอบแล้ว'); await safeRender(renderExamAdmin,'exam-apps');
+}
+async function deleteExamItem(kind,id) {
+  if (!confirm(kind === 'categories' ? 'ลบวิชานี้? ต้องไม่มีแอปในวิชานี้ก่อนลบ' : 'ลบแอปข้อสอบนี้?')) return;
+  const res = await api.delete('/exam-apps/' + (kind === 'categories' ? 'categories/' : '') + id);
+  if (res.error) { toast('❌ ' + res.error); return; }
+  toast('✅ ลบแล้ว'); await safeRender(() => renderExamAdmin(kind),'exam-apps');
+}
+
 async function renderApps() {
   const data = await api.get('/apps/admin/list');
   window._appsAll = data.apps || [];
@@ -3172,13 +3271,15 @@ async function delCmt(id) {
 // CODES — รหัสปลดล็อก
 // ══════════════════════════════════════════════════════════
 async function renderCodes() {
-  const [codesData, appsData] = await Promise.all([
+  const [codesData, appsData, examsData] = await Promise.all([
     api.get('/codes'),
     api.get('/apps/admin/list'),
+    api.get('/exam-apps/admin/list'),
   ]);
   window._codesAll = codesData.codes || [];
   window._codesApps = appsData.apps || [];
   window._allApps = appsData.apps || [];
+  window._codesExams = examsData;
   window._codesFlt = { status:'all' };
   const allApps = (appsData.apps || []).filter(a => a.locked);
 
@@ -3213,6 +3314,7 @@ async function renderCodes() {
     <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
       <li>สร้างรหัส → กำหนดว่าปลดล็อกแอปไหนบ้าง → แชร์รหัสให้ผู้ที่จ่ายเงิน</li>
       <li>รหัสเดียวสามารถปลดล็อกได้หลายแอปพร้อมกัน</li>
+      <li>แท็บ “แอปข้อสอบ” เลือกปลดทุกข้อสอบ รายวิชา หรือรายแอปได้ โดยสิทธิ์รายวิชารวมข้อสอบใหม่ในวิชานั้น</li>
       <li>เปิด "VIP" เมื่อต้องการรวมแอปที่ล็อกและแอปใหม่ในอนาคต หรือเลือกเป็นรายการเพื่อให้สิทธิ์เฉพาะแอปปัจจุบัน</li>
       <li>ตั้งวันหมดอายุสำหรับรหัสแบบรายเดือน/รายปี</li>
       <li>ปิดรหัสได้ทันทีโดยไม่ต้องลบ</li>
@@ -3258,7 +3360,20 @@ function codeIsExpired(c) {
 function codeIsAllApps(c) {
   let arr = []; try { arr = JSON.parse(c.app_ids||'[]'); } catch {}
   let ws  = []; try { ws  = JSON.parse(c.worksheet_ids||'[]'); } catch {}
-  return arr.includes('all') || ws.includes('all');
+  return arr.includes('all') || ws.includes('all') || codeIds(c.exam_app_ids).includes('all');
+}
+
+function examScopeLabels(c) {
+  const apps = codeIds(c.exam_app_ids), cats = codeIds(c.exam_category_ids);
+  if (apps.includes('all')) return ['ทุกแอปข้อสอบ · รวมข้อสอบใหม่'];
+  const data = window._codesExams || {apps:[],categories:[]};
+  return [...cats.map(id => 'วิชา' + (data.categories.find(c => String(c.id) === id)?.name || '#' + id) + ' · รวมข้อสอบใหม่ในวิชานี้'),
+    ...apps.map(id => data.apps.find(a => String(a.id) === id)?.title || 'แอปข้อสอบ #' + id)];
+}
+function codeExamSummary(c) {
+  const labels = examScopeLabels(c);
+  if (!labels.length) return '';
+  return `<div style="margin-top:8px;font-size:.82rem;"><button type="button" class="code-app-link" onclick="openCodeModal(${Number(c.id)},'exams')">📝 สิทธิ์แอปข้อสอบ</button><div>${labels.map(codeEscape).join('<br>')}</div></div>`;
 }
 
 function codeRowsHtml(arr) {
@@ -3266,7 +3381,7 @@ function codeRowsHtml(arr) {
   return arr.map(c=>`<tr style="${!c.active?'opacity:.5;':''}">
     <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${codeEscape(c.code)}</code></td>
     <td><strong>${codeEscape(c.label)}</strong></td>
-    <td>${codeAppsSummary(c)}</td>
+    <td>${codeAppsSummary(c)}${codeExamSummary(c)}</td>
     <td>${codeExpLabel(c.expires_at)}</td>
     <td>${c.active
       ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
@@ -3311,7 +3426,7 @@ function createCodePicker(items, value, kind, readOnly = false) {
   const available = items.map(item => ({...item, id:String(item.id), selectable:!!item.locked || selected.has(String(item.id))}));
   // รักษาสิทธิ์ที่เคยบันทึกไว้ แม้แอปจะถูกซ่อน ปลดล็อก หรือลบภายหลัง
   selected.forEach(id => {
-    if (!available.some(item => item.id === id)) available.push({id, title:`${kind === 'apps' ? 'แอป' : 'ใบงาน'} #${id}`, missing:true, selectable:true});
+    if (!available.some(item => item.id === id)) available.push({id, title:`${kind === 'apps' ? 'แอป' : kind === 'exams' ? 'แอปข้อสอบ' : 'ใบงาน'} #${id}`, missing:true, selectable:true});
   });
   available.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'th', {numeric:true, sensitivity:'base'}));
   return {items:available, selected, allFuture, kind, readOnly, query:'', category:'', tier:'', selectionFilter:'all', page:1, pageSize:6, manualSelection:null};
@@ -3320,11 +3435,11 @@ function codePickerTier(item) {
   return item.missing ? '' : item.is_vip ? 'vip' : item.locked ? 'premium' : 'free';
 }
 function codePickerMarkup(picker, id) {
-  const unit = picker.kind === 'apps' ? 'แอป' : 'ใบงาน';
+  const unit = picker.kind === 'apps' ? 'แอป' : picker.kind === 'exams' ? 'แอปข้อสอบ' : 'ใบงาน';
   const categories = [...new Set(picker.items.map(item => item.category || 'อื่นๆ'))].sort((a,b) => a.localeCompare(b, 'th'));
   return `<div class="code-picker" id="${id}">
     ${picker.readOnly ? '' : `<label class="code-picker-vip"><input type="checkbox" data-picker-vip ${picker.allFuture ? 'checked' : ''}>
-      <span><strong>${picker.kind === 'apps' ? '🌟 VIP' : '📄 ทุกใบงาน'} · รวมทุก${unit}ที่ล็อกและรายการใหม่ในอนาคต</strong>
+      <span><strong>${picker.kind === 'apps' ? '🌟 VIP' : picker.kind === 'exams' ? '📝 ทุกแอปข้อสอบ' : '📄 ทุกใบงาน'} · รวมทุก${unit}ที่ล็อกและรายการใหม่ในอนาคต</strong>
       <small>ปิดตัวเลือกนี้เพื่อให้สิทธิ์เฉพาะรายการที่เลือก แม้จะเลือกครบทุก${unit}ในปัจจุบัน</small></span></label>`}
     <div class="code-picker-count" data-picker-count aria-live="polite"></div>
     <div class="code-picker-filters">
@@ -3353,7 +3468,7 @@ function renderCodePicker(picker) {
   const root = picker.root;
   if (!root?.isConnected) return;
   const get = name => root.querySelector('[data-picker-' + name + ']');
-  const unit = picker.kind === 'apps' ? 'แอป' : 'ใบงาน';
+  const unit = picker.kind === 'apps' ? 'แอป' : picker.kind === 'exams' ? 'แอปข้อสอบ' : 'ใบงาน';
   const results = filteredCodePickerItems(picker);
   const pages = Math.max(1, Math.ceil(results.length / picker.pageSize));
   picker.page = Math.min(Math.max(1, picker.page), pages);
@@ -3432,6 +3547,7 @@ function updateCodeModalSummary() {
   if (!summary || !state) return;
   const label = (picker, unit) => picker.allFuture ? `ทุก${unit} + รายการใหม่` : `${picker.selected.size} ${unit}`;
   summary.textContent = label(state.apps, 'แอป') + ' · ' + label(state.worksheets, 'ใบงาน');
+  if (state.exams) summary.textContent += ' · ' + label(state.exams, 'แอปข้อสอบ') + ' + ' + state.examCategories.size + ' วิชา';
 }
 function openCodeApps(id) {
   const c = (window._codesAll || []).find(code => Number(code.id) === Number(id));
@@ -3449,16 +3565,19 @@ function openCodeApps(id) {
   document.querySelector('#codeAppsDetail [data-picker-search]').focus();
 }
 
-async function openCodeModal(id) {
+async function openCodeModal(id, initialTab) {
   try {
-    const [d, ad, wd] = await Promise.all([api.get('/codes'), api.get('/apps/admin/list'), api.get('/worksheets/admin/list')]);
+    const [d, ad, wd, ed] = await Promise.all([api.get('/codes'), api.get('/apps/admin/list'), api.get('/worksheets/admin/list'), api.get('/exam-apps/admin/list')]);
     const c = id ? (d.codes || []).find(x => Number(x.id) === Number(id)) : null;
     if (id && !c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
     window._allApps = ad.apps || [];
     window._codesApps = ad.apps || [];
+    window._codesExams = ed;
     const state = {
       apps:createCodePicker(ad.apps || [], c?.app_ids, 'apps'),
       worksheets:createCodePicker(wd.worksheets || [], c?.worksheet_ids, 'worksheets'),
+      exams:createCodePicker(ed.apps || [], c?.exam_app_ids, 'exams'),
+      examCategories:new Set(codeIds(c?.exam_category_ids)),
       originalExpiry:c?.expires_at || null,
     };
     window._codeModalState = state;
@@ -3469,7 +3588,7 @@ async function openCodeModal(id) {
       <div class="modal code-modal" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle">
         <div class="code-modal-head"><div><h3 id="codeModalTitle">${c ? '✏️ แก้ไขรหัส' : '🔑 สร้างรหัสใหม่'}</h3>${c ? `<p class="code-modal-sub">${codeEscape(c.code)} · ${codeEscape(c.label)}</p>` : ''}</div><button type="button" class="btn btn-outline btn-sm" onclick="closeModalSafe({target:this.closest('.modal-ov')},this.closest('.modal-ov'))" aria-label="ปิดหน้าต่างแก้ไขรหัส">✕</button></div>
         <div class="code-modal-tabs" role="tablist" aria-label="ข้อมูลรหัสปลดล็อก">
-          ${[['info','ข้อมูลรหัส'],['apps','🎮 แอป'],['worksheets','📄 ใบงาน']].map(([key,label]) => `<button type="button" class="btn btn-outline btn-sm" id="codeTab-${key}" role="tab" aria-controls="codePanel-${key}" data-code-tab="${key}" aria-selected="false">${label}</button>`).join('')}
+          ${[['info','ข้อมูลรหัส'],['apps','🎮 แอป'],['worksheets','📄 ใบงาน'],['exams','📝 แอปข้อสอบ']].map(([key,label]) => `<button type="button" class="btn btn-outline btn-sm" id="codeTab-${key}" role="tab" aria-controls="codePanel-${key}" data-code-tab="${key}" aria-selected="false">${label}</button>`).join('')}
         </div>
         <div class="code-modal-body">
         <div id="codePanel-info" role="tabpanel" aria-labelledby="codeTab-info" hidden>
@@ -3510,6 +3629,13 @@ async function openCodeModal(id) {
         </div>
         <div id="codePanel-apps" role="tabpanel" aria-labelledby="codeTab-apps" hidden>${codePickerMarkup(state.apps, 'cAppsPicker')}</div>
         <div id="codePanel-worksheets" role="tabpanel" aria-labelledby="codeTab-worksheets" hidden>${codePickerMarkup(state.worksheets, 'cWorksheetsPicker')}</div>
+        <div id="codePanel-exams" role="tabpanel" aria-labelledby="codeTab-exams" hidden>
+          <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;">
+            <strong>📚 ปลดล็อกทั้งวิชา</strong><p style="font-size:.85rem;color:#64748b;margin:6px 0 12px;">รวมข้อสอบปัจจุบันและข้อสอบใหม่ในวิชาที่เลือก สามารถเพิ่มสิทธิ์รายแอปจากรายการด้านล่างได้</p>
+            <div style="display:flex;flex-wrap:wrap;gap:14px;" id="cExamCategories">${[...ed.categories, ...[...state.examCategories].filter(id => !ed.categories.some(cat => String(cat.id) === id)).map(id => ({id,name:'วิชา #' + id + ' (ไม่พบในปัจจุบัน)'}))].map(cat => `<label><input type="checkbox" data-exam-category="${codeEscape(cat.id)}" ${state.examCategories.has(String(cat.id)) ? 'checked' : ''}> ${codeEscape(cat.name)}</label>`).join('') || '<span>ยังไม่มีวิชา</span>'}</div>
+          </div>
+          ${codePickerMarkup(state.exams, 'cExamsPicker')}
+        </div>
         </div>
         <div class="modal-footer">
           <span class="code-modal-summary" id="cSelectionSummary" aria-live="polite"></span>
@@ -3521,6 +3647,13 @@ async function openCodeModal(id) {
 
     bindCodePicker(state.apps, 'cAppsPicker');
     bindCodePicker(state.worksheets, 'cWorksheetsPicker');
+    bindCodePicker(state.exams, 'cExamsPicker');
+    document.getElementById('cExamCategories').addEventListener('change',event => {
+      const id = event.target.dataset.examCategory;
+      if (!id) return;
+      event.target.checked ? state.examCategories.add(id) : state.examCategories.delete(id);
+      updateCodeModalSummary();
+    });
     onDurationChange();
     const tabs = [...document.querySelectorAll('[data-code-tab]')];
     const activate = key => {
@@ -3542,8 +3675,8 @@ async function openCodeModal(id) {
         activate(next.dataset.codeTab); next.focus();
       });
     });
-    activate(c ? 'apps' : 'info');
-    if (c) document.querySelector('[data-code-tab="apps"]').focus();
+    activate(initialTab || (c ? 'apps' : 'info'));
+    if (c) document.querySelector(`[data-code-tab="${initialTab || 'apps'}"]`).focus();
     else document.getElementById('cCode').focus();
   } catch (error) {
     if (error.status !== 401) toast('❌ เปิดหน้าต่างรหัสไม่สำเร็จ: ' + error.message);
@@ -3588,6 +3721,8 @@ async function saveCode(id) {
   }
   const body = {
     code, label, app_ids: appIds, worksheet_ids: wsIds,
+    exam_app_ids:selectedIds(state.exams),
+    exam_category_ids:[...state.examCategories].map(Number),
     expires_at,
     active: document.getElementById('cActive').checked,
   };
@@ -3628,6 +3763,8 @@ function openEmailModal(id) {
     }).filter(Boolean);
   }
 
+  appList.push(...examScopeLabels(c).map(label => '📝 ' + label));
+  window._emailHasExams = examScopeLabels(c).length > 0;
   document.getElementById('modal').innerHTML = `
   <div class="modal-ov" onclick="closeModalSafe(event, this)">
     <div class="modal" style="max-width:560px;">
@@ -3652,7 +3789,7 @@ function openEmailModal(id) {
       </div>
       <div class="form-group">
         <label class="form-label">รายชื่อแอปในชุด (บรรทัดละแอป — แก้ได้)</label>
-        <textarea class="form-input" id="emApps" rows="4" style="resize:vertical;font-size:.9rem;">${appList.join('\n')}</textarea>
+        <textarea class="form-input" id="emApps" rows="4" style="resize:vertical;font-size:.9rem;">${codeEscape(appList.join('\n'))}</textarea>
       </div>
       <div class="form-group">
         <label class="form-label">หัวข้ออีเมล (กดคัดลอกแยก)</label>
@@ -3679,7 +3816,7 @@ function buildEmailHTML() {
   // (Cloudflare เปิดทิ้งไว้ตลอด) ถ้าเผลอเปิดจากที่นั่น ลูกค้าที่จ่ายเงินจะได้ลิงก์ pages.dev
   // ติดอยู่ในกล่องจดหมายถาวร — ยึดโดเมนหลักเหมือนที่ app.js ทำกับ canonical/ลิงก์แชร์
   const SITE_URL = 'https://kru-ti.com';
-  const appsUrl  = SITE_URL + '/apps';   // หน้าที่มีช่อง 🎟️ "มีรหัสปลดล็อก?" อยู่จริง
+  const appsUrl  = SITE_URL + (window._emailHasExams ? '/exam-apps' : '/apps');
   const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f1;padding:28px 12px;"><tr><td align="center">
@@ -3708,9 +3845,9 @@ function buildEmailHTML() {
   <div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;font-weight:bold;color:#15223c;margin-bottom:12px;">วิธีใช้รหัส (ใช้เวลาไม่ถึง 1 นาที)</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Tahoma,Arial,sans-serif;font-size:13.5px;line-height:1.8;color:#41506b;">
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">1.</td>
-        <td style="padding-bottom:8px;">เปิดหน้า <a href="${appsUrl}" style="color:#0fa294;font-weight:bold;">แอปทั้งหมด</a> ที่เว็บ kru-ti.com (กดลิงก์นี้ได้เลย)</td></tr>
+        <td style="padding-bottom:8px;">เปิดหน้า <a href="${appsUrl}" style="color:#0fa294;font-weight:bold;">${window._emailHasExams ? 'แอปข้อสอบ' : 'แอปทั้งหมด'}</a> ที่เว็บ kru-ti.com (กดลิงก์นี้ได้เลย)${window._emailHasExams ? ' · สิทธิ์แอปทั่วไปใช้รหัสเดียวกันที่หน้าแอปทั้งหมด' : ''}</td></tr>
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;padding-bottom:8px;">2.</td>
-        <td style="padding-bottom:8px;">กรอกรหัสด้านบนในช่อง <strong>&#127903;&#65039; "มีรหัสปลดล็อก?"</strong> แล้วกดปุ่ม ปลดล็อก</td></tr>
+        <td style="padding-bottom:8px;">กรอกรหัสด้านบนในช่อง <strong>รหัสปลดล็อก</strong> แล้วกดปุ่ม ปลดล็อก</td></tr>
     <tr><td width="30" valign="top" style="color:#f0a830;font-weight:bold;font-size:15px;">3.</td>
         <td>แอปทั้งหมดในชุดจะเปิดใช้งานได้ทันที &#128640;</td></tr>
   </table>
@@ -3754,7 +3891,7 @@ async function copyEmail() {
   const html = buildEmailHTML();
   // ฉบับ text ล้วน — ใช้เมื่อลูกค้าเปิดอีเมลด้วยโปรแกรมที่ไม่แสดง HTML
   const plain = 'รหัสปลดล็อกของคุณ: ' + document.getElementById('emCode').value
-    + '\nนำไปกรอกที่ https://kru-ti.com/apps ในช่อง "มีรหัสปลดล็อก?"';
+    + '\nนำไปกรอกที่ https://kru-ti.com/' + (window._emailHasExams ? 'exam-apps' : 'apps') + ' ในช่องรหัสปลดล็อก';
   try {
     // วิธีหลัก: ClipboardItem แบบ text/html → วางใน Gmail ติด format เต็ม
     await navigator.clipboard.write([
@@ -3800,6 +3937,8 @@ function previewEmail() {
 function openMsgrModal(id) {
   const c = (window._codesData?.codes || []).find(x => x.id === id);
   if (!c) { toast('❌ ไม่พบข้อมูลรหัส'); return; }
+
+  window._msgrExamScopes = examScopeLabels(c);
 
   document.getElementById('modal').innerHTML = `
   <div class="modal-ov" onclick="closeModalSafe(event, this)">
@@ -3851,9 +3990,9 @@ function buildMsgrText() {
 👉 ${code}
 
 วิธีใช้ (ไม่ถึงนาที)
-1️⃣ เข้า ${site} → หน้า "แอปทั้งหมด"
-2️⃣ กดช่อง 🎟️ "มีรหัสปลดล็อก?" ใส่รหัส แล้วกดปลดล็อก
-3️⃣ ใช้ได้เลยทุกแอปในชุด 🚀
+1️⃣ เข้า ${site}${window._msgrExamScopes?.length ? '/exam-apps → หน้า "แอปข้อสอบ"' : ' → หน้า "แอปทั้งหมด"'}
+2️⃣ กดช่องรหัสปลดล็อก ใส่รหัส แล้วกดปลดล็อก
+3️⃣ ใช้ได้เลยทุกแอปในชุด 🚀${window._msgrExamScopes?.length ? '\n\nสิทธิ์แอปข้อสอบ:\n' + window._msgrExamScopes.join('\n') + '\nสิทธิ์แอปทั่วไปใช้รหัสเดียวกันที่หน้าแอปทั้งหมด' : ''}
 
 ติดตรงไหนทักมาได้เลยครับ ยินดีช่วยเสมอ 😊`;
 }
