@@ -2858,6 +2858,20 @@ async function saveExamCategory(id) {
   if (res.error) { form.querySelector('[data-exam-error]').textContent = res.error; return; }
   closeModal(); toast('✅ บันทึกวิชาแล้ว'); await safeRender(() => renderExamAdmin('categories'),'exam-apps');
 }
+function normalizeAdminWebURL(value) {
+  const raw = String(value || '').trim();
+  if (!raw || (/^[/?#]/.test(raw) && !raw.startsWith('//'))) return '';
+  const hostWithPort = /^(?:localhost|[^/?#:\s]+\.[^/?#:\s]+):\d+(?:[/?#]|$)/i.test(raw);
+  const candidate = raw.startsWith('//') ? 'https:' + raw
+    : /^[a-z][a-z\d+.-]*:/i.test(raw) && !hostWithPort ? raw : 'https://' + raw;
+  try { const url = new URL(candidate); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; }
+  catch { return ''; }
+}
+function completeExamURLField(field) {
+  const url = normalizeAdminWebURL(field.value);
+  if (url) field.value = url;
+  if (field.name === 'preview_image') syncAppPreview(field);
+}
 function openExamApp(id) {
   const a = window._examAdmin.apps.find(a => Number(a.id) === Number(id)), e = codeEscape;
   document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event,this)"><form class="modal" id="examAppForm" onsubmit="event.preventDefault();saveExamApp(${id || 'null'})">
@@ -2866,17 +2880,33 @@ function openExamApp(id) {
     <div class="form-row"><label class="form-group">วิชา *<select class="form-input" name="category_id" required>${window._examAdmin.categories.map(c => `<option value="${Number(c.id)}" ${Number(a?.category_id) === Number(c.id) ? 'selected' : ''}>${e(c.name)}</option>`).join('')}</select></label>
     <label class="form-group">ไอคอน<input class="form-input" name="icon" value="${e(a?.icon || '📝')}"></label></div>
     <label class="form-group" style="display:block;">คำอธิบาย<textarea class="form-ta" name="description">${e(a?.description)}</textarea></label>
-    <label class="form-group" style="display:block;">URL เว็บแอปข้อสอบ *<input class="form-input" type="url" name="url" value="${e(a?.url)}" placeholder="https://..." required></label>
-    <label class="form-group" style="display:block;">URL รูปตัวอย่าง<input class="form-input" type="url" name="preview_image" value="${e(a?.preview_image)}" placeholder="https://..."></label>
+    <label class="form-group" style="display:block;">URL เว็บแอปข้อสอบ *<input class="form-input" type="text" inputmode="url" name="url" value="${e(a?.url)}" placeholder="เช่น onetthaip6.pages.dev" autocapitalize="off" spellcheck="false" onblur="completeExamURLField(this)" required><span style="display:block;font-size:.8rem;color:#64748b;margin-top:6px;">ใส่แค่โดเมนได้ ระบบเติม https:// ให้อัตโนมัติ</span></label>
+    <div class="form-group">
+      <label class="form-label" for="examPreview">🖼️ รูปตัวอย่างแอปข้อสอบ</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="form-input" type="text" inputmode="url" id="examPreview" name="preview_image" value="${e(a?.preview_image)}" placeholder="ลิงก์รูป หรือกดอัปโหลด" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;" oninput="syncAppPreview(this)" onblur="completeExamURLField(this)">
+        <button type="button" class="btn btn-outline btn-sm" id="examPreviewUpload" onclick="uploadPreviewImg('examPreview',this)" style="white-space:nowrap;">📷 อัปโหลด</button>
+      </div>
+      <p style="font-size:.8rem;color:#64748b;margin-top:6px;">เลือกไฟล์รูปจากเครื่อง ระบบจะใส่ลิงก์และแสดงตัวอย่างให้</p>
+    </div>
     <label class="form-group" style="display:block;">ลำดับ (เลขน้อยอยู่ก่อน)<input class="form-input" type="number" name="sort_order" value="${Number(a?.sort_order) || 0}"></label>
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin:16px 0;"><label><input type="checkbox" name="visible" ${a?.visible !== 0 ? 'checked' : ''}> แสดงบนเว็บ</label><label><input type="checkbox" name="locked" ${a?.locked !== 0 ? 'checked' : ''}> ล็อกด้วยรหัส</label></div>
     <label class="form-group" style="display:block;">รหัสเฉพาะแอป (เว้นว่างเพื่อใช้รหัสกลาง)<input class="form-input" name="lock_code" value="${e(a?.lock_code)}" autocomplete="off"></label>
     <p style="color:#64748b;font-size:.85rem;">กำหนดสิทธิ์ทุกข้อสอบ / รายวิชา / รายแอป ได้ที่เมนู “รหัสปลดล็อก” → แท็บ “แอปข้อสอบ”</p>
     <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal()">ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึกข้อสอบ</button></div>
     <p data-exam-error role="alert" style="color:#dc2626;"></p></form></div>`;
+  syncAppPreview(document.getElementById('examPreview'));
 }
 async function saveExamApp(id) {
-  const form = document.getElementById('examAppForm'), body = Object.fromEntries(new FormData(form));
+  const form = document.getElementById('examAppForm');
+  if (form.querySelector('[data-uploading="true"]')) { toast('⏳ กรุณารอให้อัปโหลดรูปเสร็จก่อน'); return; }
+  const body = Object.fromEntries(new FormData(form));
+  body.url = normalizeAdminWebURL(body.url);
+  body.preview_image = normalizeAdminWebURL(body.preview_image);
+  if (!body.url) { form.querySelector('[data-exam-error]').textContent = 'กรุณาใส่ URL แอปที่ถูกต้อง เช่น example.com'; form.elements.url.focus(); return; }
+  if (form.elements.preview_image.value.trim() && !body.preview_image) { form.querySelector('[data-exam-error]').textContent = 'URL รูปตัวอย่างไม่ถูกต้อง'; form.elements.preview_image.focus(); return; }
+  form.elements.url.value = body.url;
+  form.elements.preview_image.value = body.preview_image;
   body.visible = form.elements.visible.checked; body.locked = form.elements.locked.checked;
   const button = form.querySelector('[type="submit"]');
   button.disabled = true;
@@ -2997,7 +3027,7 @@ function openAppModal(id) {
         <div class="form-group">
           <label class="form-label">🖼️ รูป Preview (แสดงตอน hover — แนะนำ screenshot ของแอป)</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" class="form-input" id="aPreview" value="${app?.preview_image||''}" placeholder="https://... หรืออัปโหลดด้านล่าง" style="flex:1;">
+            <input type="text" class="form-input" id="aPreview" value="${app?.preview_image||''}" placeholder="https://... หรืออัปโหลดด้านล่าง" style="flex:1;" oninput="syncAppPreview(this)">
             <button type="button" class="btn btn-outline btn-sm" onclick="uploadPreviewImg()">📷 อัปโหลด</button>
           </div>
           ${app?.preview_image ? `<img class="preview-thumb" src="${app.preview_image}" style="margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;">` : ''}
@@ -4140,29 +4170,52 @@ async function copyMsgr() {
 }
 
 
-async function uploadPreviewImg() {
+function syncAppPreview(field) {
+  const group = field.closest('.form-group');
+  let img = group.querySelector('.preview-thumb');
+  let url = '';
+  if (field.id === 'examPreview') url = normalizeAdminWebURL(field.value);
+  else { try { const parsed = new URL(field.value.trim()); if (['http:','https:'].includes(parsed.protocol)) url = parsed.href; } catch {} }
+  if (!url) { if (img) { img.hidden = true; img.style.display = 'none'; } return; }
+  if (!img) {
+    img = document.createElement('img');
+    img.className = 'preview-thumb';
+    img.alt = 'รูปตัวอย่างแอป';
+    img.style = 'display:block;margin-top:8px;width:100%;max-height:160px;object-fit:contain;border-radius:8px;';
+    group.appendChild(img);
+  }
+  img.hidden = false;
+  img.style.display = 'block';
+  img.src = url;
+}
+
+// Share the apps upload flow, retaining the owning field across async uploads.
+async function uploadPreviewImg(fieldId = 'aPreview', button = null) {
+  const field = document.getElementById(fieldId);
+  if (!field || field.dataset.uploading) return;
+  const btn = button || document.querySelector('[onclick="uploadPreviewImg()"]');
+  const submit = field.closest('form')?.querySelector('[type="submit"]');
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
   inp.onchange = async () => {
-    const f = inp.files[0]; if (!f) return;
-    const btn = document.querySelector('[onclick="uploadPreviewImg()"]');
-    if (btn) btn.textContent = '⏳ กำลังอัปโหลด...';
+    const f = inp.files[0]; if (!f || !field.isConnected || field.dataset.uploading) return;
+    const submitWasDisabled = submit?.disabled;
+    field.dataset.uploading = 'true';
+    if (btn) { btn.textContent = '⏳ กำลังอัปโหลด...'; btn.disabled = true; }
+    if (submit) submit.disabled = true;
     try {
       const url = await uploadToImgbb(f);
-      if (!url) { if (btn) btn.textContent = '📷 อัปโหลด'; return; }
-      const field = document.getElementById('aPreview');
-      if (!field) { if (btn) btn.textContent = '📷 อัปโหลด'; toast('⚠️ ฟอร์มถูกปิดไปแล้ว — รูปอัปขึ้นเรียบร้อย คัดลอก URL นี้ไปวางเอง: ' + url); return; }
+      if (!url) return;
+      if (!field.isConnected) { toast('⚠️ ฟอร์มถูกปิดไปแล้ว — รูปอัปขึ้นเรียบร้อย คัดลอก URL นี้ไปวางเอง: ' + url); return; }
       field.value = url;
-      let img = document.querySelector('.preview-thumb');
-      if (!img) {
-        img = document.createElement('img'); img.className='preview-thumb';
-        img.style='margin-top:8px;width:100%;max-height:120px;object-fit:cover;border-radius:8px;';
-        field.parentNode.appendChild(img);
-      }
-      img.src = url;
+      syncAppPreview(field);
       toast('✅ อัปโหลดรูป preview แล้ว' + uploadInfo());
     } catch(e) { toast('❌ ' + e.message); }
-    if (btn) btn.textContent = '📷 อัปโหลด';
+    finally {
+      delete field.dataset.uploading;
+      if (btn) { btn.textContent = '📷 อัปโหลด'; btn.disabled = false; }
+      if (submit) submit.disabled = submitWasDisabled;
+    }
   };
   inp.click();
 }

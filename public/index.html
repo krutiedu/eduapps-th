@@ -50,7 +50,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pridi:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=2fd2fbb7">
+<link rel="stylesheet" href="/app.css?v=48178b81">
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2993021281914259" crossorigin="anonymous"></script>
 </head>
@@ -104,17 +104,18 @@
 <!-- APP VIEWER -->
 <div id="appViewer" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,21,38,.9);align-items:center;justify-content:center;padding:12px;">
   <div id="viewerBox" style="display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#15223c;flex-shrink:0;">
+    <div id="viewerToolbar" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#15223c;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
         <span id="viewerIcon" style="font-size:1.2rem;flex-shrink:0;"></span>
         <span id="viewerTitle" style="color:#fff;font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button id="viewerToolbarHide" class="viewer-toolbar-hide" onclick="toggleViewerToolbar()" title="ซ่อนแถบควบคุม" aria-label="ซ่อนแถบควบคุม" aria-controls="viewerToolbar">⌃</button>
         <button id="fsBtn" onclick="fullscreenApp()" title="ขยายเต็มจอ" style="background:#f0a830;color:#15223c;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">⛶ เต็มจอ</button>
-        <button onclick="openInNewTab()" title="เปิดแท็บใหม่" style="background:#2c4a7c;color:#cdd8ea;border:none;padding:6px 10px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">↗</button>
-        <button onclick="closeAppViewer()" title="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
+        <button onclick="closeAppViewer()" title="ปิด" aria-label="ปิด" style="background:#dc2626;color:#fff;border:none;padding:6px 11px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✕</button>
       </div>
     </div>
+    <button id="viewerToolbarShow" class="viewer-toolbar-show" onclick="toggleViewerToolbar()" title="แสดงแถบควบคุม" aria-label="แสดงแถบควบคุม" aria-controls="viewerToolbar" aria-expanded="false">☰ แถบควบคุม</button>
     <iframe id="viewerFrame" style="flex:1;width:100%;border:none;background:#fff;" allow="fullscreen; autoplay; clipboard-write; gamepad" allowfullscreen></iframe>
   </div>
 </div>
@@ -159,6 +160,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=52895e6f" defer></script>
+<script src="/app.js?v=6aa9504c" defer></script>
 </body>
 </html>
