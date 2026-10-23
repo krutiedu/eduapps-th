@@ -13,10 +13,26 @@ export async function examApps(req, env, segs, method, {ok, err, okCache}) {
   const id = segs[1];
   if (id === 'categories') {
     const categoryId = segs[2];
+    if (categoryId === 'reorder' && method === 'PUT' && segs.length === 3) {
+      const body = await req.json();
+      if (!Array.isArray(body.ids) || !body.ids.length || !body.ids.every(id => ['number','string'].includes(typeof id) && positiveId(id))) return err('ลำดับวิชาไม่ถูกต้อง');
+      const orderedIds = body.ids.map(Number);
+      if (new Set(orderedIds).size !== orderedIds.length) return err('รายการวิชาซ้ำกัน');
+      const order = JSON.stringify(orderedIds);
+      // One atomic update; a stale list (added/deleted subjects) changes no rows.
+      // json_each keeps the bind count fixed even for a large subject list.
+      const result = await db.prepare(`UPDATE exam_categories SET sort_order=(
+        SELECT CAST(key AS INTEGER)+1 FROM json_each(?) WHERE CAST(value AS INTEGER)=exam_categories.id
+      ) WHERE (SELECT COUNT(*) FROM exam_categories)=?
+        AND NOT EXISTS (SELECT 1 FROM exam_categories WHERE id NOT IN (SELECT value FROM json_each(?)))`)
+        .bind(order, orderedIds.length, order).run();
+      if (result.meta.changes !== orderedIds.length) return err('รายชื่อวิชาเปลี่ยนไป กรุณารีเฟรชหน้าก่อนจัดลำดับอีกครั้ง', 409);
+      return ok({ok:true});
+    }
     if (!categoryId && method === 'GET') {
       const {results} = await db.prepare(`SELECT c.*,COUNT(a.id) AS app_count FROM exam_categories c
         LEFT JOIN exam_apps a ON a.category_id=c.id AND a.visible=1 GROUP BY c.id ORDER BY c.sort_order,c.id`).all();
-      return okCache({categories:results});
+      return ok({categories:results}, {'Cache-Control':'no-cache'});
     }
     if (categoryId && !positiveId(categoryId)) return err('ไม่พบหมวดวิชา', 404);
     if ((!categoryId && method === 'POST') || (categoryId && method === 'PUT')) {

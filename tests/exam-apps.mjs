@@ -110,6 +110,26 @@ await admin('/exam-apps/categories/' + math,'PUT',{name:'คณิตศาส�
 assert.deepEqual(unlockedIds(await unlock('MATH')),[first,second,later]);
 assert.equal((await call('/exam-apps/categories/' + math,'DELETE',undefined,'admin-test')).status,409);
 await admin('/exam-apps/categories/' + empty,'DELETE');
+const categoryOrder = () => db.prepare('SELECT id FROM exam_categories ORDER BY sort_order,id').all().map(c => c.id);
+assert.equal((await call('/exam-apps/categories/reorder','PUT',{ids:[thai,math]})).status,401);
+assert.equal((await call('/exam-apps/categories/reorder','PUT',{ids:[thai,math]},'other-editor')).status,403);
+const scopesBeforeOrder = db.prepare('SELECT * FROM access_codes ORDER BY id').all();
+const appsBeforeOrder = db.prepare('SELECT * FROM exam_apps ORDER BY id').all();
+await admin('/exam-apps/categories/reorder','PUT',{ids:[String(thai),math]});
+assert.deepEqual(categoryOrder(),[thai,math]);
+assert.deepEqual((await call('/exam-apps/categories')).data.categories.map(c => c.id),[thai,math]);
+assert.deepEqual(db.prepare('SELECT * FROM access_codes ORDER BY id').all(),scopesBeforeOrder);
+assert.deepEqual(db.prepare('SELECT * FROM exam_apps ORDER BY id').all(),appsBeforeOrder);
+for (const invalid of [[],[math,math],[math,String(math)],[null,thai],[[math],thai],['all',thai]]) {
+  assert.equal((await call('/exam-apps/categories/reorder','PUT',{ids:invalid},'admin-test')).status,400);
+  assert.deepEqual(categoryOrder(),[thai,math]);
+}
+for (const stale of [[math],[math,thai,999999],[math,999999]]) {
+  assert.equal((await call('/exam-apps/categories/reorder','PUT',{ids:stale},'admin-test')).status,409);
+  assert.deepEqual(categoryOrder(),[thai,math],'stale/unknown lists must not partially update the order');
+}
+assert.equal((await call('/exam-apps/categories/reorder','PUT',{ids:[math,thai]},'apps-editor')).status,200);
+assert.deepEqual(categoryOrder(),[math,thai]);
 // Old clients updating codes cannot silently clear new exam scopes.
 const mathCode = (await admin('/codes')).codes.find(c => c.code === 'MATH');
 await admin('/codes/' + mathCode.id,'PUT',{code:'MATH',label:'Math package',app_ids:['all'],worksheet_ids:[1],active:true});
@@ -141,13 +161,18 @@ console.log('PASS: SQL migration, protected URLs, all/category/app grants, futur
 
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
+let failReorder = false, reorderRequests = 0;
 const server = createServer(async (req,res) => {
   try {
     const url = new URL(req.url,'http://127.0.0.1');
     let response;
     if (url.pathname.startsWith('/api/')) {
       let body = ''; for await (const chunk of req) body += chunk;
-      response = await onRequest({env,params:{route:url.pathname.slice(5).split('/')},request:new Request(url,{method:req.method,headers:req.headers,...(body ? {body} : {})})});
+      if (url.pathname === '/api/exam-apps/categories/reorder') reorderRequests++;
+      if (url.pathname === '/api/exam-apps/categories/reorder' && failReorder) {
+        failReorder = false;
+        response = new Response(JSON.stringify({error:'Fixture reorder unavailable'}),{status:503,headers:{'Content-Type':'application/json'}});
+      } else response = await onRequest({env,params:{route:url.pathname.slice(5).split('/')},request:new Request(url,{method:req.method,headers:req.headers,...(body ? {body} : {})})});
     } else if (/^\/exam-apps(?:\/(?:category\/)?[^/]+)?\/?$/.test(url.pathname)) {
       response = await renderExamPage({env,request:new Request(url),params:{id:url.pathname === '/exam-apps' ? undefined : url.pathname.split('/').pop()}});
     } else response = await asset(new Request(url));
@@ -223,6 +248,56 @@ try {
   await page.locator('#examCategoryForm [type=submit]').click();
   await page.waitForFunction(() => !document.getElementById('examCategoryForm'));
   assert.ok(db.prepare("SELECT id FROM exam_categories WHERE name='วิชาทดสอบ'").get());
+  // Native mouse dragging, keyboard ordering and mobile move controls all persist.
+  await page.setViewportSize({width:1440,height:1000});
+  const rowOrder = () => page.locator('#examCategoryRows [data-category-id]').evaluateAll(rows => rows.map(row => Number(row.dataset.categoryId)));
+  const beforeDrag = await rowOrder();
+  const dragSource = page.locator(`[data-category-id="${beforeDrag[0]}"] [data-category-grip]`);
+  const dragTarget = page.locator(`[data-category-id="${beforeDrag.at(-1)}"]`);
+  const targetBounds = await dragTarget.boundingBox();
+  await dragSource.dragTo(dragTarget,{targetPosition:{x:20,y:targetBounds.height - 4}});
+  await page.waitForFunction(() => document.getElementById('examCategoryOrderStatus').textContent.includes('✅'));
+  let expectedOrder = [...beforeDrag.slice(1),beforeDrag[0]];
+  assert.deepEqual(await rowOrder(),expectedOrder);
+  assert.deepEqual(categoryOrder(),expectedOrder);
+  assert.equal(reorderRequests,1);
+  const movedGrip = page.locator(`[data-category-id="${beforeDrag[0]}"] [data-category-grip]`);
+  await movedGrip.press('ArrowUp');
+  await page.waitForFunction(() => !document.getElementById('examCategoryManager').dataset.saving);
+  [expectedOrder[1],expectedOrder[2]] = [expectedOrder[2],expectedOrder[1]];
+  assert.deepEqual(await rowOrder(),expectedOrder);
+  assert.deepEqual(categoryOrder(),expectedOrder);
+  assert.equal(await movedGrip.evaluate(el => el === document.activeElement),true);
+  await page.evaluate(() => renderExamAdmin('categories'));
+  assert.deepEqual(await rowOrder(),expectedOrder,'saved order survives a fresh API load');
+  const writesBeforeCancel = reorderRequests;
+  await page.locator(`[data-category-id="${expectedOrder[0]}"] [data-category-grip]`).dragTo(page.locator('.page-title'));
+  assert.deepEqual(await rowOrder(),expectedOrder);
+  assert.equal(reorderRequests,writesBeforeCancel,'dropping outside the table does not save');
+  assert.equal(await page.locator('.exam-category-dragging,.exam-drop-before,.exam-drop-after').count(),0);
+  failReorder = true;
+  await page.locator(`[data-category-id="${expectedOrder[0]}"] [data-category-move="1"]`).click();
+  await page.waitForFunction(() => document.getElementById('examCategoryOrderStatus').textContent.includes('Fixture reorder unavailable'));
+  assert.deepEqual(await rowOrder(),expectedOrder);
+  assert.deepEqual(categoryOrder(),expectedOrder);
+  assert.equal(await page.locator('#examCategoryManager').evaluate(el => el.inert),false);
+  await page.setViewportSize({width:375,height:812});
+  await page.locator(`[data-category-id="${expectedOrder[0]}"] [data-category-move="1"]`).click();
+  await page.waitForFunction(() => !document.getElementById('examCategoryManager').dataset.saving);
+  [expectedOrder[0],expectedOrder[1]] = [expectedOrder[1],expectedOrder[0]];
+  assert.deepEqual(await rowOrder(),expectedOrder);
+  assert.deepEqual(categoryOrder(),expectedOrder);
+  assert.equal(await page.locator('#examCategoryRows tr').first().locator('[data-category-move="-1"]').isDisabled(),true);
+  assert.equal(await page.locator('#examCategoryRows tr').last().locator('[data-category-move="1"]').isDisabled(),true);
+  await page.screenshot({path:new URL('category-order-mobile.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:new URL('category-order-desktop.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
+  await page.goto(base + '/exam-apps');
+  await page.waitForFunction(() => !document.getElementById('app').dataset.serverRendered);
+  assert.deepEqual(await page.locator('.exam-subject').evaluateAll(links => links.map(link => Number(link.getAttribute('href').split('/').pop()))),expectedOrder);
+  await page.goto(base + '/admin/');
+  await page.evaluate(() => showAdmin());
+  await page.setViewportSize({width:375,height:812});
   await page.evaluate(async () => { await renderExamAdmin(); openExamApp(null); });
   await page.locator('#examAppForm [name=title]').fill('ข้อสอบผ่านแอดมิน');
   await page.locator('#examAppForm [name=url]').fill('https://exam.example/admin');
@@ -259,7 +334,7 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:new URL('code-exams-desktop.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
   assert.deepEqual(errors,[]);
-  console.log('PASS: browser subject/detail links, search, all/category/app redemption, revocation, reload, free exams, admin CRUD, preserved mixed scopes, all-future checkbox and mobile layout.');
+  console.log('PASS: browser subject/detail links, search, all/category/app redemption, revocation, reload, free exams, admin CRUD, drag/keyboard/mobile category ordering, cancelled/failed saves, preserved mixed scopes, all-future checkbox and mobile layout.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

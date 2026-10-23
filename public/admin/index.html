@@ -102,6 +102,22 @@ tr:hover td{background:#fafafa;}
 .badge-gray{background:#f1f5f9;color:#64748b;}
 .badge-orange{background:#fff7ed;color:#9a3412;}
 
+/* Subject ordering: drag handle on desktop, move buttons on every screen. */
+.exam-category-controls{display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.exam-category-control{display:inline-flex;align-items:center;justify-content:center;width:30px;height:36px;border:1px solid #e2e8f0;border-radius:7px;background:#fff;color:#475569;font:inherit;cursor:pointer;}
+.exam-category-control:hover{background:#eff6ff;border-color:#93c5fd;}
+.exam-category-control:focus-visible{outline:2px solid #2563eb;outline-offset:2px;}
+.exam-category-control:disabled{opacity:.3;cursor:default;}
+.exam-category-grip{cursor:grab;font-size:1.3rem;user-select:none;}
+.exam-category-grip:active{cursor:grabbing;}
+#examCategoryRows .exam-category-dragging{opacity:.45;}
+#examCategoryRows .exam-drop-before>td{box-shadow:inset 0 3px #2563eb;background:#eff6ff;}
+#examCategoryRows .exam-drop-after>td{box-shadow:inset 0 -3px #2563eb;background:#eff6ff;}
+#examCategoryManager[aria-busy="true"] .table-wrap{opacity:.6;}
+.exam-category-title{min-width:180px;}
+.exam-category-status{min-height:1.5em;margin-top:12px;color:#475569;font-size:.83rem;}
+@media(pointer:coarse){.exam-category-control{width:36px;height:44px;}}
+
 /* WYSIWYG EDITOR */
 .editor-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px 10px;
                 background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px 8px 0 0;border-bottom:none;}
@@ -2692,12 +2708,17 @@ async function renderExamAdmin(tab = 'apps') {
       <button class="flt-chip ${tab === 'apps' ? 'on' : ''}" onclick="renderExamAdmin('apps')">แอปข้อสอบ (${data.apps.length})</button>
       <button class="flt-chip ${tab === 'categories' ? 'on' : ''}" onclick="renderExamAdmin('categories')">หมวดวิชา (${data.categories.length})</button>
     </div>
-    ${tab === 'categories' ? `<div class="card">
+    ${tab === 'categories' ? `<div class="card" id="examCategoryManager">
       <div class="card-title">จัดการหมวดวิชา <button class="btn btn-primary btn-sm" onclick="openExamCategory(null)">+ เพิ่มวิชา</button></div>
+      <p id="examCategoryOrderHint" style="color:#475569;margin-bottom:8px;">จับปุ่ม ⠿ แล้วลากขึ้น–ลงเพื่อจัดลำดับ หรือกดปุ่ม ↑ ↓ ระบบบันทึกให้อัตโนมัติ</p>
       <p style="color:#64748b;margin-bottom:16px;">เปลี่ยนชื่อวิชาได้โดยสิทธิ์ปลดล็อกเดิมยังอยู่ ลบได้เมื่อไม่มีแอปในวิชานั้น</p>
-      <div class="table-wrap"><table><thead><tr><th>วิชา</th><th>แอปทั้งหมด</th><th>ลำดับ</th><th>จัดการ</th></tr></thead><tbody>
-      ${data.categories.map(c => `<tr><td><a href="/exam-apps/category/${Number(c.id)}" target="_blank" rel="noopener">${e(c.icon)} ${e(c.name)}</a><p>${e(c.description)}</p></td><td>${data.apps.filter(a => Number(a.category_id) === Number(c.id)).length}</td><td>${Number(c.sort_order)}</td><td><button class="btn btn-outline btn-sm" onclick="openExamCategory(${Number(c.id)})">แก้ไข</button> <button class="btn btn-danger btn-sm" onclick="deleteExamItem('categories',${Number(c.id)})">ลบ</button></td></tr>`).join('') || '<tr><td colspan="4">ยังไม่มีวิชา กด “เพิ่มวิชา” เพื่อเริ่มต้น</td></tr>'}
-      </tbody></table></div></div>` : `<div class="card">
+      <div class="table-wrap"><table><thead><tr><th>จัดลำดับ</th><th>วิชา</th><th>แอปทั้งหมด</th><th>ลำดับ</th><th>จัดการ</th></tr></thead><tbody id="examCategoryRows">
+      ${data.categories.map((c,index) => `<tr data-category-id="${Number(c.id)}"><td><div class="exam-category-controls">
+        <button type="button" class="exam-category-control exam-category-grip" draggable="true" data-category-grip aria-label="ลากเพื่อจัดลำดับวิชา${e(c.name)}" aria-describedby="examCategoryOrderHint" title="ลากขึ้น–ลง หรือใช้ปุ่มลูกศรบนคีย์บอร์ด">⠿</button>
+        <button type="button" class="exam-category-control" data-category-move="-1" aria-label="เลื่อนวิชา${e(c.name)}ขึ้น" title="เลื่อนขึ้น" ${index === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="exam-category-control" data-category-move="1" aria-label="เลื่อนวิชา${e(c.name)}ลง" title="เลื่อนลง" ${index === data.categories.length - 1 ? 'disabled' : ''}>↓</button>
+      </div></td><td class="exam-category-title"><a href="/exam-apps/category/${Number(c.id)}" target="_blank" rel="noopener">${e(c.icon)} ${e(c.name)}</a><p>${e(c.description)}</p></td><td>${data.apps.filter(a => Number(a.category_id) === Number(c.id)).length}</td><td>${Number(c.sort_order)}</td><td style="white-space:nowrap;"><button class="btn btn-outline btn-sm" onclick="openExamCategory(${Number(c.id)})">แก้ไข</button> <button class="btn btn-danger btn-sm" onclick="deleteExamItem('categories',${Number(c.id)})">ลบ</button></td></tr>`).join('') || '<tr><td colspan="5">ยังไม่มีวิชา กด “เพิ่มวิชา” เพื่อเริ่มต้น</td></tr>'}
+      </tbody></table></div><p id="examCategoryOrderStatus" class="exam-category-status" role="status" aria-live="polite"></p></div>` : `<div class="card">
       <div class="card-title">รายการแอปข้อสอบ <button class="btn btn-primary btn-sm" onclick="openExamApp(null)" ${!data.categories.length ? 'disabled' : ''}>+ เพิ่มแอปข้อสอบ</button></div>
       ${!data.categories.length ? '<div class="alert alert-info">เริ่มจากแท็บ “หมวดวิชา” เพื่อเพิ่มวิชาก่อนลงแอปข้อสอบ</div>' : ''}
       <div class="flt-bar"><input class="form-input" style="flex:1;min-width:160px;" type="search" id="examAdminSearch" placeholder="ค้นหาข้อสอบ..." oninput="filterExamAdmin()" aria-label="ค้นหาข้อสอบ">
@@ -2707,6 +2728,101 @@ async function renderExamAdmin(tab = 'apps') {
       <p id="examAdminCount" style="margin-top:12px;color:#64748b;"></p>
     </div>`}`;
   if (tab === 'apps') filterExamAdmin();
+  else bindExamCategoryOrdering();
+}
+function bindExamCategoryOrdering() {
+  const root = document.getElementById('examCategoryManager'), list = document.getElementById('examCategoryRows');
+  let draggedId = null;
+  const clearTargets = () => list.querySelectorAll('.exam-drop-before,.exam-drop-after').forEach(row => row.classList.remove('exam-drop-before','exam-drop-after'));
+  const clearDrag = () => {
+    clearTargets();
+    list.querySelectorAll('.exam-category-dragging').forEach(row => row.classList.remove('exam-category-dragging'));
+    draggedId = null;
+  };
+  const move = (row,step) => {
+    const order = window._examAdmin.categories.map(c => Number(c.id)), id = Number(row.dataset.categoryId);
+    const index = order.indexOf(id), next = index + step;
+    if (index < 0 || next < 0 || next >= order.length) return;
+    [order[index],order[next]] = [order[next],order[index]];
+    saveExamCategoryOrder(order,id,root);
+  };
+  list.addEventListener('click',event => {
+    const button = event.target.closest('[data-category-move]');
+    if (button && !button.disabled && !root.dataset.saving) move(button.closest('[data-category-id]'),Number(button.dataset.categoryMove));
+  });
+  list.addEventListener('keydown',event => {
+    if (!event.target.closest('[data-category-grip]') || !['ArrowUp','ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    if (!root.dataset.saving) move(event.target.closest('[data-category-id]'),event.key === 'ArrowUp' ? -1 : 1);
+  });
+  list.addEventListener('dragstart',event => {
+    const handle = event.target.closest('[data-category-grip]');
+    if (!handle || root.dataset.saving) { event.preventDefault(); return; }
+    const row = handle.closest('[data-category-id]');
+    draggedId = Number(row.dataset.categoryId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain',String(draggedId));
+    event.dataTransfer.setDragImage(row,20,20);
+    row.classList.add('exam-category-dragging');
+  });
+  list.addEventListener('dragover',event => {
+    const row = event.target.closest('[data-category-id]');
+    if (draggedId === null || root.dataset.saving || !row) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    clearTargets();
+    if (Number(row.dataset.categoryId) === draggedId) return;
+    const bounds = row.getBoundingClientRect();
+    row.classList.add(event.clientY < bounds.top + bounds.height / 2 ? 'exam-drop-before' : 'exam-drop-after');
+  });
+  list.addEventListener('dragleave',event => {
+    if (!list.contains(event.relatedTarget)) clearTargets();
+  });
+  list.addEventListener('drop',event => {
+    const row = event.target.closest('[data-category-id]');
+    if (draggedId === null || root.dataset.saving || !row) return;
+    event.preventDefault();
+    const id = draggedId, target = Number(row.dataset.categoryId), bounds = row.getBoundingClientRect();
+    const after = event.clientY >= bounds.top + bounds.height / 2;
+    clearDrag();
+    if (id === target) return;
+    const order = window._examAdmin.categories.map(c => Number(c.id)).filter(value => value !== id);
+    order.splice(order.indexOf(target) + (after ? 1 : 0),0,id);
+    saveExamCategoryOrder(order,id,root);
+  });
+  list.addEventListener('dragend',clearDrag);
+}
+async function saveExamCategoryOrder(order,focusId,root) {
+  if (root.dataset.saving) return;
+  if (order.every((id,index) => id === Number(window._examAdmin.categories[index]?.id))) return;
+  root.dataset.saving = 'true';
+  root.setAttribute('aria-busy','true');
+  root.inert = true;
+  const status = root.querySelector('#examCategoryOrderStatus');
+  status.textContent = 'กำลังบันทึกลำดับวิชา...';
+  const res = await api.put('/exam-apps/categories/reorder',{ids:order});
+  if (!root.isConnected) return;
+  root.inert = false;
+  root.removeAttribute('aria-busy');
+  delete root.dataset.saving;
+  if (res.error) {
+    status.textContent = '❌ ' + res.error + ' · ยังไม่ได้เปลี่ยนลำดับ';
+    root.querySelector(`[data-category-id="${focusId}"] [data-category-grip]`)?.focus({preventScroll:true});
+    return;
+  }
+  const categories = window._examAdmin.categories;
+  window._examAdmin.categories = order.map((id,index) => ({...categories.find(c => Number(c.id) === id),sort_order:index+1}));
+  // Reuse the rows to retain scroll/focus and avoid a second network request.
+  order.forEach((id,index) => {
+    const row = root.querySelector(`[data-category-id="${id}"]`);
+    row.children[3].textContent = index + 1;
+    row.querySelector('[data-category-move="-1"]').disabled = index === 0;
+    row.querySelector('[data-category-move="1"]').disabled = index === order.length - 1;
+    root.querySelector('#examCategoryRows').append(row);
+  });
+  root.querySelector(`[data-category-id="${focusId}"] [data-category-grip]`)?.focus({preventScroll:true});
+  status.textContent = '✅ บันทึกลำดับวิชาแล้ว';
+  toast('✅ บันทึกลำดับวิชาแล้ว');
 }
 function filterExamAdmin() {
   const q = document.getElementById('examAdminSearch').value.trim().toLocaleLowerCase('th');
