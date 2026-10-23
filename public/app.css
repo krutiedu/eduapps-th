@@ -616,20 +616,26 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
 /* เต็มจอจำลอง — ใช้ได้ทุกที่รวม iOS Safari standalone ที่ Fullscreen API ใช้ไม่ได้ */
+#viewerBox{position:relative;}
+#viewerFrame{min-height:0;}
+.viewer-toolbar-hide{display:none;background:#2c4a7c;color:#fff;border:0;padding:6px 10px;border-radius:8px;font:700 .8rem 'Sarabun',sans-serif;cursor:pointer;}
+.viewer-toolbar-show{display:none;position:absolute;z-index:3;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));background:rgba(21,34,60,.8);color:#fff;border:1px solid #ffffff66;border-radius:9px;padding:8px 11px;font:700 .8rem 'Sarabun',sans-serif;cursor:pointer;box-shadow:0 2px 8px #0003;}
+.viewer-toolbar-show:hover,.viewer-toolbar-show:focus-visible{background:#15223c;}
 #appViewer.vb-full{padding:0!important;background:#000!important;}
 #appViewer.vb-full #viewerBox{
   max-width:none!important;width:100%!important;height:100%!important;
   height:100dvh!important;border-radius:0!important;
 }
 /* เผื่อ notch/home indicator บน iPad/iPhone standalone */
-#appViewer.vb-full #viewerBox > div:first-child{
+#appViewer.vb-full #viewerToolbar{
+  position:absolute;inset:0 0 auto;z-index:2;
   padding-top:calc(9px + env(safe-area-inset-top))!important;
   padding-left:calc(12px + env(safe-area-inset-left))!important;
   padding-right:calc(12px + env(safe-area-inset-right))!important;
 }
-#appViewer.vb-full #viewerFrame{
-  padding-bottom:env(safe-area-inset-bottom);background:#fff;
-}
+#appViewer.vb-full .viewer-toolbar-hide{display:block;}
+#appViewer.vb-full.vb-controls-hidden #viewerToolbar{display:none!important;}
+#appViewer.vb-full.vb-controls-hidden .viewer-toolbar-show{display:block;}
 
 /* Exam library shares the site's paper, ink and gold palette. */
 .exam-page{padding-bottom:44px;}

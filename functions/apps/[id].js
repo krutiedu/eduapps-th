@@ -174,14 +174,15 @@ ${navHTML(BASE)}
 ${/* ตัวเปิดแอป — โครงเดียวกับในเว็บหลัก เพื่อให้หน้านี้ใช้งานได้จบในตัว */''}
 <div class="viewer" id="viewer" hidden>
   <div class="viewer-box">
-    <div class="viewer-bar">
+    <div class="viewer-bar" id="viewerToolbar">
       <span class="viewer-name">${esc(app.icon || '🎮')} ${title}</span>
       <span class="viewer-btns">
-        <button onclick="fsApp()" title="ขยายเต็มจอ">⛶ เต็มจอ</button>
-        <button onclick="newTab()" title="เปิดแท็บใหม่">↗</button>
-        <button class="x" onclick="closeApp()" title="ปิด">✕</button>
+        <button class="viewer-toolbar-hide" onclick="toggleViewerToolbar()" title="ซ่อนแถบควบคุม" aria-label="ซ่อนแถบควบคุม" aria-controls="viewerToolbar">⌃</button>
+        <button id="fsBtn" onclick="fsApp()" title="ขยายเต็มจอ">⛶ เต็มจอ</button>
+        <button class="x" onclick="closeApp()" title="ปิด" aria-label="ปิด">✕</button>
       </span>
     </div>
+    <button id="viewerToolbarShow" class="viewer-toolbar-show" onclick="toggleViewerToolbar()" title="แสดงแถบควบคุม" aria-label="แสดงแถบควบคุม" aria-controls="viewerToolbar" aria-expanded="false">☰ แถบควบคุม</button>
     <iframe id="viewerFrame" allow="fullscreen; autoplay; clipboard-write; gamepad" allowfullscreen></iframe>
   </div>
 </div>
@@ -194,10 +195,8 @@ ${trackHTML('/apps/' + app.id)}
   ${/* url ของแอปฟรีเป็นข้อมูลสาธารณะอยู่แล้ว (GET /api/apps ส่งให้ทุกคน)
         ส่วนแอปที่ล็อกจะไม่มีค่านี้ในหน้าเว็บเด็ดขาด ต้องแลกด้วยรหัสผ่าน API เท่านั้น */''}
   var URL_FREE = ${isLocked ? 'null' : JSON.stringify(app.url || '')};
-  var url = null;
-
   function show(u) {
-    url = u;
+    setFullscreen(false);
     document.getElementById('viewerFrame').src = u;
     document.getElementById('viewer').hidden = false;
     document.body.style.overflow = 'hidden';
@@ -205,20 +204,56 @@ ${trackHTML('/apps/' + app.id)}
   window.closeApp = function () {
     // ต้องออกจากโหมดเต็มจอก่อน ไม่งั้นปิดหน้าต่างแอปแล้วเบราว์เซอร์ยังค้างเต็มจอ
     // ผู้ใช้ต้องกด Esc เองอีกรอบ
-    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
-    var box = document.querySelector('.viewer-box');
-    if (box) box.classList.remove('fs');
+    exitFullscreen();
+    setFullscreen(false);
     document.getElementById('viewer').hidden = true;
     document.getElementById('viewerFrame').src = 'about:blank';
     document.body.style.overflow = '';
   };
-  window.newTab = function () { if (url) window.open(url, '_blank', 'noopener'); };
+  function setFullscreen(full) {
+    var box = document.querySelector('.viewer-box');
+    box.classList.toggle('fs', full);
+    box.classList.toggle('controls-hidden', full);
+    var btn = document.getElementById('fsBtn');
+    btn.textContent = full ? '🗗 ย่อ' : '⛶ เต็มจอ';
+    btn.title = full ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ';
+  }
+  function exitFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) return;
+    try {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      var result = exit && exit.call(document);
+      if (result && result.catch) result.catch(function () {});
+    } catch (e) {}
+  }
+  window.toggleViewerToolbar = function () {
+    var box = document.querySelector('.viewer-box');
+    if (!box.classList.contains('fs')) return;
+    var hidden = box.classList.toggle('controls-hidden');
+    document.getElementById(hidden ? 'viewerToolbarShow' : 'fsBtn').focus({preventScroll:true});
+  };
   window.fsApp = function () {
     var b = document.querySelector('.viewer-box');
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (b.requestFullscreen) b.requestFullscreen();
-    else b.classList.toggle('fs');      // iOS Safari ไม่มี Fullscreen API — ใช้ CSS แทน
+    if (b.classList.contains('fs')) {
+      setFullscreen(false);
+      document.getElementById('fsBtn').focus({preventScroll:true});
+      exitFullscreen();
+    } else {
+      setFullscreen(true);
+      document.getElementById('viewerToolbarShow').focus({preventScroll:true});
+      // CSS fullscreen remains available when native fullscreen is unsupported or denied.
+      var request = b.requestFullscreen || b.webkitRequestFullscreen || b.msRequestFullscreen;
+      try {
+        var result = request && request.call(b);
+        if (result && result.catch) result.catch(function () {});
+      } catch (e) {}
+    }
   };
+  ['fullscreenchange','webkitfullscreenchange'].forEach(function (event) {
+    document.addEventListener(event, function () {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) setFullscreen(false);
+    });
+  });
 
   window.openApp = function () {
     if (!LOCKED) return show(URL_FREE);
@@ -265,7 +300,10 @@ ${trackHTML('/apps/' + app.id)}
   };
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !document.getElementById('viewer').hidden) closeApp();
+    if (e.key !== 'Escape' || document.getElementById('viewer').hidden) return;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    if (document.querySelector('.viewer-box').classList.contains('fs')) window.fsApp();
+    else closeApp();
   });
 })();
 <\/script>
@@ -365,9 +403,9 @@ h1,h2{font-family:'Pridi',serif;font-weight:600;line-height:1.4;}
 .viewer{position:fixed;inset:0;z-index:9999;background:rgba(13,21,38,.9);
   display:flex;align-items:center;justify-content:center;padding:12px;}
 .viewer[hidden]{display:none;}
-.viewer-box{display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;
+.viewer-box{position:relative;display:flex;flex-direction:column;width:100%;max-width:460px;height:88vh;background:#fff;
   border-radius:15px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);}
-.viewer-box.fs{position:fixed;inset:0;max-width:none;width:100vw;height:100vh;border-radius:0;}
+.viewer-box.fs{position:fixed;inset:0;max-width:none;width:100%;height:100vh;height:100dvh;border-radius:0;}
 .viewer-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
   padding:9px 12px;background:var(--ink);flex-shrink:0;}
 .viewer-name{color:#fff;font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -375,7 +413,14 @@ h1,h2{font-family:'Pridi',serif;font-weight:600;line-height:1.4;}
 .viewer-btns button{background:var(--gold);color:var(--ink);border:none;padding:6px 11px;border-radius:8px;
   font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;}
 .viewer-btns button.x{background:#dc2626;color:#fff;}
-#viewerFrame{flex:1;width:100%;border:none;background:#fff;}
+.viewer-toolbar-hide,.viewer-toolbar-show{display:none;}
+.viewer-box.fs .viewer-bar{position:absolute;inset:0 0 auto;z-index:2;padding-top:calc(9px + env(safe-area-inset-top));padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right));}
+.viewer-box.fs .viewer-toolbar-hide{display:block;}
+.viewer-box.fs.controls-hidden .viewer-bar{display:none;}
+.viewer-box.fs.controls-hidden .viewer-toolbar-show{display:block;}
+.viewer-toolbar-show{position:absolute;z-index:3;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));background:rgba(21,34,60,.8);color:#fff;border:1px solid #ffffff66;border-radius:9px;padding:8px 11px;font:700 .8rem 'Sarabun',sans-serif;cursor:pointer;box-shadow:0 2px 8px #0003;}
+.viewer-toolbar-show:hover,.viewer-toolbar-show:focus-visible{background:#15223c;}
+#viewerFrame{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 
 /* ช่องใส่รหัส */
 .unlock{background:#fff;border:1.5px solid var(--gold);border-radius:15px;padding:18px 20px;margin-bottom:30px;}

@@ -55,7 +55,7 @@ export function examDetailHTML(app, unlocked = false) {
       <p class="ph-sub">วิชา <a href="${categoryURL(app.category_id)}">${e(app.category)}</a></p></div>
     ${examWebURL(app.preview_image) ? `<img class="exam-detail-cover" src="${e(app.preview_image)}" alt="ตัวอย่าง ${e(app.title)}">` : ''}
     <p class="exam-description">${e(app.description || 'เปิดเว็บแอปข้อสอบเพื่อฝึกฝนและทบทวนความรู้')}</p>
-    ${app.locked && !unlocked ? unlockForm({app}) : `<div class="exam-launch"><button type="button" class="btn btn-primary" id="examLaunch">🚀 เปิดแอปข้อสอบ</button><a class="btn btn-outline" id="examExternal" ${!app.locked && examWebURL(app.url) ? `href="${e(app.url)}"` : ''} target="_blank" rel="noopener noreferrer">เปิดในแท็บใหม่ ↗</a></div>`}
+    ${app.locked && !unlocked ? unlockForm({app}) : `<div class="exam-launch"><button type="button" class="btn btn-primary" id="examLaunch">🚀 เปิดแอปข้อสอบ</button></div>`}
     <p class="exam-back"><a href="${categoryURL(app.category_id)}">ดูข้อสอบวิชา${e(app.category)}ทั้งหมด →</a></p>
   </div>`;
 }

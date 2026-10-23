@@ -4,7 +4,16 @@ const ids = value => {
   catch { return []; }
 };
 const positiveId = value => /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
-const webURL = value => { try { return ['http:', 'https:'].includes(new URL(value).protocol); } catch { return false; } };
+const webURL = value => {
+  if (typeof value !== 'string') return '';
+  const raw = value.trim();
+  if (!raw || (/^[/?#]/.test(raw) && !raw.startsWith('//'))) return '';
+  const hostWithPort = /^(?:localhost|[^/?#:\s]+\.[^/?#:\s]+):\d+(?:[/?#]|$)/i.test(raw);
+  const candidate = raw.startsWith('//') ? 'https:' + raw
+    : /^[a-z][a-z\d+.-]*:/i.test(raw) && !hostWithPort ? raw : 'https://' + raw;
+  try { const url = new URL(candidate); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; }
+  catch { return ''; }
+};
 export const EXAM_PUBLIC_COLUMNS = `a.id,a.category_id,a.title,a.icon,a.description,a.preview_image,a.locked,a.sort_order,a.created_at,a.view_count,
   c.name AS category,c.icon AS category_icon,CASE WHEN a.locked=0 THEN a.url ELSE NULL END AS url`;
 
@@ -97,10 +106,11 @@ export async function examApps(req, env, segs, method, {ok, err, okCache}) {
   if ((!id && method === 'POST') || (positiveId(id) && method === 'PUT' && segs.length === 2)) {
     const b = await req.json();
     if (typeof b.title !== 'string' || !b.title.trim()) return err('กรุณาใส่ชื่อแอปข้อสอบ');
-    if (!webURL(b.url)) return err('URL แอปต้องขึ้นต้นด้วย https:// หรือ http://');
-    if (b.preview_image && !webURL(b.preview_image)) return err('URL รูปตัวอย่างไม่ถูกต้อง');
+    const appURL = webURL(b.url), previewURL = webURL(b.preview_image || '');
+    if (!appURL) return err('กรุณาใส่ URL แอปที่ถูกต้อง เช่น example.com');
+    if (b.preview_image && !previewURL) return err('URL รูปตัวอย่างไม่ถูกต้อง');
     if (!positiveId(b.category_id) || !await db.prepare('SELECT id FROM exam_categories WHERE id=?').bind(b.category_id).first()) return err('กรุณาเลือกหมวดวิชาที่มีอยู่');
-    const values = [Number(b.category_id),b.title.trim(),String(b.icon || '📝'),String(b.description || ''),b.url.trim(),String(b.preview_image || ''),b.locked !== false && b.locked !== 0 ? 1 : 0,String(b.lock_code || '').trim(),b.visible !== false && b.visible !== 0 ? 1 : 0,parseInt(b.sort_order) || 0];
+    const values = [Number(b.category_id),b.title.trim(),String(b.icon || '📝'),String(b.description || ''),appURL,previewURL,b.locked !== false && b.locked !== 0 ? 1 : 0,String(b.lock_code || '').trim(),b.visible !== false && b.visible !== 0 ? 1 : 0,parseInt(b.sort_order) || 0];
     if (id) {
       const result = await db.prepare('UPDATE exam_apps SET category_id=?,title=?,icon=?,description=?,url=?,preview_image=?,locked=?,lock_code=?,visible=?,sort_order=? WHERE id=?').bind(...values,id).run();
       if (!result.meta.changes) return err('ไม่พบแอปข้อสอบ', 404);

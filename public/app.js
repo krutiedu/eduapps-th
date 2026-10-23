@@ -663,7 +663,7 @@ function calcPageSize() {
 }
 
 // Keep codes in this tab and recheck them on navigation; do not persist unlocked URLs.
-const examUI = () => import('/exam-pages.mjs?v=05d0718a');
+const examUI = () => import('/exam-pages.mjs?v=06a20c9a');
 let _examGrants = new Map();
 function examSavedCodes() {
   try { const codes = JSON.parse(sessionStorage.getItem('exam_codes') || '[]'); return Array.isArray(codes) ? codes.filter(c => typeof c === 'string') : []; }
@@ -740,7 +740,6 @@ async function renderExamDetail(id) {
     app.innerHTML = ui.examDetailHTML(item,!!url);
     bindExamUnlock(draw);
     if (!url) return;
-    document.getElementById('examExternal').href = url;
     document.getElementById('examLaunch').addEventListener('click',async event => {
       const button = event.currentTarget;
       button.disabled = true;
@@ -1686,7 +1685,6 @@ function doCopyPre(pid, btn) {
 }
 
 // ── APP PLAYER ───────────────────────────────────────────
-let _viewerUrl = '';
 // mini toast — แจ้งเตือนสั้นๆ มุมล่าง
 function toast(msg) {
   let t = document.getElementById('_toast');
@@ -1724,7 +1722,7 @@ async function shareApp(id, title) {
 }
 
 function openAppViewer(url, title, icon, appId) {
-  _viewerUrl = url;
+  setViewerFullscreen(false);
   document.getElementById('viewerFrame').src = url;
   document.getElementById('viewerTitle').textContent = title || 'แอป';
   document.getElementById('viewerIcon').textContent = icon || '🎮';
@@ -1736,37 +1734,44 @@ function openAppViewer(url, title, icon, appId) {
 function closeAppViewer() {
   const av = document.getElementById('appViewer');
   if (document.fullscreenElement || document.webkitFullscreenElement) {
-    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); } catch {}
   }
-  av.classList.remove('vb-full');
-  const btn = document.getElementById('fsBtn');
-  if (btn) btn.innerHTML = '⛶ เต็มจอ';
+  setViewerFullscreen(false);
   av.style.display = 'none';
   document.getElementById('viewerFrame').src = 'about:blank';
   document.body.style.overflow = '';
 }
-function openInNewTab() {
-  if (_viewerUrl) window.open(_viewerUrl, '_blank');
+function setViewerFullscreen(full) {
+  const av = document.getElementById('appViewer'), btn = document.getElementById('fsBtn');
+  av.classList.toggle('vb-full',full);
+  av.classList.toggle('vb-controls-hidden',full);
+  btn.textContent = full ? '🗗 ย่อ' : '⛶ เต็มจอ';
+  btn.title = full ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ';
+}
+function toggleViewerToolbar() {
+  const av = document.getElementById('appViewer');
+  if (!av.classList.contains('vb-full')) return;
+  const hidden = av.classList.toggle('vb-controls-hidden');
+  document.getElementById(hidden ? 'viewerToolbarShow' : 'fsBtn').focus({preventScroll:true});
 }
 function fullscreenApp() {
   const av  = document.getElementById('appViewer');
   const box = document.getElementById('viewerBox');
-  const btn = document.getElementById('fsBtn');
   const isFull = av.classList.contains('vb-full');
 
   if (!isFull) {
     // ขยายเต็มจอ — CSS fullscreen ทำงานได้ทุกที่ (รวม iOS standalone)
-    av.classList.add('vb-full');
-    if (btn) btn.innerHTML = '🗗 ย่อ';
+    setViewerFullscreen(true);
+    document.getElementById('viewerToolbarShow').focus({preventScroll:true});
     // เสริม: ลอง native Fullscreen API ด้วย (Android/desktop ได้ขอบจอเต็มจริง; iOS จะ no-op เฉยๆ)
     const req = box.requestFullscreen || box.webkitRequestFullscreen || box.msRequestFullscreen;
-    try { req?.call(box); } catch (_) {}
+    try { req?.call(box)?.catch?.(() => {}); } catch (_) {}
   } else {
     // ย่อกลับ
-    av.classList.remove('vb-full');
-    if (btn) btn.innerHTML = '⛶ เต็มจอ';
+    setViewerFullscreen(false);
+    document.getElementById('fsBtn').focus({preventScroll:true});
     if (document.fullscreenElement || document.webkitFullscreenElement) {
-      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); } catch {}
     }
   }
 }
@@ -1774,9 +1779,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('promptModal')?.style.display === 'flex') { closePromptModal(); return; }
   if (e.key === 'Escape' && document.getElementById('appViewer').style.display === 'flex') {
     // ถ้าเต็มจอ (CSS) อยู่ → ย่อก่อน; กด Escape อีกครั้งค่อยปิด
-    if (document.getElementById('appViewer').classList.contains('vb-full') && !document.fullscreenElement) {
+    if (document.getElementById('appViewer').classList.contains('vb-full') && !document.fullscreenElement && !document.webkitFullscreenElement) {
       fullscreenApp();
-    } else if (!document.fullscreenElement) {
+    } else if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       closeAppViewer();
     }
   }
@@ -1785,8 +1790,7 @@ document.addEventListener('keydown', e => {
 ['fullscreenchange','webkitfullscreenchange'].forEach(ev =>
   document.addEventListener(ev, () => {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      const av = document.getElementById('appViewer'), btn = document.getElementById('fsBtn');
-      if (av.classList.contains('vb-full')) { av.classList.remove('vb-full'); if (btn) btn.innerHTML = '⛶ เต็มจอ'; }
+      if (document.getElementById('appViewer').classList.contains('vb-full')) setViewerFullscreen(false);
     }
   })
 );
@@ -2049,7 +2053,7 @@ window.doCopyPre = doCopyPre;
 window.openAppViewer = openAppViewer;
 window.shareApp = shareApp;
 window.closeAppViewer = closeAppViewer;
-window.openInNewTab = openInNewTab;
+window.toggleViewerToolbar = toggleViewerToolbar;
 window.fullscreenApp = fullscreenApp;
 window.renderAbout = renderAbout;
 window.renderBuy = renderBuy;
