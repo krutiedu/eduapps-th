@@ -160,6 +160,54 @@ const go = path => {
 };
 
 let _focusSearch = false;
+// Search state belongs to user edits, never to saved credentials or form restoration.
+const _catalogSearches = new WeakMap();
+function bindCatalogSearch(input, {value = '', onInput, onSubmit} = {}) {
+  let query = String(value), editing = false, composing = false, editTimer;
+  const restore = () => { if (input.value !== query) input.value = query; };
+  const armEdit = event => {
+    if (!event.isTrusted) return;
+    editing = true;
+    clearTimeout(editTimer);
+    editTimer = setTimeout(() => { editing = false; }, 0);
+  };
+  input.addEventListener('beforeinput', armEdit);
+  input.addEventListener('keydown', event => {
+    if (event.key.length === 1 || ['Backspace','Delete'].includes(event.key)) armEdit(event);
+  });
+  for (const type of ['paste','cut','drop']) input.addEventListener(type, armEdit);
+  input.addEventListener('compositionstart', event => { if (event.isTrusted) composing = true; });
+  input.addEventListener('compositionend', () => { composing = false; });
+  input.addEventListener('input', event => {
+    if (!event.isTrusted || (input.value && !editing && !composing) || input.matches(':autofill')) {
+      restore();
+      return;
+    }
+    editing = false;
+    query = input.value;
+    onInput?.(query);
+  });
+  for (const type of ['focus','blur','change']) input.addEventListener(type, restore);
+  input.form.addEventListener('submit', event => {
+    event.preventDefault();
+    restore();
+    if (!composing) onSubmit?.(query);
+  });
+  // Some browsers/extensions assign .value without any event, even after hydration.
+  const check = setInterval(() => {
+    if (!input.isConnected) {
+      clearInterval(check);
+      clearTimeout(editTimer);
+    } else if (!composing) restore();
+  }, 200);
+  const controller = {
+    get value() { restore(); return query; },
+    setValue(value) { query = String(value); restore(); },
+  };
+  _catalogSearches.set(input, controller);
+  restore();
+  return controller;
+}
 function goSearch() {
   const h = location.pathname.replace(/\/+$/, '') || '/';
   if (h.startsWith('/exam-apps')) {
@@ -315,11 +363,10 @@ async function renderBlog(q, cat, page) {
     <div class="page-head library-head rv">
       <h1>บทความทั้งหมด</h1>
       <div class="ph-sub">เทคนิคการสอน ข่าวการศึกษา และเครื่องมือสำหรับครู</div>
-      <div class="search-row header-search">
-      <input class="search-in" id="blogSearch" placeholder="🔍 ค้นหาบทความ..." value="${esc(blogQ)}"
-        onkeydown="if(event.key==='Enter')renderBlog(this.value,undefined,1)">
-      <button class="btn btn-primary" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
-      </div>
+      <form class="search-row header-search" role="search" autocomplete="off">
+      <input type="search" class="search-in" id="blogSearch" name="article-query" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="ค้นหาบทความ" placeholder="🔍 ค้นหาบทความ..." value="${esc(blogQ)}">
+      <button class="btn btn-primary" type="submit">ค้นหา</button>
+      </form>
     </div>
     <div class="blog-bar rv2">
       <div class="cat-strip" id="blogCats"></div>
@@ -351,6 +398,7 @@ async function renderBlog(q, cat, page) {
     </div>` : ''}
   </div>`;
   delete app.dataset.serverRendered;
+  bindCatalogSearch(document.getElementById('blogSearch'), {value:blogQ, onSubmit:query => renderBlog(query,undefined,1)});
   loadBlogCats();
   activateAds();
   if (_focusSearch) { _focusSearch = false; document.getElementById('blogSearch')?.focus(); }
@@ -720,13 +768,9 @@ async function renderExamApps(categoryId) {
   delete app.dataset.serverRendered;
   app.innerHTML = ui.examListHTML(data.apps,cats.categories,category,new Set(_examGrants.keys()),_examView);
   setPageMeta({title:category ? 'ข้อสอบวิชา' + category.name : 'แอปข้อสอบ',desc:category?.description || 'รวมเว็บแอปข้อสอบ แยกตามวิชา',url:SITE + path});
-  const search = document.getElementById('examSearch');
-  // Keep the query separate from values restored or filled by password managers.
-  let query = '';
-  search.value = query;
+  const search = bindCatalogSearch(document.getElementById('examSearch'), {onInput:() => draw()});
   const draw = () => {
-    search.value = query;
-    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,query,new Set(_examGrants.keys()),_examView);
+    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,search.value,new Set(_examGrants.keys()),_examView);
   };
   const viewButtons = app.querySelectorAll('[data-exam-view]');
   viewButtons.forEach(button => button.addEventListener('click',() => {
@@ -739,17 +783,6 @@ async function renderExamApps(categoryId) {
     });
     draw();
   }));
-  search.form.addEventListener('submit',event => event.preventDefault());
-  search.addEventListener('focus',() => { search.value = query; });
-  search.addEventListener('input',event => {
-    // Typing, paste, IME and undo have an inputType; autofill may send a plain Event.
-    if (search.matches(':autofill') || (search.value && !event.inputType)) {
-      search.value = query;
-      return;
-    }
-    query = search.value;
-    draw();
-  });
   bindExamUnlock(draw);
 }
 async function renderExamDetail(id) {
@@ -839,10 +872,9 @@ async function renderApps(openId) {
     <div class="page-head library-head${hasLocked ? ' library-head-unlock' : ''} rv">
       <div class="library-heading"><h1>คลังแอปทั้งหมด</h1>${redeemHTML}</div>
       <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
-      <div class="search-row header-search">
-        <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
-          oninput="filterApps(this.value)">
-      </div>
+      <form class="search-row header-search" role="search" autocomplete="off">
+        <input type="search" class="search-in" id="appSearch" name="teaching-app-query" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="ค้นหาแอป" placeholder="🔍 ค้นหาแอป...">
+      </form>
     </div>
     <div class="apps-toolbar">
       <div class="apps-view-controls">${viewToggleHTML}${sortHTML}</div>
@@ -852,6 +884,7 @@ async function renderApps(openId) {
     <div id="appsContent"></div>
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
+  bindCatalogSearch(document.getElementById('appSearch'), {value:_appQ, onInput:filterApps});
   drawApps();
   activateAds();
 
@@ -1101,7 +1134,7 @@ function filterApps(q) { _appQ = q; _pageGrid = _pageTable = 1; drawApps(); }
 function clearAppQ() {
   _appQ = '';
   const el = document.getElementById('appSearch');
-  if (el) el.value = '';
+  if (el) _catalogSearches.get(el)?.setValue('');
   _pageGrid = _pageTable = 1;
   drawApps();
 }
@@ -1179,9 +1212,9 @@ async function renderWorksheets() {
     <div class="page-head library-head rv">
       <h1>คลังใบงาน</h1>
       <div class="ph-sub">ใบงานพร้อมพิมพ์ใช้ในห้องเรียน — ดาวน์โหลดเป็น PDF</div>
-      <div class="search-row header-search">
-        <input class="search-in" id="wsSearch" placeholder="🔍 ค้นหาใบงาน..." oninput="filterWs(this.value)">
-      </div>
+      <form class="search-row header-search" role="search" autocomplete="off">
+        <input type="search" class="search-in" id="wsSearch" name="worksheet-query" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="ค้นหาใบงาน" placeholder="🔍 ค้นหาใบงาน...">
+      </form>
     </div>
     <div class="ws-toolbar rv">
       <div class="ws-viewtoggle">
@@ -1194,6 +1227,7 @@ async function renderWorksheets() {
     <div id="wsContent"></div>
     <div style="margin-top:24px;">${adSlot()}</div>
   </div>`;
+  bindCatalogSearch(document.getElementById('wsSearch'), {value:_wsQ, onInput:filterWs});
   drawWs();
   activateAds();
 }
@@ -1943,15 +1977,21 @@ function loadCategories() {
 
 // ── LOCK MODAL ────────────────────────────────────────────
 let _lockAppId = null, _lockTitle = '', _lockIcon = '';
+let _lockFocusTimer;
 function openLockModal(id, title, icon) {
   _lockAppId = id; _lockTitle = title; _lockIcon = icon;
   document.getElementById('lockTitle').textContent = title;
-  document.getElementById('lockInput').value = '';
+  document.getElementById('lockInputSlot').replaceChildren(document.getElementById('lockInputTemplate').content.cloneNode(true));
   document.getElementById('lockErr').style.display = 'none';
   document.getElementById('lockModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('lockInput').focus(), 100);
+  clearTimeout(_lockFocusTimer);
+  _lockFocusTimer = setTimeout(() => document.getElementById('lockInput')?.focus(), 100);
 }
-function closeLockModal() { document.getElementById('lockModal').style.display = 'none'; }
+function closeLockModal() {
+  clearTimeout(_lockFocusTimer);
+  document.getElementById('lockModal').style.display = 'none';
+  document.getElementById('lockInputSlot').replaceChildren();
+}
 async function submitLock() {
   const code = document.getElementById('lockInput').value.trim();
   if (!code) return;
@@ -1966,7 +2006,7 @@ async function submitLock() {
       openAppViewer(d.url, _lockTitle, _lockIcon, _lockAppId);
     } else {
       document.getElementById('lockErr').style.display = 'block';
-      document.getElementById('lockInput').select();
+      document.getElementById('lockInput')?.select();
     }
   } catch { document.getElementById('lockErr').style.display = 'block'; }
 }

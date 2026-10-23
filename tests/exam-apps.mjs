@@ -294,11 +294,8 @@ try {
   await page.locator('[data-exam-view="table"]').click();
   assert.equal(await page.locator('.exam-table tbody tr').count(),1);
   await page.locator('[data-exam-view="grid"]').click();
-  // Search clear buttons may send a plain Event, so an empty value is accepted.
-  await search.evaluate(input => {
-    input.value = '';
-    input.dispatchEvent(new Event('input',{bubbles:true}));
-  });
+  // Clearing through a real browser edit still resets the filter.
+  await search.fill('');
   assert.equal(await page.locator('.exam-card').count(),allExamCount);
   await page.setViewportSize({width:375,height:812});
   await search.fill('ข้อสอบภาษาไทย');

@@ -63,8 +63,8 @@ function listContent(data, settings, home) {
   const pages = Math.ceil(data.total / 9);
   return `<div class="container" style="padding-bottom:32px;">
     <div class="page-head${home ? '' : ' library-head'}"><h1>${esc(heading)}</h1><p class="ph-sub">${esc(description)}</p>
-      ${home ? '' : `<form class="search-row header-search" action="/blog" method="get">
-        <input class="search-in" name="q" aria-label="ค้นหาบทความ" placeholder="ค้นหาบทความ..." value="${esc(data.q)}">
+      ${home ? '' : `<form class="search-row header-search" role="search" autocomplete="off" action="/blog" method="get">
+        <input type="search" class="search-in" name="q" autocomplete="off" data-lpignore="true" data-1p-ignore aria-label="ค้นหาบทความ" placeholder="ค้นหาบทความ..." value="${esc(data.q)}">
         ${data.category ? `<input type="hidden" name="category" value="${esc(data.category)}">` : ''}
         <button class="btn btn-primary" type="submit">ค้นหา</button></form>`}</div>
     ${home ? `<p style="margin-bottom:24px;">เลือกอ่านบทความการศึกษา เปิดใช้แอปการสอน หรือค้นหาใบงานสำหรับห้องเรียนของคุณ</p>

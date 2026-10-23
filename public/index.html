@@ -84,21 +84,21 @@
 
 <!-- LOCK MODAL -->
 <div id="lockModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(13,21,38,.72);align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:18px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+  <form id="appUnlockForm" autocomplete="off" onsubmit="event.preventDefault();submitLock()" style="background:#fff;border-radius:18px;padding:28px 24px;max-width:360px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
     <div style="text-align:center;margin-bottom:16px;">
       <div style="font-size:2.2rem;margin-bottom:8px;">🔒</div>
       <h3 style="font-size:1.1rem;font-weight:700;color:#15223c;" id="lockTitle">แอปนี้ต้องใช้รหัสผ่าน</h3>
       <p style="font-size:.88rem;color:#6d7588;margin-top:6px;">กรอกรหัสที่ได้รับเพื่อใช้งานแอปนี้</p>
     </div>
-    <input id="lockInput" type="password" placeholder="ใส่รหัสที่นี่..." autocomplete="off"
-      style="width:100%;padding:11px 14px;border:1.5px solid #e8e1d3;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"
-      onkeydown="if(event.key==='Enter')submitLock()">
+    <template id="lockInputTemplate"><input id="lockInput" name="app-access-code" type="password" placeholder="ใส่รหัสที่นี่..." autocomplete="one-time-code" data-lpignore="true" data-1p-ignore
+      style="width:100%;padding:11px 14px;border:1.5px solid #e8e1d3;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:1rem;margin-bottom:8px;outline:none;"></template>
+    <div id="lockInputSlot"></div>
     <p id="lockErr" style="color:#dc2626;font-size:.85rem;margin-bottom:8px;display:none;">รหัสไม่ถูกต้อง กรุณาลองใหม่</p>
     <div style="display:flex;gap:8px;">
-      <button onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e8e1d3;border-radius:10px;background:#faf7f1;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
-      <button onclick="submitLock()" style="flex:2;padding:10px;background:#f0a830;color:#15223c;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
+      <button type="button" onclick="closeLockModal()" style="flex:1;padding:10px;border:1px solid #e8e1d3;border-radius:10px;background:#faf7f1;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button type="submit" style="flex:2;padding:10px;background:#f0a830;color:#15223c;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">🔓 ปลดล็อก</button>
     </div>
-  </div>
+  </form>
 </div>
 
 <!-- APP VIEWER -->
@@ -160,6 +160,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=67c89784" defer></script>
+<script src="/app.js?v=381d3b7b" defer></script>
 </body>
 </html>
