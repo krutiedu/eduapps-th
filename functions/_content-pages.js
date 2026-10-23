@@ -62,15 +62,15 @@ function listContent(data, settings, home) {
   };
   const pages = Math.ceil(data.total / 9);
   return `<div class="container" style="padding-bottom:32px;">
-    <div class="page-head"><h1>${esc(heading)}</h1><p class="ph-sub">${esc(description)}</p></div>
+    <div class="page-head${home ? '' : ' library-head'}"><h1>${esc(heading)}</h1><p class="ph-sub">${esc(description)}</p>
+      ${home ? '' : `<form class="search-row header-search" action="/blog" method="get">
+        <input class="search-in" name="q" aria-label="ค้นหาบทความ" placeholder="ค้นหาบทความ..." value="${esc(data.q)}">
+        ${data.category ? `<input type="hidden" name="category" value="${esc(data.category)}">` : ''}
+        <button class="btn btn-primary" type="submit">ค้นหา</button></form>`}</div>
     ${home ? `<p style="margin-bottom:24px;">เลือกอ่านบทความการศึกษา เปิดใช้แอปการสอน หรือค้นหาใบงานสำหรับห้องเรียนของคุณ</p>
       <p style="margin-bottom:28px;"><a class="btn btn-outline" href="/apps">คลังแอปการสอน</a>
       <a class="btn btn-outline" href="/worksheets">คลังใบงาน</a></p>
-      <h2 class="sec-title" style="margin-bottom:22px;">บทความล่าสุด</h2>`
-      : `<form class="search-row" action="/blog" method="get">
-        <input class="search-in" name="q" aria-label="ค้นหาบทความ" placeholder="ค้นหาบทความ..." value="${esc(data.q)}">
-        ${data.category ? `<input type="hidden" name="category" value="${esc(data.category)}">` : ''}
-        <button class="btn btn-primary" type="submit">ค้นหา</button></form>`}
+      <h2 class="sec-title" style="margin-bottom:22px;">บทความล่าสุด</h2>` : ''}
     ${data.items.length ? `<div class="arts-grid">${data.items.map(articleCard).join('')}</div>`
       : '<p class="empty">ไม่พบบทความ</p>'}
     ${home ? '<p style="margin-top:24px;"><a class="btn btn-outline" href="/blog">อ่านบทความทั้งหมด →</a></p>'

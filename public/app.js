@@ -312,14 +312,14 @@ async function renderBlog(q, cat, page) {
 
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
-    <div class="page-head rv">
+    <div class="page-head library-head rv">
       <h1>บทความทั้งหมด</h1>
       <div class="ph-sub">เทคนิคการสอน ข่าวการศึกษา และเครื่องมือสำหรับครู</div>
-    </div>
-    <div class="search-row rv">
+      <div class="search-row header-search">
       <input class="search-in" id="blogSearch" placeholder="🔍 ค้นหาบทความ..." value="${esc(blogQ)}"
         onkeydown="if(event.key==='Enter')renderBlog(this.value,undefined,1)">
-      <button class="btn btn-primary" style="padding:9px 18px;" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
+      <button class="btn btn-primary" onclick="renderBlog(document.getElementById('blogSearch').value,undefined,1)">ค้นหา</button>
+      </div>
     </div>
     <div class="blog-bar rv2">
       <div class="cat-strip" id="blogCats"></div>
@@ -663,8 +663,10 @@ function calcPageSize() {
 }
 
 // Keep codes in this tab and recheck them on navigation; do not persist unlocked URLs.
-const examUI = () => import('/exam-pages.mjs?v=06a20c9a');
+const examUI = () => import('/exam-pages.mjs?v=c4d8f76b');
 let _examGrants = new Map();
+let _examView = 'grid';
+try { if (localStorage.getItem('examView') === 'table') _examView = 'table'; } catch {}
 function examSavedCodes() {
   try { const codes = JSON.parse(sessionStorage.getItem('exam_codes') || '[]'); return Array.isArray(codes) ? codes.filter(c => typeof c === 'string') : []; }
   catch { return []; }
@@ -716,12 +718,23 @@ async function renderExamApps(categoryId) {
   if (categoryId && !category) return render404('ไม่พบหมวดวิชานี้');
   const app = document.getElementById('app');
   delete app.dataset.serverRendered;
-  app.innerHTML = ui.examListHTML(data.apps,cats.categories,category,new Set(_examGrants.keys()));
+  app.innerHTML = ui.examListHTML(data.apps,cats.categories,category,new Set(_examGrants.keys()),_examView);
   setPageMeta({title:category ? 'ข้อสอบวิชา' + category.name : 'แอปข้อสอบ',desc:category?.description || 'รวมเว็บแอปข้อสอบ แยกตามวิชา',url:SITE + path});
   const search = document.getElementById('examSearch');
   const draw = () => {
-    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,search.value,new Set(_examGrants.keys()));
+    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,search.value,new Set(_examGrants.keys()),_examView);
   };
+  const viewButtons = app.querySelectorAll('[data-exam-view]');
+  viewButtons.forEach(button => button.addEventListener('click',() => {
+    _examView = button.dataset.examView;
+    try { localStorage.setItem('examView',_examView); } catch {}
+    viewButtons.forEach(item => {
+      const selected = item.dataset.examView === _examView;
+      item.classList.toggle('on',selected);
+      item.setAttribute('aria-pressed',String(selected));
+    });
+    draw();
+  }));
   search.addEventListener('input',draw);
   bindExamUnlock(draw);
 }
@@ -797,38 +810,30 @@ async function renderApps(openId) {
     </div>`;
 
   const hasLocked = _allApps.some(a => a.locked);
-  const redeemHTML = hasLocked ? `
-    <div class="redeem-row rv2">
-      <span class="redeem-ico">🎟️</span>
-      <input id="redeemCode" placeholder="มีรหัสปลดล็อก? กรอกที่นี่เพื่อปลดทุกแอปในชุด"
+  const redeemHTML = hasLocked ? `<div class="library-unlock library-unlock-inline">
+    <div class="redeem-row">
+      <input id="redeemCode" placeholder="รหัสปลดล็อก" aria-label="รหัสปลดล็อกแอปการสอน"
              onkeydown="if(event.key==='Enter')redeemAll()">
       <button onclick="redeemAll()">ปลดล็อก</button>
       <span id="redeemMsg"></span>
-    </div>
-    <p style="text-align:center;font-size:.88rem;color:var(--slate);margin:-14px 0 24px;">
-      ยังไม่มีรหัส? <a href="/buy" style="color:var(--gold-deep);font-weight:700;">ดูวิธีซื้อรหัสปลดล็อก →</a>
-    </p>` : '';
+    </div></div>` : '';
 
   // ── วาด shell ครั้งเดียว — search/redeem อยู่นิ่ง ไม่ถูก re-render ──
   // (ปุ่มกรองวาดใหม่ได้ เพราะไม่ใช่ช่องกรอก จึงไม่ทำให้คีย์บอร์ดมือถือเด้งปิด)
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
-    <div class="page-head rv" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-      <div>
-        <h1>คลังแอปทั้งหมด</h1>
-        <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        ${viewToggleHTML}
-        ${sortHTML}
+    <div class="page-head library-head${hasLocked ? ' library-head-unlock' : ''} rv">
+      <div class="library-heading"><h1>คลังแอปทั้งหมด</h1>${redeemHTML}</div>
+      <div class="ph-sub">เปิดใช้ได้ทันทีในห้องเรียน — แอปฟรีและพรีเมียม</div>
+      <div class="search-row header-search">
+        <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
+          oninput="filterApps(this.value)">
       </div>
     </div>
-    <div class="search-row rv" style="margin-bottom:14px;">
-      <input class="search-in" id="appSearch" placeholder="🔍 ค้นหาแอป..."
-        oninput="filterApps(this.value)">
+    <div class="apps-toolbar">
+      <div class="apps-view-controls">${viewToggleHTML}${sortHTML}</div>
     </div>
     <div class="fx-pills rv2" id="appPills"></div>
-    ${redeemHTML}
     ${adSlot()}
     <div id="appsContent"></div>
     <div style="margin-top:24px;">${adSlot()}</div>
@@ -1157,14 +1162,14 @@ async function renderWorksheets() {
 
   app.innerHTML = `
   <div class="container" style="padding-bottom:32px;">
-    <div class="page-head rv">
+    <div class="page-head library-head rv">
       <h1>คลังใบงาน</h1>
       <div class="ph-sub">ใบงานพร้อมพิมพ์ใช้ในห้องเรียน — ดาวน์โหลดเป็น PDF</div>
-    </div>
-    <div class="ws-toolbar rv">
-      <div class="search-row" style="flex:1;min-width:200px;margin:0;">
+      <div class="search-row header-search">
         <input class="search-in" id="wsSearch" placeholder="🔍 ค้นหาใบงาน..." oninput="filterWs(this.value)">
       </div>
+    </div>
+    <div class="ws-toolbar rv">
       <div class="ws-viewtoggle">
         <button id="wsvGrid" onclick="setWsView('grid')">▦ บล็อก</button>
         <button id="wsvList" onclick="setWsView('list')">☰ ตาราง</button>
