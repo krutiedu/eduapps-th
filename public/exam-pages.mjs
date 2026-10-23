@@ -63,8 +63,8 @@ export function examListHTML(apps, categories, category, unlocked = new Set(), v
           <button type="button" class="vt-btn ${view !== 'table' ? 'on' : ''}" data-exam-view="grid" aria-pressed="${view !== 'table'}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>การ์ด</button>
           <button type="button" class="vt-btn ${view === 'table' ? 'on' : ''}" data-exam-view="table" aria-pressed="${view === 'table'}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>ตาราง</button>
         </div></div></div>
-    ${!category && categories.length ? `<nav class="exam-subjects" aria-label="หมวดวิชาข้อสอบ">${categories.map(c => `<a class="exam-subject" href="${categoryURL(c.id)}"><span>${e(c.icon)}</span><strong>${e(c.name)}</strong><small>${apps.filter(a => Number(a.category_id) === Number(c.id)).length} แอป →</small></a>`).join('')}</nav>` : ''}
     <div id="examResults">${examResultsHTML(apps,categories,category,'',unlocked,view)}</div>
+    ${!category && categories.length ? `<nav class="exam-subjects" aria-label="หมวดวิชาข้อสอบ">${categories.map(c => `<a class="exam-subject" href="${categoryURL(c.id)}"><span>${e(c.icon)}</span><strong>${e(c.name)}</strong><small>${apps.filter(a => Number(a.category_id) === Number(c.id)).length} แอป →</small></a>`).join('')}</nav>` : ''}
   </div>`;
 }
 export function examDetailHTML(app, unlocked = false) {

@@ -663,7 +663,7 @@ function calcPageSize() {
 }
 
 // Keep codes in this tab and recheck them on navigation; do not persist unlocked URLs.
-const examUI = () => import('/exam-pages.mjs?v=c4d8f76b');
+const examUI = () => import('/exam-pages.mjs?v=fa329edd');
 let _examGrants = new Map();
 let _examView = 'grid';
 try { if (localStorage.getItem('examView') === 'table') _examView = 'table'; } catch {}

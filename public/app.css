@@ -663,7 +663,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 .exam-list-meta{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;}
 .exam-list-meta .ph-sub{flex:1;min-width:180px;}
 .exam-view-toggle{margin-left:auto;flex-shrink:0;}
-.exam-subjects{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:28px;}
+.exam-subjects{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:28px 0 0;}
 .exam-subject{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;color:var(--ink);text-decoration:none;}
 .exam-subject>span{font-size:1.6rem;}.exam-subject small{width:100%;color:var(--slate);}
 .exam-subject:hover,.exam-card:hover{border-color:var(--gold);box-shadow:0 6px 22px #15223c0a;}
