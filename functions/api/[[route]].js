@@ -3,6 +3,8 @@
 // Cloudflare Pages Functions  →  /functions/api/[[route]].js
 // ═══════════════════════════════════════════════════════
 
+import { examApps } from '../_exam-apps.js';
+
 const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
@@ -38,9 +40,16 @@ export async function onRequest(ctx) {
   const segments = params.route || [];
   const path     = '/' + segments.join('/');
   const method   = request.method;
+  const examWrite = segments[0] === 'exam-apps' && (
+    segments[1] === 'admin' || (method !== 'GET' && !(
+      method === 'POST' && (segments.length === 2 && segments[1] === 'unlock-all'
+        || segments.length === 3 && /^\d+$/.test(segments[1]) && segments[2] === 'unlock')
+    ))
+  );
 
   // ── AUTH CHECK ──
   const needsAuth = (
+    examWrite ||
     path.startsWith('/articles/admin') ||
     (path.startsWith('/articles') && method !== 'GET') ||
     path.startsWith('/apps/admin') ||
@@ -68,6 +77,7 @@ export async function onRequest(ctx) {
     const sess = await getSession(env, token);
     // map path → permission ที่ต้องมี (เฉพาะ write operations กับ admin endpoints)
     let neededPerm = null;
+    if (examWrite && !hasPerm(sess, 'apps')) return err('ไม่มีสิทธิ์ในหมวดนี้', 403);
     if (path.startsWith('/articles') && (method !== 'GET' || path.startsWith('/articles/admin'))) neededPerm = 'articles';
     else if (path.startsWith('/apps') && (path.startsWith('/apps/admin') || (method !== 'GET' && !path.includes('/unlock')))) neededPerm = 'apps';
     else if (path.startsWith('/worksheets') && (path.startsWith('/worksheets/admin') || (method !== 'GET' && !path.includes('/unlock') && !path.includes('/download')))) neededPerm = 'worksheets';
@@ -95,6 +105,7 @@ export async function onRequest(ctx) {
     if (path === '/auth/logout' && method === 'POST')   return await logout(request, env);
     if (path === '/auth/check'  && method === 'GET')    return await authCheck(request, env);
 
+    if (segments[0] === 'exam-apps') return await examApps(request, env, segments, method, {ok,err,okCache});
     if (path.startsWith('/articles'))  return await articles(request,  env, segments, method);
     if (path.startsWith('/apps'))      return await apps(request,      env, segments, method);
     if (path.startsWith('/worksheets'))return await worksheets(request, env, segments, method);
@@ -808,12 +819,14 @@ async function codes(req, env, segs, method) {
       .prepare('SELECT id FROM access_codes WHERE code=?').bind(b.code.trim()).all();
     if (exist[0]) return err('รหัสนี้มีอยู่แล้ว');
     await env.DB.prepare(
-      'INSERT INTO access_codes (code,label,app_ids,worksheet_ids,expires_at,active) VALUES (?,?,?,?,?,?)'
+      'INSERT INTO access_codes (code,label,app_ids,worksheet_ids,exam_app_ids,exam_category_ids,expires_at,active) VALUES (?,?,?,?,?,?,?,?)'
     ).bind(
       b.code.trim().toUpperCase(),
       b.label.trim(),
       JSON.stringify(b.app_ids || []),
       JSON.stringify(b.worksheet_ids || []),
+      JSON.stringify(b.exam_app_ids || []),
+      JSON.stringify(b.exam_category_ids || []),
       b.expires_at || null,
       b.active !== false ? 1 : 0   // รับค่า active จริงๆ ไม่ hardcode
     ).run();
@@ -823,13 +836,17 @@ async function codes(req, env, segs, method) {
   // PUT /codes/:id — แก้ไขโค้ด
   if (id && method === 'PUT') {
     const b = await req.json();
+    const existing = await env.DB.prepare('SELECT exam_app_ids,exam_category_ids FROM access_codes WHERE id=?').bind(id).first();
+    if (!existing) return err('ไม่พบรหัส', 404);
     await env.DB.prepare(
-      'UPDATE access_codes SET code=?,label=?,app_ids=?,worksheet_ids=?,expires_at=?,active=? WHERE id=?'
+      'UPDATE access_codes SET code=?,label=?,app_ids=?,worksheet_ids=?,exam_app_ids=?,exam_category_ids=?,expires_at=?,active=? WHERE id=?'
     ).bind(
       b.code.trim().toUpperCase(),
       b.label.trim(),
       JSON.stringify(b.app_ids || []),
       JSON.stringify(b.worksheet_ids || []),
+      b.exam_app_ids === undefined ? existing.exam_app_ids : JSON.stringify(b.exam_app_ids),
+      b.exam_category_ids === undefined ? existing.exam_category_ids : JSON.stringify(b.exam_category_ids),
       b.expires_at || null,
       b.active ? 1 : 0,
       id
@@ -865,9 +882,9 @@ async function track(req, env) {
 
     // ── DENORMALIZE: อัพเดต view_count แบบ inline ──
     // เลิก scan page_views ตอนแสดงผล ทำให้ /apps ฯลฯ เร็วขึ้น 100x
-    const m = path.match(/^\/(apps|article|worksheet)\/(\d+)$/);
+    const m = path.match(/^\/(apps|exam-apps|article|worksheet)\/(\d+)$/);
     if (m) {
-      const table = m[1] === 'article' ? 'articles' : (m[1] === 'apps' ? 'apps' : 'worksheets');
+      const table = m[1] === 'article' ? 'articles' : m[1] === 'exam-apps' ? 'exam_apps' : (m[1] === 'apps' ? 'apps' : 'worksheets');
       await env.DB.prepare(`UPDATE ${table} SET view_count = view_count + 1 WHERE id = ?`).bind(m[2]).run();
     }
     return ok({ ok:true });
@@ -935,9 +952,10 @@ async function analytics(req, env, segs, method) {
     // ── ประกอบผลใน JS (ไม่แตะ DB เพิ่ม) — จัดหมวด + เรียง + ตัด top 10 ──
     const catOf = (p) => {
       if (p.startsWith('/article/')) return 'article';
+      if (p.startsWith('/exam-apps/')) return 'app';
       if (p.startsWith('/apps/')) return 'app';
       if (p.startsWith('/worksheet/')) return 'worksheet';
-      if (p === '' || ['/','/blog','/apps','/worksheets','/about','/buy','/report','/privacy'].includes(p)) return 'page';
+      if (p === '' || ['/','/blog','/apps','/exam-apps','/worksheets','/about','/buy','/report','/privacy'].includes(p)) return 'page';
       return null; // path อื่นเข้าได้เฉพาะ bucket 'all'
     };
     const blank = () => ({ all: [], page: [], article: [], app: [], worksheet: [] });
@@ -1056,7 +1074,7 @@ async function images(req, env, segs, method) {
 
 // ── BACKUP: dump ทุกตารางเป็น JSON (admin เท่านั้น) ──────
 async function backupAll(env) {
-  const tables = ['articles', 'apps', 'worksheets', 'access_codes', 'comments', 'reports', 'users', 'settings'];
+  const tables = ['articles', 'apps', 'exam_categories', 'exam_apps', 'worksheets', 'access_codes', 'comments', 'reports', 'users', 'settings'];
   const dump = {
     _meta: {
       site: 'kru-ti.com',

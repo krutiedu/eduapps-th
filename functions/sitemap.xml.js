@@ -14,6 +14,7 @@ export async function onRequest({ env }) {
     { url: `${BASE}/about`,      priority: '0.5', freq: 'monthly' },
     { url: `${BASE}/privacy`,    priority: '0.3', freq: 'monthly' },
     { url: `${BASE}/apps`,       priority: '0.9', freq: 'weekly' },
+    { url: `${BASE}/exam-apps`,  priority: '0.9', freq: 'weekly' },
     { url: `${BASE}/worksheets`, priority: '0.9', freq: 'weekly' },
   ];
 
@@ -71,6 +72,16 @@ export async function onRequest({ env }) {
     console.error('sitemap worksheets error:', e);
   }
 
+  let examUrls = [];
+  try {
+    const [apps,categories] = await Promise.all([
+      env.DB.prepare('SELECT id,created_at FROM exam_apps WHERE visible=1 ORDER BY sort_order LIMIT 1000').all(),
+      env.DB.prepare('SELECT id FROM exam_categories ORDER BY sort_order,id').all(),
+    ]);
+    examUrls = [...categories.results.map(c => ({url:`${BASE}/exam-apps/category/${c.id}`,priority:'0.7',freq:'weekly'})),
+      ...apps.results.map(a => ({url:`${BASE}/exam-apps/${a.id}`,lastmod:(a.created_at || today).substring(0,10),priority:'0.7',freq:'weekly'}))];
+  } catch (e) { console.error('sitemap exams error:',e); }
+
   const urlXML = (entry) => `  <url>
     <loc>${entry.url}</loc>
     ${entry.lastmod ? `<lastmod>${entry.lastmod}</lastmod>` : `<lastmod>${today}</lastmod>`}
@@ -84,6 +95,7 @@ export async function onRequest({ env }) {
 ${staticPages.map(urlXML).join('\n')}
 ${articleUrls.map(urlXML).join('\n')}
 ${appUrls.map(urlXML).join('\n')}
+${examUrls.map(urlXML).join('\n')}
 ${worksheetUrls.map(urlXML).join('\n')}
 </urlset>`;
 

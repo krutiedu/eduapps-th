@@ -120,6 +120,7 @@ ${img ? `<meta property="og:image" content="${esc(img)}">` : ''}
     <a href="${BASE}/">หน้าหลัก</a>
     <a href="${BASE}/blog">บทความ</a>
     <a href="${BASE}/apps">แอปทั้งหมด</a>
+    <a href="${BASE}/exam-apps">แอปข้อสอบ</a>
     <a href="${BASE}/worksheets">ใบงาน</a>
     <a href="${BASE}/buy">ซื้อรหัส</a>
   </div>

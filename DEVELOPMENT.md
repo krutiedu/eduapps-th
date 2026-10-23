@@ -66,3 +66,18 @@ wrangler pages dev public --port 8792 --persist-to .wrangler/adsense-test
 ก่อน deploy โค้ดที่มี `/api/school-links` และ `/s/:token` ครั้งแรก ให้รัน `migration-school-short-links.sql` กับ D1 production (`eduapps-db`) เพียงครั้งเดียวผ่าน Cloudflare Dashboard → D1 → Console จากนั้น deploy เว็บหลักและแอป `pp5-40s.pages.dev` ตามลำดับ
 
 ตาราง `school_short_links` มี `config_hash` แบบ unique: config เดิมได้ token เดิมเสมอ ส่วน config ที่เปลี่ยนจะได้ token ใหม่ การเปิด `/s/:token` ใช้การค้นด้วย primary key และส่ง 302 ไป URL แอปที่มี `#fbcfg=` โดยไม่แสดงหน้า iframe
+
+## แอปข้อสอบ
+
+หน้าใหม่คือ `/exam-apps`, `/exam-apps/category/:id` และ `/exam-apps/:id` แอดมินจัดการแอปและวิชาที่เมนู **แอปข้อสอบ / วิชา** (ใช้ permission `apps` เดิม) ส่วนรหัสอยู่ที่ **รหัสปลดล็อก → แอปข้อสอบ** ในหน้าต่างสร้าง/แก้ไขรหัสเดิม
+
+- `exam_app_ids: ["all"]` ให้สิทธิ์ทุกแอปข้อสอบ รวมแอปใหม่
+- `exam_category_ids: [1,2]` ให้สิทธิ์ทุกแอปในวิชาที่เลือก รวมแอปใหม่ในวิชานั้น
+- `exam_app_ids: [3,4]` ให้สิทธิ์เฉพาะรายแอป สามารถใช้ร่วมกับสิทธิ์รายวิชาได้
+- `app_ids` และ `worksheet_ids` ทำงานเหมือนเดิม รหัส VIP เดิมไม่เพิ่มสิทธิ์ข้อสอบโดยอัตโนมัติ
+
+หมวดวิชาใช้ ID คงที่ เปลี่ยนชื่อแล้วสิทธิ์เดิมยังอยู่ การลบวิชาต้องย้ายหรือลบแอปทั้งหมดในวิชานั้นก่อน (รวมแอปซ่อน) แอปใหม่ตั้งต้นเป็นแบบล็อก ลิงก์ปลายทางจะถูกซ่อนใน API สาธารณะและ HTML จนตรวจรหัสผ่าน รหัสที่ปิด/หมดอายุไม่สามารถปลดล็อกได้ เบราว์เซอร์จำรหัสเฉพาะแท็บและตรวจสิทธิ์ใหม่เมื่อเข้าหน้าข้อสอบหรือกดเปิดแอป
+
+**ก่อน deploy ครั้งแรก:** สำรอง D1 production แล้วรัน `migration-exam-apps.sql` กับฐานข้อมูลเดิม **ครั้งเดียว** ผ่าน D1 Console จากนั้น deploy โค้ด การ migration เพิ่มตารางและคอลัมน์โดยไม่แก้สิทธิ์เดิม ห้ามรัน migration ซ้ำหรือรันบนฐานข้อมูลที่ใช้ `schema.sql` เวอร์ชันใหม่แล้ว เพราะ SQLite ไม่รองรับ `ADD COLUMN IF NOT EXISTS` สำหรับไฟล์นี้ ฐานข้อมูลใหม่ใช้ `schema.sql` ได้เลย
+
+ทดสอบด้วย `node tests/exam-apps.mjs` ใช้ Node.js 22.13+ ที่มี `node:sqlite` และ Playwright/Chromium (หรือตั้ง `PLAYWRIGHT_MODULE_PATH` และ `PLAYWRIGHT_CHANNEL=msedge` เช่นเดียวกับ admin-codes) ทดสอบ migration, API กับ SQLite ในหน่วยความจำ, สิทธิ์ทั้งสามแบบ, การเปลี่ยนชื่อ/เพิ่มข้อสอบใหม่, รหัสหมดอายุ/ปิดใช้งาน, การไม่เผย URL, SSR/404/503, sitemap, backup และการใช้งานผ่านเบราว์เซอร์บน desktop/mobile ภาพตรวจหน้าจออยู่ใน `.wrangler/exam-test/` ไม่แตะ D1 หรือ API จริง รัน `node tests/admin-codes.mjs` และ `node update-asset-version.mjs` ร่วมด้วย

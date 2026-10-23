@@ -84,7 +84,7 @@ h1,h2,h3,h4{font-family:'Pridi',serif;font-weight:600;line-height:1.35;}
 .search-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(243,172,46,.4);background:var(--gold-bright);}
 .search-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 .hamburger{display:none;background:none;border:none;font-size:1.45rem;cursor:pointer;color:#fff;}
-@media(max-width:640px){
+@media(max-width:960px){
   .hamburger{display:block;}
   .nav-links,.nav-right{display:none;}
   .nav-links.open{display:flex;position:absolute;top:66px;left:0;right:0;background:var(--ink-2);
@@ -630,3 +630,28 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 #appViewer.vb-full #viewerFrame{
   padding-bottom:env(safe-area-inset-bottom);background:#fff;
 }
+
+/* Exam library shares the site's paper, ink and gold palette. */
+.exam-page{padding-bottom:44px;}
+.exam-subjects{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:28px;}
+.exam-subject{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;color:var(--ink);text-decoration:none;}
+.exam-subject>span{font-size:1.6rem;}.exam-subject small{width:100%;color:var(--slate);}
+.exam-subject:hover,.exam-card:hover{border-color:var(--gold);box-shadow:0 6px 22px #15223c0a;}
+.exam-search{display:block;font-weight:700;margin:20px 0;}.exam-search input{display:block;width:100%;margin-top:8px;}
+.exam-unlock{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:14px;padding:20px;margin:24px 0;}
+.exam-unlock label{font-weight:700;font-size:1.05rem;}.exam-unlock p{color:var(--slate);font-size:.9rem;margin:8px 0;}
+.exam-unlock-row{display:flex;gap:10px;margin-top:14px;}.exam-unlock-row input{min-width:0;flex:1;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--bg);color:var(--ink);}
+.exam-unlock a,.exam-section-head>a,.exam-back a{color:var(--gold-deep);font-weight:700;}
+.exam-section{margin:32px 0;}.exam-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.exam-section-head h2{font-family:'Pridi',serif;font-size:1.35rem;}.exam-section-head h2 a{color:var(--ink);text-decoration:none;}
+.exam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;}
+.exam-card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s;min-width:0;}
+.exam-card-main{display:block;color:inherit;text-decoration:none;flex:1;}.exam-cover{display:block;width:100%;height:180px;object-fit:cover;background:#edf2f9;}
+.exam-cover-placeholder{display:flex;align-items:center;justify-content:center;font-size:3.5rem;background:linear-gradient(135deg,#e8eef9,#fff5df);}
+.exam-card-body{padding:18px;}.exam-card h3{font-size:1.1rem;margin:10px 0;overflow-wrap:anywhere;}.exam-card p{font-size:.9rem;color:var(--slate);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;}
+.exam-card-category{display:block;padding:12px 18px;border-top:1px solid var(--line);color:var(--slate);font-size:.88rem;text-decoration:none;}
+.exam-detail{max-width:880px;}.exam-breadcrumb{padding-top:24px;color:var(--slate);}.exam-breadcrumb a{color:inherit;}
+.exam-detail-cover{display:block;max-width:100%;max-height:380px;object-fit:contain;margin:0 auto 24px;border-radius:16px;}
+.exam-description{white-space:pre-wrap;line-height:1.9;overflow-wrap:anywhere;}.exam-launch{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0;}.exam-back{margin-top:28px;}
+@media(max-width:900px){.exam-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:560px){.exam-grid{grid-template-columns:1fr;}.exam-unlock-row{flex-direction:column;}.exam-subjects{grid-template-columns:repeat(2,minmax(0,1fr));}.exam-subject{padding:14px;}.exam-section-head h2{font-size:1.2rem;}}

@@ -39,6 +39,7 @@ const server = createServer((req, res) => {
   }
   if (url.pathname === '/version.txt') { res.end('fixture'); return; }
   if (url.pathname === '/api/apps/admin/list') { res.end(JSON.stringify({apps})); return; }
+  if (url.pathname === '/api/exam-apps/admin/list') { res.end(JSON.stringify({apps:[],categories:[]})); return; }
   if (url.pathname === '/api/worksheets/admin/list') {
     if (failWorksheets) { res.statusCode = 503; res.end(JSON.stringify({error:'Fixture unavailable'})); }
     else res.end(JSON.stringify({worksheets}));
