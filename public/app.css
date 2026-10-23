@@ -663,10 +663,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 .exam-list-meta{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;}
 .exam-list-meta .ph-sub{flex:1;min-width:180px;}
 .exam-view-toggle{margin-left:auto;flex-shrink:0;}
-.exam-subjects{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:28px 0 0;}
-.exam-subject{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;color:var(--ink);text-decoration:none;}
-.exam-subject>span{font-size:1.6rem;}.exam-subject small{width:100%;color:var(--slate);}
-.exam-subject:hover,.exam-card:hover{border-color:var(--gold);box-shadow:0 6px 22px #15223c0a;}
+.exam-card:hover{border-color:var(--gold);box-shadow:0 6px 22px #15223c0a;}
 .exam-search{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:700;margin:10px 0;}.exam-search>span{flex-shrink:0;}.exam-search input{display:block;flex:1;width:0;margin:0;}
 .exam-unlock{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:8px 12px;margin:10px 0;}
 .exam-unlock label{grid-column:1;grid-row:1;font-weight:700;font-size:.9rem;}.exam-unlock p{grid-column:1/-1;grid-row:2;color:var(--slate);font-size:.82rem;line-height:1.4;margin:0;}
@@ -720,7 +717,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
   .exam-unlock p{grid-row:3;}
   .exam-unlock #examUnlockMsg{grid-row:4;}
 }
-@media(max-width:560px){.exam-grid{grid-template-columns:1fr;}.exam-subjects{grid-template-columns:repeat(2,minmax(0,1fr));}.exam-subject{padding:14px;}.exam-section-head h2{font-size:1.2rem;}
+@media(max-width:560px){.exam-grid{grid-template-columns:1fr;}.exam-section-head h2{font-size:1.2rem;}
   .search-in,.redeem-row input,.exam-unlock-row input{font-size:16px;min-height:44px;}
   .search-row>.btn,.redeem-row button,.exam-unlock-row .btn{min-height:44px;}
   .exam-unlock>a{min-height:28px;line-height:28px;}

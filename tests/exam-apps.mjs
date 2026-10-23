@@ -317,7 +317,8 @@ try {
     await page.setViewportSize({width:1440,height:1000});
   };
   await page.screenshot({path:new URL('library-desktop.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1'),fullPage:true});
-  await page.locator('.exam-subject').filter({hasText:'คณิตศาสตร์ใหม่'}).click();
+  assert.equal(await page.locator('.exam-subjects').count(),0);
+  await page.locator('.exam-section-head h2 a').filter({hasText:'คณิตศาสตร์ใหม่'}).click();
   await page.waitForURL('**/exam-apps/category/' + math);
   await page.locator('#examSearch').fill('คณิต 1');
   assert.equal(await page.locator('.exam-card').count(),1);
@@ -429,7 +430,8 @@ try {
   await page.screenshot({path:new URL('category-order-desktop.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
   await page.goto(base + '/exam-apps');
   await page.waitForFunction(() => !document.getElementById('app').dataset.serverRendered);
-  assert.deepEqual(await page.locator('.exam-subject').evaluateAll(links => links.map(link => Number(link.getAttribute('href').split('/').pop()))),expectedOrder);
+  const visibleCategoryOrder = expectedOrder.filter(id => db.prepare('SELECT 1 FROM exam_apps WHERE category_id=? AND visible=1').get(id));
+  assert.deepEqual(await page.locator('.exam-section-head h2 a').evaluateAll(links => links.map(link => Number(link.getAttribute('href').split('/').pop()))),visibleCategoryOrder);
   await page.goto(base + '/admin/');
   await page.evaluate(() => showAdmin());
   await page.setViewportSize({width:375,height:812});
