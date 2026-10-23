@@ -664,7 +664,7 @@ footer::before{content:"✦";position:absolute;right:-40px;bottom:-80px;font-siz
 .exam-list-meta .ph-sub{flex:1;min-width:180px;}
 .exam-view-toggle{margin-left:auto;flex-shrink:0;}
 .exam-card:hover{border-color:var(--gold);box-shadow:0 6px 22px #15223c0a;}
-.exam-search{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:700;margin:10px 0;}.exam-search>span{flex-shrink:0;}.exam-search input{display:block;flex:1;width:0;margin:0;}
+.exam-search{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:700;margin:10px 0;}.exam-search>label{flex-shrink:0;}.exam-search input{display:block;flex:1;width:0;margin:0;}
 .exam-unlock{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:8px 12px;margin:10px 0;}
 .exam-unlock label{grid-column:1;grid-row:1;font-weight:700;font-size:.9rem;}.exam-unlock p{grid-column:1/-1;grid-row:2;color:var(--slate);font-size:.82rem;line-height:1.4;margin:0;}
 .exam-unlock p:empty{display:none;}

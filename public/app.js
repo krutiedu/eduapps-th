@@ -663,7 +663,7 @@ function calcPageSize() {
 }
 
 // Keep codes in this tab and recheck them on navigation; do not persist unlocked URLs.
-const examUI = () => import('/exam-pages.mjs?v=669eccf2');
+const examUI = () => import('/exam-pages.mjs?v=a35fccf8');
 let _examGrants = new Map();
 let _examView = 'grid';
 try { if (localStorage.getItem('examView') === 'table') _examView = 'table'; } catch {}
@@ -721,8 +721,12 @@ async function renderExamApps(categoryId) {
   app.innerHTML = ui.examListHTML(data.apps,cats.categories,category,new Set(_examGrants.keys()),_examView);
   setPageMeta({title:category ? 'ข้อสอบวิชา' + category.name : 'แอปข้อสอบ',desc:category?.description || 'รวมเว็บแอปข้อสอบ แยกตามวิชา',url:SITE + path});
   const search = document.getElementById('examSearch');
+  // Keep the query separate from values restored or filled by password managers.
+  let query = '';
+  search.value = query;
   const draw = () => {
-    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,search.value,new Set(_examGrants.keys()),_examView);
+    search.value = query;
+    document.getElementById('examResults').innerHTML = ui.examResultsHTML(data.apps,cats.categories,category,query,new Set(_examGrants.keys()),_examView);
   };
   const viewButtons = app.querySelectorAll('[data-exam-view]');
   viewButtons.forEach(button => button.addEventListener('click',() => {
@@ -735,7 +739,17 @@ async function renderExamApps(categoryId) {
     });
     draw();
   }));
-  search.addEventListener('input',draw);
+  search.form.addEventListener('submit',event => event.preventDefault());
+  search.addEventListener('focus',() => { search.value = query; });
+  search.addEventListener('input',event => {
+    // Typing, paste, IME and undo have an inputType; autofill may send a plain Event.
+    if (search.matches(':autofill') || (search.value && !event.inputType)) {
+      search.value = query;
+      return;
+    }
+    query = search.value;
+    draw();
+  });
   bindExamUnlock(draw);
 }
 async function renderExamDetail(id) {

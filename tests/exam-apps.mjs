@@ -248,6 +248,71 @@ try {
   assert.equal(await page.evaluate(() => window.examXss),undefined);
   const output = new URL('../.wrangler/exam-test/',import.meta.url);
   await mkdir(output,{recursive:true});
+  const allExamCount = await page.locator('.exam-card').count();
+  const search = page.locator('#examSearch');
+  assert.equal(await search.inputValue(),'');
+  // Password managers can fill a field late and emit a plain input/change event.
+  await search.evaluate(input => {
+    input.value = 'saved-login-value';
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  assert.equal(await search.inputValue(),'');
+  assert.equal(await page.locator('.exam-card').count(),allExamCount);
+  // Native autofill can also emit an InputEvent; exercise its browser pseudo-state.
+  const autofillClient = await page.context().newCDPSession(page);
+  await autofillClient.send('DOM.enable');
+  await autofillClient.send('CSS.enable');
+  const {root} = await autofillClient.send('DOM.getDocument');
+  const {nodeId} = await autofillClient.send('DOM.querySelector',{nodeId:root.nodeId,selector:'#examSearch'});
+  await autofillClient.send('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:['autofill']});
+  await search.evaluate(input => {
+    input.value = 'saved-login-value';
+    input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertReplacementText',data:null}));
+  });
+  assert.equal(await search.inputValue(),'');
+  assert.equal(await page.locator('.exam-card').count(),allExamCount);
+  await autofillClient.send('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:[]});
+  await autofillClient.detach();
+  // A restored value without an event must not become a filter on the next draw.
+  await search.evaluate(input => { input.value = 'saved-login-value'; });
+  await page.locator('[data-exam-view="table"]').click();
+  assert.equal(await search.inputValue(),'');
+  assert.equal(await page.locator('.exam-table tbody tr').count(),allExamCount);
+  await page.locator('[data-exam-view="grid"]').click();
+  await search.pressSequentially('คณิต 1');
+  assert.equal(await page.locator('.exam-card').count(),1);
+  await search.press('Enter');
+  assert.equal(new URL(page.url()).pathname,'/exam-apps');
+  assert.equal(await search.inputValue(),'คณิต 1');
+  await search.evaluate(input => {
+    input.value = 'saved-login-value';
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  assert.equal(await search.inputValue(),'คณิต 1');
+  assert.equal(await page.locator('.exam-card').count(),1);
+  await page.locator('[data-exam-view="table"]').click();
+  assert.equal(await page.locator('.exam-table tbody tr').count(),1);
+  await page.locator('[data-exam-view="grid"]').click();
+  // Search clear buttons may send a plain Event, so an empty value is accepted.
+  await search.evaluate(input => {
+    input.value = '';
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  assert.equal(await page.locator('.exam-card').count(),allExamCount);
+  await page.setViewportSize({width:375,height:812});
+  await search.fill('ข้อสอบภาษาไทย');
+  assert.equal(await page.locator('.exam-card').count(),1);
+  await search.fill('');
+  assert.equal(await page.locator('.exam-card').count(),allExamCount);
+  assert.ok(await page.locator('.exam-page').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+  await page.screenshot({path:new URL('library-mobile.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1'),fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});
+  await search.fill('คณิต 1');
+  await page.reload();
+  await page.waitForFunction(() => document.getElementById('examSearch') && !document.getElementById('app').dataset.serverRendered);
+  assert.equal(await search.inputValue(),'');
+  assert.equal(await page.locator('.exam-card').count(),allExamCount);
   const checkFullscreenViewer = async (viewerSelector,boxSelector,openSelector,label) => {
     const viewer = page.locator(viewerSelector);
     const embeddedApp = page.frameLocator('#viewerFrame').getByRole('heading',{name:'MATHTOOLS — กระดานครูคณิต',exact:true});
@@ -320,11 +385,15 @@ try {
   assert.equal(await page.locator('.exam-subjects').count(),0);
   await page.locator('.exam-section-head h2 a').filter({hasText:'คณิตศาสตร์ใหม่'}).click();
   await page.waitForURL('**/exam-apps/category/' + math);
+  assert.equal(await page.locator('#examSearch').inputValue(),'');
   await page.locator('#examSearch').fill('คณิต 1');
   assert.equal(await page.locator('.exam-card').count(),1);
+  await page.locator('#examSearch').evaluate(input => { input.value = 'saved-login-value'; });
   await page.locator('#examCode').fill('MATH');
   await page.locator('#examUnlockForm button').click();
   await page.waitForFunction(() => document.getElementById('examUnlockMsg').textContent.includes('สำเร็จ'));
+  assert.equal(await page.locator('#examSearch').inputValue(),'คณิต 1');
+  assert.equal(await page.locator('.exam-card').count(),1);
   await page.locator('.exam-card-main').click();
   await page.waitForURL('**/exam-apps/' + first);
   await page.locator('#examLaunch').waitFor();
@@ -543,7 +612,7 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:new URL('code-exams-desktop.png',output).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
   assert.deepEqual(errors,[]);
-  console.log('PASS: browser links/search/redemption, native/fallback fullscreen and toolbar controls in exam/regular apps, admin CRUD, drag/keyboard/mobile category ordering, shared image uploads/compression/cancellation/errors, preserved forms and scopes, existing app upload regression and mobile layout.');
+  console.log('PASS: browser links/search/redemption, autofill isolation and query reset/preservation on desktop/mobile, native/fallback fullscreen and toolbar controls in exam/regular apps, admin CRUD, drag/keyboard/mobile category ordering, shared image uploads/compression/cancellation/errors, preserved forms and scopes, existing app upload regression and mobile layout.');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

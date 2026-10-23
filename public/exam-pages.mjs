@@ -57,7 +57,9 @@ export function examListHTML(apps, categories, category, unlocked = new Set(), v
     ${category ? '<a class="back-btn" href="/exam-apps">← แอปข้อสอบทั้งหมด</a>' : ''}
     <div class="page-head library-head library-head-unlock">
       <div class="library-heading"><h1>${category ? e(category.icon) + ' ' + e(category.name) : 'แอปข้อสอบ'}</h1>${unlockForm({category,inline:true})}</div>
-      <label class="exam-search header-search" for="examSearch"><span>ค้นหาแอปข้อสอบ</span><input type="search" class="search-in" id="examSearch" placeholder="ชื่อข้อสอบ วิชา หรือคำอธิบาย..."></label>
+      <form id="examSearchForm" class="exam-search header-search" role="search" autocomplete="off">
+        <label for="examSearch">ค้นหาแอปข้อสอบ</label><input type="search" class="search-in" id="examSearch" name="exam-catalog-query" autocomplete="off" data-lpignore="true" data-1p-ignore placeholder="ชื่อข้อสอบ วิชา หรือคำอธิบาย...">
+      </form>
       <div class="exam-list-meta"><p class="ph-sub">${category ? e(category.description || 'เว็บแอปข้อสอบวิชา' + category.name) : 'รวมเว็บแอปข้อสอบ แยกตามวิชา เลือกข้อสอบแล้วเปิดใช้งานได้ทันที'}</p>
         <div class="view-toggle exam-view-toggle" role="group" aria-label="มุมมองแอปข้อสอบ">
           <button type="button" class="vt-btn ${view !== 'table' ? 'on' : ''}" data-exam-view="grid" aria-pressed="${view !== 'table'}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>การ์ด</button>
