@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { examApps } from '../_exam-apps.js';
+import { ensureCodeGroups, codeGroups, codeGroupId, codeGroupAssignment } from '../_code-groups.js';
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -802,23 +803,31 @@ async function upload(req, env) {
 // ════════════════════════════════════════════════════════
 async function codes(req, env, segs, method) {
   const id = segs[1];
+  await ensureCodeGroups(env.DB);
+  if (id === 'groups') return codeGroups(req, env.DB, segs, method, {ok,err});
 
   // GET /codes — รายการโค้ดทั้งหมด
   if (!id && method === 'GET') {
-    const { results } = await env.DB
-      .prepare('SELECT * FROM access_codes ORDER BY created_at DESC').all();
-    return ok({ codes: results });
+    const [rows, groups] = await Promise.all([
+      env.DB.prepare(`SELECT c.*,m.group_id FROM access_codes c
+        LEFT JOIN access_code_group_members m ON m.code_id=c.id ORDER BY c.created_at DESC,c.id DESC`).all(),
+      env.DB.prepare('SELECT * FROM access_code_groups ORDER BY name COLLATE NOCASE,id').all(),
+    ]);
+    return ok({ codes: rows.results, groups: groups.results });
   }
 
   // POST /codes — สร้างโค้ดใหม่
   if (!id && method === 'POST') {
     const b = await req.json();
-    if (!b.code || !b.label) return err('กรุณาใส่รหัสและชื่อแพ็กเกจ');
+    if (typeof b.code !== 'string' || typeof b.label !== 'string' || !b.code.trim() || !b.label.trim()) return err('กรุณาใส่รหัสและชื่อแพ็กเกจ');
+    const groupId = b.group_id === undefined ? null : codeGroupId(b.group_id);
+    if (groupId === undefined) return err('กลุ่มไม่ถูกต้อง');
+    if (groupId !== null && !await env.DB.prepare('SELECT id FROM access_code_groups WHERE id=?').bind(groupId).first()) return err('ไม่พบกลุ่ม กรุณาโหลดรายการใหม่',409);
     // เช็คว่าโค้ดซ้ำไหม
     const { results: exist } = await env.DB
-      .prepare('SELECT id FROM access_codes WHERE code=?').bind(b.code.trim()).all();
+      .prepare('SELECT id FROM access_codes WHERE code=?').bind(b.code.trim().toUpperCase()).all();
     if (exist[0]) return err('รหัสนี้มีอยู่แล้ว');
-    await env.DB.prepare(
+    const insert = env.DB.prepare(
       'INSERT INTO access_codes (code,label,app_ids,worksheet_ids,exam_app_ids,exam_category_ids,expires_at,active) VALUES (?,?,?,?,?,?,?,?)'
     ).bind(
       b.code.trim().toUpperCase(),
@@ -829,16 +838,24 @@ async function codes(req, env, segs, method) {
       JSON.stringify(b.exam_category_ids || []),
       b.expires_at || null,
       b.active !== false ? 1 : 0   // รับค่า active จริงๆ ไม่ hardcode
-    ).run();
+    );
+    const statements = [insert];
+    if (groupId !== null) statements.push(env.DB.prepare(`INSERT INTO access_code_group_members(code_id,group_id)
+      SELECT id,? FROM access_codes WHERE code=?`).bind(groupId,b.code.trim().toUpperCase()));
+    await env.DB.batch(statements);
     return ok({ ok: true });
   }
 
   // PUT /codes/:id — แก้ไขโค้ด
   if (id && method === 'PUT') {
     const b = await req.json();
+    if (typeof b.code !== 'string' || typeof b.label !== 'string' || !b.code.trim() || !b.label.trim()) return err('กรุณาใส่รหัสและชื่อแพ็กเกจ');
+    const groupId = b.group_id === undefined ? undefined : codeGroupId(b.group_id);
+    if (b.group_id !== undefined && groupId === undefined) return err('กลุ่มไม่ถูกต้อง');
+    if (groupId != null && !await env.DB.prepare('SELECT id FROM access_code_groups WHERE id=?').bind(groupId).first()) return err('ไม่พบกลุ่ม กรุณาโหลดรายการใหม่',409);
     const existing = await env.DB.prepare('SELECT exam_app_ids,exam_category_ids FROM access_codes WHERE id=?').bind(id).first();
     if (!existing) return err('ไม่พบรหัส', 404);
-    await env.DB.prepare(
+    const update = env.DB.prepare(
       'UPDATE access_codes SET code=?,label=?,app_ids=?,worksheet_ids=?,exam_app_ids=?,exam_category_ids=?,expires_at=?,active=? WHERE id=?'
     ).bind(
       b.code.trim().toUpperCase(),
@@ -850,13 +867,19 @@ async function codes(req, env, segs, method) {
       b.expires_at || null,
       b.active ? 1 : 0,
       id
-    ).run();
+    );
+    const statements = [update];
+    if (b.group_id !== undefined) statements.push(codeGroupAssignment(env.DB,id,groupId));
+    await env.DB.batch(statements);
     return ok({ ok: true });
   }
 
   // DELETE /codes/:id — ลบโค้ด
   if (id && method === 'DELETE') {
-    await env.DB.prepare('DELETE FROM access_codes WHERE id=?').bind(id).run();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM access_code_group_members WHERE code_id=?').bind(id),
+      env.DB.prepare('DELETE FROM access_codes WHERE id=?').bind(id),
+    ]);
     return ok({ ok: true });
   }
 
@@ -1074,7 +1097,8 @@ async function images(req, env, segs, method) {
 
 // ── BACKUP: dump ทุกตารางเป็น JSON (admin เท่านั้น) ──────
 async function backupAll(env) {
-  const tables = ['articles', 'apps', 'exam_categories', 'exam_apps', 'worksheets', 'access_codes', 'comments', 'reports', 'users', 'settings'];
+  await ensureCodeGroups(env.DB);
+  const tables = ['articles', 'apps', 'exam_categories', 'exam_apps', 'worksheets', 'access_codes', 'access_code_groups', 'access_code_group_members', 'comments', 'reports', 'users', 'settings'];
   const dump = {
     _meta: {
       site: 'kru-ti.com',

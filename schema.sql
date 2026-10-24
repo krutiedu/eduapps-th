@@ -260,6 +260,18 @@ CREATE INDEX IF NOT EXISTS idx_boards_term       ON kb_boards(term_tag);
 CREATE INDEX IF NOT EXISTS idx_subs_board        ON kb_subs(board);
 
 
+-- Organization metadata is separate from the permissions in access_codes.
+CREATE TABLE IF NOT EXISTS access_code_groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS access_code_group_members (
+  code_id INTEGER PRIMARY KEY REFERENCES access_codes(id) ON DELETE CASCADE,
+  group_id INTEGER NOT NULL REFERENCES access_code_groups(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_code_group_members_group ON access_code_group_members(group_id);
+
 -- ═══ ข้อมูลตั้งต้น (ใช้เมื่อสร้างฐานข้อมูลใหม่) ═══════════════════
 -- INSERT OR IGNORE — ไม่ทับค่าที่ตั้งไว้แล้ว
 -- ไม่มีบทความ/แอปตัวอย่างในไฟล์นี้ เนื้อหาจริงกู้จากไฟล์ backup JSON

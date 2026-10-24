@@ -86,13 +86,13 @@ try {
     await page.locator('#codesBody tr').first().waitFor();
   };
   assert.equal(await page.locator('#codesBody tr').count(), 3);
-  assert.equal(await page.locator('#codesBody .code-app-preview').count(), 2);
-  assert.match(await page.locator('#codesBody').innerText(), /5 แอป · ดูรายชื่อ/);
-  assert.match(await page.locator('#codesBody').innerText(), /ทุกแอป · รวมแอปใหม่/);
+  assert.equal(await page.locator('#codesBody .code-app-preview').count(), 0);
+  assert.match(await page.locator('#codesBody').innerText(), /5 แอป/);
+  assert.match(await page.locator('#codesBody').innerText(), /ทุกแอป \+ ใหม่/);
   assert.equal(await page.locator('#codesBody img, #codesBody strong b').count(), 0);
 
   // Detail view is read-only, searchable, and dismissible without editing a code.
-  await page.locator('.code-app-link').first().click();
+  await page.locator('[aria-label="ดูแอปที่ปลดล็อกด้วยรหัส TEST01"]').click();
   assert.equal(await page.locator('#codeAppsDetail [data-picker-item]').count(), 5);
   assert.equal(await page.locator('#codeAppsDetail [data-picker-item]:enabled').count(), 0);
   await field(page.locator('#codeAppsDetail'), 'search').fill('020');

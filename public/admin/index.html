@@ -183,6 +183,34 @@ tr:hover td{background:#fafafa;}
 .code-app-previews{display:flex;align-items:center;gap:5px;margin-top:6px;max-width:280px;}
 .code-app-preview{display:block;min-width:0;max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#f1f5f9;border-radius:5px;padding:2px 6px;font-size:.75rem;}
 .code-app-more{font-size:.78rem;color:#64748b;white-space:nowrap;}
+.codes-heading,.code-list-footer,.code-bulk-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.codes-heading{margin-bottom:20px;}.codes-heading .page-title{margin:0;}.codes-heading-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.code-groups{display:flex;gap:7px;overflow-x:auto;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid #e2e8f0;}
+.code-groups .flt-chip{flex-shrink:0;}.code-groups small{margin-left:6px;opacity:.7;}
+.code-list-filters{display:grid;grid-template-columns:1fr 1fr minmax(180px,1.6fr) 1fr;gap:10px;margin:12px 0;}
+.code-list-filters label,.code-list-footer label{font-size:.78rem;color:#64748b;min-width:0;}
+.code-list-filters select{display:block;width:100%;max-width:none;margin-top:5px;min-width:0;}
+.code-list-filters .flt-select{max-width:none;}
+.codes-table .badge-red{background:#fee2e2;color:#b91c1c;}
+.code-groups .flt-chip{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#codeSearch::-webkit-search-cancel-button{-webkit-appearance:none;}
+.code-list-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0;font-size:.82rem;color:#64748b;}
+.code-bulk-bar{background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:.85rem;}
+.code-bulk-bar[hidden]{display:none;}.code-bulk-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.code-bulk-actions select{max-width:220px;}.codes-table{min-width:850px;}.codes-table td{padding:12px 10px;}
+.codes-table input[type="checkbox"]{width:17px;height:17px;accent-color:#2563eb;cursor:pointer;}
+.code-group-label{display:block;font-size:.75rem;color:#64748b;margin-top:4px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.code-scope-summary{display:flex;gap:5px;flex-wrap:wrap;max-width:285px;}
+.code-scope-summary .code-app-link{border:1px solid #dbeafe;background:#eff6ff;border-radius:6px;padding:4px 7px;font-size:.78rem;white-space:nowrap;}
+.code-row-actions{display:flex;gap:5px;align-items:center;}.code-row-actions .btn{margin:0!important;}
+.code-row-actions details{position:relative;}.code-row-actions summary{list-style:none;cursor:pointer;}.code-row-actions summary::-webkit-details-marker{display:none;}
+.code-action-menu{min-width:175px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px;margin-top:5px;}
+.code-action-menu button{display:block;width:100%;text-align:left;border:0;background:#fff;font:inherit;font-size:.82rem;padding:9px;border-radius:5px;cursor:pointer;}.code-action-menu button:hover{background:#f1f5f9;}
+.code-list-footer{padding-top:14px;margin-top:4px;border-top:1px solid #e2e8f0;font-size:.82rem;color:#64748b;}
+.code-group-editor{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0;}.code-group-editor input{flex:1;min-width:120px;}.code-group-editor .btn{flex-shrink:0;}
+.code-group-help{font-size:.84rem;color:#64748b;line-height:1.7;margin-bottom:14px;}.code-group-error{color:#dc2626;font-size:.85rem;min-height:24px;}
+@media(max-width:900px){.code-list-filters{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:520px){.codes-heading-actions{width:100%;}.codes-heading-actions .btn{flex:1;}.code-list-filters{grid-template-columns:minmax(0,1fr);}.code-list-filters select{font-size:16px;}.code-bulk-actions{width:100%;}.code-bulk-actions select{flex:1;min-width:0;}.code-list-footer .code-picker-pages{width:100%;justify-content:space-between;}}
 .code-modal{max-width:820px;max-height:88vh;max-height:88dvh;padding:0;display:flex;flex-direction:column;overflow:hidden;}
 .code-modal-head{padding:20px 24px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .code-modal-head h3{margin:0;}
@@ -3417,57 +3445,148 @@ async function delCmt(id) {
 // CODES — รหัสปลดล็อก
 // ══════════════════════════════════════════════════════════
 async function renderCodes() {
-  const [codesData, appsData, examsData] = await Promise.all([
+  const [codesData, appsData, examsData, worksheetsData] = await Promise.all([
     api.get('/codes'),
     api.get('/apps/admin/list'),
     api.get('/exam-apps/admin/list'),
+    api.get('/worksheets/admin/list'),
   ]);
   window._codesAll = codesData.codes || [];
   window._codesApps = appsData.apps || [];
   window._allApps = appsData.apps || [];
   window._codesExams = examsData;
-  window._codesFlt = { status:'all' };
-  const allApps = (appsData.apps || []).filter(a => a.locked);
+  window._codesWorksheets = worksheetsData.worksheets || [];
+  window._codeGroups = codesData.groups || [];
+  window._codesFlt = readCodeListView();
+  if (window._codesFlt.group && window._codesFlt.group !== 'ungrouped' && !window._codeGroups.some(g => String(g.id) === window._codesFlt.group)) window._codesFlt.group = '';
+  const validIds = new Set(window._codesAll.map(c => Number(c.id)));
+  window._codeSelection = new Set([...(window._codeSelection || [])].filter(id => validIds.has(id)));
 
   document.getElementById('content').innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div class="page-title" style="margin:0;">🔑 จัดการรหัสปลดล็อก</div>
-    <button class="btn btn-primary" onclick="openCodeModal(null)">+ สร้างรหัสใหม่</button>
+  <div class="codes-heading">
+    <div class="page-title">🔑 จัดการรหัสปลดล็อก</div>
+    <div class="codes-heading-actions"><button class="btn btn-outline" onclick="openCodeGroups()">📁 จัดการกลุ่ม</button>
+    <button class="btn btn-primary" onclick="openCodeModal(null)">+ สร้างรหัสใหม่</button></div>
   </div>
-  ${allApps.length===0 ? `<div class="alert alert-info">⚠️ ยังไม่มีแอปที่เปิดระบบล็อกไว้ ไปที่ <a href="#" onclick="nav('apps')">จัดการแอป</a> แล้วเปิด 🔒 ก่อน</div>` : ''}
-  <div class="card">
+  <div class="card" id="codesList">
+    <div class="code-groups" id="codeGroups" aria-label="กลุ่มรหัส"></div>
     <div class="flt-bar">
       <div class="flt-search">
         <span class="fs-ico">🔍</span>
-        <input id="codeSearch" type="text" placeholder="ค้นหารหัส หรือชื่อแพ็กเกจ..." oninput="filterCodes()" autocomplete="off">
-        <button class="fs-clr" id="codeSearchClr" onclick="document.getElementById('codeSearch').value='';filterCodes();document.getElementById('codeSearch').focus();" title="ล้าง">✕</button>
+        <input id="codeSearch" type="search" name="code-list-query" placeholder="ค้นหารหัส แพ็กเกจ ชื่อแอป ใบงาน หรือวิชา..." aria-label="ค้นหารหัสและเนื้อหาที่ปลดล็อก" value="${codeEscape(window._codesFlt.query)}" oninput="setCodeFilter('query',this.value)" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+        <button class="fs-clr" id="codeSearchClr" onclick="document.getElementById('codeSearch').value='';setCodeFilter('query','');document.getElementById('codeSearch').focus();" aria-label="ล้างคำค้น">✕</button>
       </div>
-      <div class="flt-chips">
-        ${[['all','ทั้งหมด'],['active','✅ ใช้งานได้'],['off','⏸ ปิด'],['expired','⏰ หมดอายุ'],['allapps','🌟 ปลดทุกแอป']].map(([v,l])=>
-          `<button class="flt-chip${v==='all'?' on':''}" data-st="${v}" onclick="setCodeStatus('${v}')">${l}</button>`).join('')}
-      </div>
-      <span class="flt-count" id="codeCount"></span>
+      <button class="btn btn-outline btn-sm" onclick="resetCodeFilters()">ล้างตัวกรอง</button>
+    </div>
+    <div class="code-list-filters">
+      <label>สถานะ<select class="flt-select" id="codeStatus" onchange="setCodeFilter('status',this.value)">${codeSelectOptions([['all','ทุกสถานะ'],['active','✅ ใช้งานได้'],['off','⏸ ปิดใช้งาน'],['expired','⏰ หมดอายุ'],['expiring','⌛ ใกล้หมดอายุใน 7 วัน']],window._codesFlt.status)}</select></label>
+      <label>ประเภทสิทธิ์<select class="flt-select" id="codeKind" onchange="setCodeFilter('kind',this.value)">${codeSelectOptions([['','ทุกประเภท'],['apps','🎮 แอป'],['worksheets','📄 ใบงาน'],['exams','📝 แอปข้อสอบ'],['allfuture','🌟 สิทธิ์แบบปลดทั้งหมด']],window._codesFlt.kind)}</select></label>
+      <label>แอป / ใบงาน / วิชา<select class="flt-select" id="codeContent" onchange="setCodeFilter('content',this.value)"></select></label>
+      <label>เรียงลำดับ<select class="flt-select" id="codeSort" onchange="setCodeFilter('sort',this.value)">${codeSelectOptions([['newest','ใหม่ล่าสุด'],['label','ชื่อแพ็กเกจ'],['code','รหัส'],['expiry','ใกล้หมดอายุก่อน']],window._codesFlt.sort)}</select></label>
+    </div>
+    <div class="code-list-meta"><span id="codeCount" role="status" aria-live="polite"></span><span>คลิกจำนวนเนื้อหาเพื่อดูรายชื่อ</span></div>
+    <div class="code-bulk-bar" id="codeBulk" hidden>
+      <strong id="codeSelectedCount"></strong><div class="code-bulk-actions">
+      <select class="flt-select" id="codeMoveGroup" aria-label="กลุ่มปลายทาง">${codeGroupOptions(null)}</select>
+      <button class="btn btn-primary btn-sm" id="codeMoveButton" onclick="moveSelectedCodes()">ย้ายกลุ่ม</button>
+      <button class="btn btn-outline btn-sm" onclick="clearCodeSelection()">ยกเลิกเลือก</button></div>
     </div>
     <div class="table-wrap">
-    <table>
-      <thead><tr><th>รหัส</th><th>ชื่อแพ็กเกจ</th><th>ปลดล็อก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+    <table class="codes-table">
+      <thead><tr><th><input type="checkbox" id="codeSelectPage" onchange="selectCodePage(this.checked)" aria-label="เลือกรหัสทั้งหมดในหน้านี้"></th><th>รหัส</th><th>ชื่อแพ็กเกจ / กลุ่ม</th><th>ปลดล็อก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
       <tbody id="codesBody"></tbody>
     </table>
     </div>
+    <div class="code-list-footer">
+      <label>แสดง <select class="flt-select" id="codePageSize" onchange="setCodeFilter('pageSize',Number(this.value))">${codeSelectOptions([[25,'25'],[50,'50'],[100,'100']],window._codesFlt.pageSize)}</select> รหัสต่อหน้า</label>
+      <div class="code-picker-pages"><button class="btn btn-outline btn-sm" id="codePrev" onclick="changeCodePage(-1)">← ก่อนหน้า</button><span id="codePage"></span><button class="btn btn-outline btn-sm" id="codeNext" onclick="changeCodePage(1)">ถัดไป →</button></div>
+    </div>
   </div>
-  <div class="card" style="background:#f8fafc;">
-    <div class="card-title" style="font-size:.9rem;">💡 วิธีใช้งาน</div>
-    <ul style="font-size:.88rem;color:#475569;line-height:2;padding-left:18px;">
-      <li>สร้างรหัส → กำหนดว่าปลดล็อกแอปไหนบ้าง → แชร์รหัสให้ผู้ที่จ่ายเงิน</li>
-      <li>รหัสเดียวสามารถปลดล็อกได้หลายแอปพร้อมกัน</li>
-      <li>แท็บ “แอปข้อสอบ” เลือกปลดทุกข้อสอบ รายวิชา หรือรายแอปได้ โดยสิทธิ์รายวิชารวมข้อสอบใหม่ในวิชานั้น</li>
-      <li>เปิด "VIP" เมื่อต้องการรวมแอปที่ล็อกและแอปใหม่ในอนาคต หรือเลือกเป็นรายการเพื่อให้สิทธิ์เฉพาะแอปปัจจุบัน</li>
-      <li>ตั้งวันหมดอายุสำหรับรหัสแบบรายเดือน/รายปี</li>
-      <li>ปิดรหัสได้ทันทีโดยไม่ต้องลบ</li>
-    </ul>
-  </div>`;
+  <p class="code-group-help">💡 ค้นหาชื่อเนื้อหาเพื่อดูรหัสที่ให้สิทธิ์ รวมรหัสแบบปลดทั้งหมดและปลดทั้งวิชา · เลือกหลายรหัสเพื่อย้ายกลุ่มได้ · การจัดกลุ่มคงสิทธิ์ปลดล็อกเดิม</p>`;
   window._codesData = codesData;
+  window._codeSearchIndex = new Map(window._codesAll.map(c => [c.id,codeSearchText(c)]));
+  renderCodeGroupChips();
+  renderCodeContentOptions();
   filterCodes();
+}
+
+function codeSelectOptions(options, selected) {
+  return options.map(([value,label]) => `<option value="${codeEscape(value)}" ${String(value) === String(selected) ? 'selected' : ''}>${codeEscape(label)}</option>`).join('');
+}
+function readCodeListView() {
+  let saved = window._codesFlt;
+  if (!saved) { try { saved = JSON.parse(sessionStorage.getItem('codeListView') || '{}'); } catch {} }
+  const view = {...{query:'',group:'',status:'all',kind:'',content:'',sort:'newest',page:1,pageSize:25},...saved};
+  for (const key of ['query','group','content']) if (typeof view[key] !== 'string') view[key] = '';
+  if (!['all','active','off','expired','expiring'].includes(view.status)) view.status = 'all';
+  if (!['','apps','worksheets','exams','allfuture'].includes(view.kind)) view.kind = '';
+  if (!['newest','label','code','expiry'].includes(view.sort)) view.sort = 'newest';
+  if (![25,50,100].includes(view.pageSize)) view.pageSize = 25;
+  if (!Number.isSafeInteger(view.page) || view.page < 1) view.page = 1;
+  return view;
+}
+function saveCodeListView() {
+  try { sessionStorage.setItem('codeListView',JSON.stringify(window._codesFlt)); } catch {}
+}
+function codeGroupOptions(selected) {
+  return codeSelectOptions([['','ยังไม่จัดกลุ่ม'],...(window._codeGroups || []).map(g => [g.id,g.name])],selected ?? '');
+}
+function renderCodeGroupChips() {
+  const codes = window._codesAll || [];
+  const groups = [['','ทั้งหมด',codes.length],['ungrouped','ยังไม่จัดกลุ่ม',codes.filter(c => !c.group_id).length],
+    ...(window._codeGroups || []).map(g => [String(g.id),g.name,codes.filter(c => Number(c.group_id) === Number(g.id)).length])];
+  document.getElementById('codeGroups').innerHTML = groups.map(([id,name,count]) => `<button type="button" class="flt-chip${window._codesFlt.group === id ? ' on' : ''}" aria-pressed="${window._codesFlt.group === id}" data-code-group="${codeEscape(id)}">${codeEscape(name)}<small>${count}</small></button>`).join('');
+  document.querySelectorAll('[data-code-group]').forEach(button => button.onclick = () => setCodeFilter('group',button.dataset.codeGroup));
+}
+function codeContentItems(kind) {
+  return kind === 'apps' ? window._codesApps || [] : kind === 'worksheets' ? window._codesWorksheets || [] : window._codesExams?.apps || [];
+}
+function renderCodeContentOptions() {
+  const kind = window._codesFlt.kind;
+  const sections = [['apps','🎮 แอป'],['worksheets','📄 ใบงาน'],['exams','📝 แอปข้อสอบ']].filter(([key]) => !kind || kind === 'allfuture' || kind === key);
+  const html = sections.map(([key,label]) => `<optgroup label="${label}">${codeSelectOptions(codeContentItems(key).map(item => [key + ':' + item.id,item.title]),window._codesFlt.content)}</optgroup>`).join('');
+  const categories = !kind || kind === 'exams' || kind === 'allfuture' ? `<optgroup label="📚 วิชาข้อสอบ">${codeSelectOptions((window._codesExams?.categories || []).map(cat => ['category:' + cat.id,cat.name]),window._codesFlt.content)}</optgroup>` : '';
+  const select = document.getElementById('codeContent');
+  select.innerHTML = '<option value="">ทุกเนื้อหา</option>' + html + categories;
+  if (![...select.options].some(option => option.value === window._codesFlt.content)) window._codesFlt.content = '';
+  select.value = window._codesFlt.content;
+}
+function setCodeFilter(key, value) {
+  window._codesFlt[key] = value;
+  window._codesFlt.page = 1;
+  window._codeSelection.clear();
+  if (key === 'kind') { window._codesFlt.content = ''; renderCodeContentOptions(); }
+  if (key === 'group') renderCodeGroupChips();
+  filterCodes();
+}
+function resetCodeFilters() {
+  window._codesFlt = null;
+  try { sessionStorage.removeItem('codeListView'); } catch {}
+  window._codesFlt = readCodeListView();
+  window._codeSelection.clear();
+  for (const [id,key] of [['codeSearch','query'],['codeStatus','status'],['codeKind','kind'],['codeSort','sort'],['codePageSize','pageSize']]) document.getElementById(id).value = window._codesFlt[key];
+  renderCodeGroupChips();
+  renderCodeContentOptions();
+  filterCodes();
+}
+function codeAllowsContent(c,kind,item) {
+  const ids = codeIds(c[kind === 'apps' ? 'app_ids' : kind === 'worksheets' ? 'worksheet_ids' : 'exam_app_ids']);
+  return ids.includes(String(item.id)) || !!item.locked && (ids.includes('all') || kind === 'exams' && codeIds(c.exam_category_ids).includes(String(item.category_id)));
+}
+function codeHasKind(c,kind) {
+  if (kind === 'allfuture') return codeIsAllApps(c);
+  return codeIds(c[kind === 'apps' ? 'app_ids' : kind === 'worksheets' ? 'worksheet_ids' : 'exam_app_ids']).length > 0 || kind === 'exams' && codeIds(c.exam_category_ids).length > 0;
+}
+function codeSearchText(c) {
+  const group = (window._codeGroups || []).find(g => Number(g.id) === Number(c.group_id));
+  const text = [c.code,c.label,group?.name];
+  for (const kind of ['apps','worksheets','exams']) {
+    for (const item of codeContentItems(kind)) if (codeAllowsContent(c,kind,item)) text.push(item.title,item.category);
+  }
+  for (const cat of window._codesExams?.categories || []) {
+    if (codeIds(c.exam_app_ids).includes('all') || codeIds(c.exam_category_ids).includes(String(cat.id))) text.push(cat.name);
+  }
+  return text.filter(Boolean).join(' ').normalize('NFC').toLocaleLowerCase('th');
 }
 
 function codeIds(value) {
@@ -3479,20 +3598,13 @@ function codeEscape(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 function codeAppsSummary(c) {
-  const ids = codeIds(c.app_ids);
-  const all = ids.includes('all');
-  const apps = window._codesApps || [];
-  const count = all ? apps.filter(a => a.locked).length : ids.length;
-  if (!all && !count) return '<span class="code-app-more">ไม่ได้เลือกแอป</span>';
-  const previews = ids.slice(0, 2).map(id => {
-    const app = apps.find(a => String(a.id) === id);
-    const title = app?.title || 'แอป #' + id;
-    return `<span class="code-app-preview" title="${codeEscape(title)}">${codeEscape(title)}</span>`;
+  const badges = [['apps','app_ids','🎮','แอป'],['worksheets','worksheet_ids','📄','ใบงาน'],['exams','exam_app_ids','📝','ข้อสอบ']].map(([kind,field,icon,unit]) => {
+    const ids = codeIds(c[field]), categories = kind === 'exams' ? codeIds(c.exam_category_ids) : [];
+    if (!ids.length && !categories.length) return '';
+    const label = ids.includes('all') ? `ทุก${unit} + ใหม่` : [ids.length ? `${ids.length} ${unit}` : '',categories.length ? `${categories.length} วิชา + ใหม่` : ''].filter(Boolean).join(' · ');
+    return `<button type="button" class="code-app-link" onclick="openCodeApps(${Number(c.id)},'${kind}')" aria-label="ดู${unit}ที่ปลดล็อกด้วยรหัส ${codeEscape(c.code)}">${icon} ${label}</button>`;
   }).join('');
-  return `<div class="code-app-summary">
-    <button type="button" class="code-app-link" onclick="openCodeApps(${Number(c.id)})" aria-label="ดูรายชื่อแอปในรหัส ${codeEscape(c.code)}">${all ? '🌟 ทุกแอป · รวมแอปใหม่' : count + ' แอป · ดูรายชื่อ'}</button>
-    <div class="code-app-previews">${all ? `<span class="code-app-more">ปัจจุบัน ${count} แอปที่ล็อก</span>` : previews + (count > 2 ? `<span class="code-app-more">+${count - 2}</span>` : '')}</div>
-  </div>`;
+  return `<div class="code-scope-summary">${badges || '<span class="code-app-more">ยังไม่มีสิทธิ์</span>'}</div>`;
 }
 function codeExpLabel(exp) {
   if (!exp) return '<span style="color:#059669;font-weight:700;">ไม่หมดอายุ</span>';
@@ -3504,9 +3616,7 @@ function codeIsExpired(c) {
   return !!(c.expires_at && new Date(c.expires_at) < new Date());
 }
 function codeIsAllApps(c) {
-  let arr = []; try { arr = JSON.parse(c.app_ids||'[]'); } catch {}
-  let ws  = []; try { ws  = JSON.parse(c.worksheet_ids||'[]'); } catch {}
-  return arr.includes('all') || ws.includes('all') || codeIds(c.exam_app_ids).includes('all');
+  return ['app_ids','worksheet_ids','exam_app_ids'].some(key => codeIds(c[key]).includes('all'));
 }
 
 function examScopeLabels(c) {
@@ -3516,52 +3626,171 @@ function examScopeLabels(c) {
   return [...cats.map(id => 'วิชา' + (data.categories.find(c => String(c.id) === id)?.name || '#' + id) + ' · รวมข้อสอบใหม่ในวิชานี้'),
     ...apps.map(id => data.apps.find(a => String(a.id) === id)?.title || 'แอปข้อสอบ #' + id)];
 }
-function codeExamSummary(c) {
-  const labels = examScopeLabels(c);
-  if (!labels.length) return '';
-  return `<div style="margin-top:8px;font-size:.82rem;"><button type="button" class="code-app-link" onclick="openCodeModal(${Number(c.id)},'exams')">📝 สิทธิ์แอปข้อสอบ</button><div>${labels.map(codeEscape).join('<br>')}</div></div>`;
-}
-
 function codeRowsHtml(arr) {
-  if (!arr.length) return `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบรหัสที่ตรงกับเงื่อนไข</td></tr>`;
+  if (!arr.length) return `<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">ไม่พบรหัสที่ตรงกับเงื่อนไข ลองล้างตัวกรองหรือสร้างรหัสใหม่</td></tr>`;
   return arr.map(c=>`<tr style="${!c.active?'opacity:.5;':''}">
+    <td><input type="checkbox" data-code-select="${Number(c.id)}" ${window._codeSelection.has(Number(c.id)) ? 'checked' : ''} onchange="toggleCodeSelection(${Number(c.id)},this.checked)" aria-label="เลือกรหัส ${codeEscape(c.code)}"></td>
     <td><code style="background:#f1f5f9;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:1px;">${codeEscape(c.code)}</code></td>
-    <td><strong>${codeEscape(c.label)}</strong></td>
-    <td>${codeAppsSummary(c)}${codeExamSummary(c)}</td>
+    <td><strong>${codeEscape(c.label)}</strong><span class="code-group-label">${codeEscape((window._codeGroups || []).find(g => Number(g.id) === Number(c.group_id))?.name || 'ยังไม่จัดกลุ่ม')}</span></td>
+    <td>${codeAppsSummary(c)}</td>
     <td>${codeExpLabel(c.expires_at)}</td>
-    <td>${c.active
-      ? '<span class="badge badge-green">✅ ใช้งานได้</span>'
-      : '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>'}</td>
-    <td style="white-space:nowrap;">
-      <button class="btn btn-outline btn-sm" title="สร้างอีเมลส่งรหัสให้ลูกค้า" onclick="openEmailModal(${c.id})">📧</button>
-      <button class="btn btn-outline btn-sm" style="margin-left:4px;" title="ร่างข้อความ Messenger ส่งรหัสให้ลูกค้า" onclick="openMsgrModal(${c.id})">💬</button>
-      <button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="openCodeModal(${c.id})" aria-label="แก้ไขรหัส ${codeEscape(c.code)}">✏️</button>
-      <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="delCode(${c.id},'${String(c.code).replace(/'/g,"\\'")}')">🗑</button>
-    </td>
+    <td>${!c.active ? '<span class="badge badge-gray">⏸ ปิดใช้งาน</span>' : codeIsExpired(c) ? '<span class="badge badge-red">⏰ หมดอายุ</span>' : '<span class="badge badge-green">✅ ใช้งานได้</span>'}</td>
+    <td><div class="code-row-actions">
+      <button class="btn btn-outline btn-sm" onclick="openCodeModal(${Number(c.id)})" aria-label="แก้ไขรหัส ${codeEscape(c.code)}">✏️</button>
+      <details><summary class="btn btn-outline btn-sm" aria-label="การทำงานอื่นสำหรับรหัส ${codeEscape(c.code)}">⋯</summary>
+      <div class="code-action-menu"><button onclick="openEmailModal(${Number(c.id)})">📧 ร่างอีเมล</button><button onclick="openMsgrModal(${Number(c.id)})">💬 ร่าง Messenger</button><button style="color:#dc2626;" onclick="delCode(${Number(c.id)})">🗑 ลบรหัส</button></div></details>
+    </div></td>
   </tr>`).join('');
 }
 
 function setCodeStatus(st) {
-  window._codesFlt.status = st;
-  document.querySelectorAll('.flt-chip[data-st]').forEach(c=>c.classList.toggle('on', c.dataset.st===st));
-  filterCodes();
+  setCodeFilter('status',st);
 }
 
 function filterCodes() {
-  const q  = (document.getElementById('codeSearch')?.value || '').trim().toLowerCase();
-  const st = window._codesFlt.status;
+  const view = window._codesFlt;
+  const q = view.query.trim().normalize('NFC').toLocaleLowerCase('th');
+  const st = view.status, now = Date.now();
   const clr = document.getElementById('codeSearchClr'); if (clr) clr.style.display = q ? 'block' : 'none';
   const out = (window._codesAll||[]).filter(c=>{
-    if (q && !(c.code||'').toLowerCase().includes(q) && !(c.label||'').toLowerCase().includes(q)) return false;
+    if (q && !q.split(/\s+/).every(term => (window._codeSearchIndex.get(c.id) || '').includes(term))) return false;
+    if (view.group === 'ungrouped' && c.group_id || view.group && view.group !== 'ungrouped' && String(c.group_id) !== view.group) return false;
     if (st==='active'  && (!c.active || codeIsExpired(c))) return false;
     if (st==='off'     &&  c.active) return false;
     if (st==='expired' && !codeIsExpired(c)) return false;
-    if (st==='allapps' && !codeIsAllApps(c)) return false;
+    if (st==='expiring' && (!c.active || !c.expires_at || Date.parse(c.expires_at) <= now || Date.parse(c.expires_at) > now + 7 * 86400000)) return false;
+    if (view.kind && !codeHasKind(c,view.kind)) return false;
+    if (view.content) {
+      const [kind,id] = view.content.split(':');
+      if (kind === 'category') {
+        if (!codeIds(c.exam_app_ids).includes('all') && !codeIds(c.exam_category_ids).includes(id) && !codeContentItems('exams').some(item => String(item.category_id) === id && codeAllowsContent(c,'exams',item))) return false;
+      } else {
+        const item = codeContentItems(kind).find(item => String(item.id) === id);
+        if (!item || !codeAllowsContent(c,kind,item)) return false;
+      }
+    }
     return true;
   });
-  document.getElementById('codesBody').innerHTML = codeRowsHtml(out);
-  const cnt = document.getElementById('codeCount');
-  if (cnt) cnt.textContent = `${out.length} / ${(window._codesAll||[]).length} รหัส`;
+  const compare = (a,b) => String(a || '').localeCompare(String(b || ''),'th',{numeric:true,sensitivity:'base'});
+  out.sort((a,b) => (view.sort === 'label' ? compare(a.label,b.label) : view.sort === 'code' ? compare(a.code,b.code) : view.sort === 'expiry' ? (a.expires_at ? Date.parse(a.expires_at) : Infinity) - (b.expires_at ? Date.parse(b.expires_at) : Infinity) : (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0)) || Number(b.id) - Number(a.id));
+  const pages = Math.max(1,Math.ceil(out.length / view.pageSize));
+  view.page = Math.min(view.page,pages);
+  window._codesVisible = out.slice((view.page - 1) * view.pageSize,view.page * view.pageSize);
+  document.getElementById('codesBody').innerHTML = codeRowsHtml(window._codesVisible);
+  document.getElementById('codeCount').textContent = `พบ ${out.length} จาก ${(window._codesAll||[]).length} รหัส`;
+  document.getElementById('codePage').textContent = `หน้า ${view.page} / ${pages}`;
+  document.getElementById('codePrev').disabled = view.page === 1;
+  document.getElementById('codeNext').disabled = view.page === pages;
+  updateCodeSelection();
+  saveCodeListView();
+}
+
+function changeCodePage(delta) { window._codesFlt.page = Math.max(1,window._codesFlt.page + delta); filterCodes(); }
+function toggleCodeSelection(id, checked) {
+  if (checked && window._codeSelection.size >= 1000) { toast('เลือกได้ครั้งละไม่เกิน 1,000 รหัส'); document.querySelector(`[data-code-select="${id}"]`).checked = false; return; }
+  checked ? window._codeSelection.add(id) : window._codeSelection.delete(id);
+  updateCodeSelection();
+}
+function selectCodePage(checked) {
+  for (const c of window._codesVisible) {
+    if (!checked) window._codeSelection.delete(Number(c.id));
+    else if (window._codeSelection.size < 1000) window._codeSelection.add(Number(c.id));
+  }
+  document.querySelectorAll('[data-code-select]').forEach(input => input.checked = window._codeSelection.has(Number(input.dataset.codeSelect)));
+  updateCodeSelection();
+}
+function clearCodeSelection() { window._codeSelection.clear(); selectCodePage(false); }
+function updateCodeSelection() {
+  const size = window._codeSelection.size;
+  document.getElementById('codeBulk').hidden = size === 0;
+  document.getElementById('codeSelectedCount').textContent = `เลือก ${size} รหัส`;
+  const page = document.getElementById('codeSelectPage');
+  const selected = window._codesVisible.filter(c => window._codeSelection.has(Number(c.id))).length;
+  page.checked = selected > 0 && selected === window._codesVisible.length;
+  page.indeterminate = selected > 0 && selected < window._codesVisible.length;
+  page.disabled = window._codesVisible.length === 0;
+}
+async function moveSelectedCodes() {
+  const button = document.getElementById('codeMoveButton');
+  if (button.disabled || !window._codeSelection.size) return;
+  button.disabled = true;
+  const res = await api.put('/codes/groups/move',{ids:[...window._codeSelection],group_id:document.getElementById('codeMoveGroup').value || null});
+  if (res.error) { button.disabled = false; toast('❌ ' + res.error); return; }
+  window._codeSelection.clear();
+  toast(`✅ ย้ายกลุ่ม ${res.moved} รหัสแล้ว`);
+  await safeRender(renderCodes,'codes');
+}
+
+function openCodeGroups() {
+  const groups = window._codeGroups || [];
+  document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event,this)"><div class="modal code-modal" role="dialog" aria-modal="true" aria-labelledby="codeGroupsTitle">
+    <div class="code-modal-head"><h3 id="codeGroupsTitle">📁 จัดการกลุ่มรหัส</h3><button class="btn btn-outline btn-sm" onclick="closeModal()" aria-label="ปิดจัดการกลุ่ม">✕</button></div>
+    <div class="code-modal-body"><p class="code-group-help">รหัสหนึ่งอยู่ได้หนึ่งกลุ่ม · เปลี่ยนชื่อกลุ่มแล้วรหัสยังอยู่ในกลุ่มเดิม · เมื่อลบกลุ่ม รหัสจะกลับไป “ยังไม่จัดกลุ่ม” พร้อมสิทธิ์เดิม</p>
+    <form class="code-group-editor" onsubmit="event.preventDefault();saveCodeGroup(null)"><input class="form-input" id="groupName-new" aria-label="ชื่อกลุ่มใหม่" placeholder="เช่น O-NET, ห้องเรียน, ทดลอง" maxlength="80" required><button class="btn btn-primary" type="submit">+ เพิ่มกลุ่ม</button></form>
+    <p class="code-group-error" id="codeGroupError" role="alert"></p>
+    ${groups.map(g => `<form class="code-group-editor" onsubmit="event.preventDefault();saveCodeGroup(${Number(g.id)})"><input class="form-input" id="groupName-${Number(g.id)}" aria-label="ชื่อกลุ่ม ${codeEscape(g.name)}" value="${codeEscape(g.name)}" maxlength="80" required><span>${window._codesAll.filter(c => Number(c.group_id) === Number(g.id)).length} รหัส</span><button class="btn btn-outline btn-sm" type="submit">บันทึกชื่อ</button><button class="btn btn-outline btn-sm" type="button" onclick="deleteCodeGroup(${Number(g.id)})" aria-label="ลบกลุ่ม ${codeEscape(g.name)}">🗑</button></form>`).join('') || '<p class="code-group-help">ยังไม่มีกลุ่ม เริ่มเพิ่มกลุ่มแรกได้ด้านบน</p>'}
+    </div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">เสร็จแล้ว</button></div></div></div>`;
+  document.getElementById('groupName-new').focus();
+}
+async function refreshCodeGroupData() {
+  const data = await api.get('/codes');
+  window._codesAll = data.codes || [];
+  window._codesData = data;
+  window._codeGroups = data.groups || [];
+  const group = window._codesFlt.group;
+  if (group && group !== 'ungrouped' && !window._codeGroups.some(g => String(g.id) === group)) window._codesFlt.group = '';
+  window._codeSearchIndex = new Map(window._codesAll.map(c => [c.id,codeSearchText(c)]));
+  renderCodeGroupChips();
+  document.getElementById('codeMoveGroup').innerHTML = codeGroupOptions(null);
+  filterCodes();
+}
+async function changeCodeGroup(action) {
+  const root = document.querySelector('.code-modal');
+  if (root.dataset.busy) return;
+  root.dataset.busy = 'true';
+  root.querySelectorAll('button').forEach(button => button.disabled = true);
+  try {
+    const res = await action();
+    if (res.error) { document.getElementById('codeGroupError').textContent = res.error; return; }
+    await refreshCodeGroupData();
+    openCodeGroups();
+  } catch (error) {
+    if (error.status !== 401) toast('❌ โหลดกลุ่มล่าสุดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่');
+  } finally {
+    delete root.dataset.busy;
+    root.querySelectorAll('button').forEach(button => button.disabled = false);
+  }
+}
+function saveCodeGroup(id) {
+  const name = document.getElementById('groupName-' + (id || 'new')).value;
+  return changeCodeGroup(() => id ? api.put('/codes/groups/' + id,{name}) : api.post('/codes/groups',{name}));
+}
+function deleteCodeGroup(id) {
+  const group = window._codeGroups.find(g => Number(g.id) === id);
+  if (group && confirm(`ลบกลุ่ม “${group.name}”? รหัสในกลุ่มจะย้ายไป “ยังไม่จัดกลุ่ม” และยังปลดล็อกได้ตามสิทธิ์เดิม`)) return changeCodeGroup(() => api.delete('/codes/groups/' + id));
+}
+async function createCodeGroupInForm() {
+  const button = document.getElementById('cAddGroup');
+  if (button.disabled) return;
+  const root = button.closest('.code-modal');
+  const save = document.getElementById('cSave');
+  button.disabled = true;
+  save.disabled = true;
+  const name = document.getElementById('cNewGroup').value;
+  const res = await api.post('/codes/groups',{name});
+  button.disabled = false;
+  save.disabled = false;
+  if (res.error) { toast('❌ ' + res.error); return; }
+  window._codeGroups.push({id:res.id,name:res.name});
+  if (root.isConnected) {
+    root.querySelector('#cGroup').innerHTML = codeGroupOptions(res.id);
+    root.querySelector('#cNewGroup').value = '';
+  }
+  if (document.getElementById('codeMoveGroup')) {
+    document.getElementById('codeMoveGroup').innerHTML = codeGroupOptions(null);
+    renderCodeGroupChips();
+  }
+  toast('✅ เพิ่มกลุ่มแล้ว');
 }
 
 // เก็บรายการที่เลือกแยกจาก DOM เพื่อไม่ให้การค้นหา/แบ่งหน้าทำสิทธิ์เดิมหาย
@@ -3695,17 +3924,19 @@ function updateCodeModalSummary() {
   summary.textContent = label(state.apps, 'แอป') + ' · ' + label(state.worksheets, 'ใบงาน');
   if (state.exams) summary.textContent += ' · ' + label(state.exams, 'แอปข้อสอบ') + ' + ' + state.examCategories.size + ' วิชา';
 }
-function openCodeApps(id) {
+function openCodeApps(id, kind = 'apps') {
   const c = (window._codesAll || []).find(code => Number(code.id) === Number(id));
   if (!c) return;
-  const ids = codeIds(c.app_ids);
-  const items = (window._codesApps || []).filter(item => ids.includes('all') ? item.locked : ids.includes(String(item.id)));
-  const picker = createCodePicker(items, ids, 'apps', true);
+  const ids = codeIds(c[kind === 'apps' ? 'app_ids' : kind === 'worksheets' ? 'worksheet_ids' : 'exam_app_ids']);
+  const items = codeContentItems(kind).filter(item => codeAllowsContent(c,kind,item));
+  const selected = ids.includes('all') ? ids : [...new Set([...ids,...items.map(item => String(item.id))])];
+  const picker = createCodePicker(items, selected, kind, true);
+  const title = kind === 'apps' ? '🎮 แอปที่ปลดล็อกได้' : kind === 'worksheets' ? '📄 ใบงานที่ปลดล็อกได้' : '📝 ข้อสอบที่ปลดล็อกได้';
   document.getElementById('modal').innerHTML = `<div class="modal-ov" onclick="closeModalSafe(event, this)">
     <div class="modal code-modal" role="dialog" aria-modal="true" aria-labelledby="codeAppsTitle">
-      <div class="code-modal-head"><div><h3 id="codeAppsTitle">🎮 แอปที่ปลดล็อกได้</h3><p class="code-modal-sub">${codeEscape(c.code)} · ${codeEscape(c.label)}</p></div><button type="button" class="btn btn-outline btn-sm" onclick="closeModal()" aria-label="ปิดรายชื่อแอป">✕</button></div>
-      <div class="code-modal-body">${codePickerMarkup(picker, 'codeAppsDetail')}</div>
-      <div class="modal-footer"><span class="code-modal-summary">ดูรายชื่อแอปในรหัสนี้</span><button type="button" class="btn btn-outline" onclick="closeModal()">ปิด</button></div>
+      <div class="code-modal-head"><div><h3 id="codeAppsTitle">${title}</h3><p class="code-modal-sub">${codeEscape(c.code)} · ${codeEscape(c.label)}</p></div><button type="button" class="btn btn-outline btn-sm" onclick="closeModal()" aria-label="ปิดรายชื่อเนื้อหา">✕</button></div>
+      <div class="code-modal-body">${kind === 'exams' ? `<p class="code-group-help">${examScopeLabels(c).map(codeEscape).join('<br>')}</p>` : ''}${codePickerMarkup(picker, 'codeAppsDetail')}</div>
+      <div class="modal-footer"><span class="code-modal-summary">รายชื่อเนื้อหาในรหัสนี้</span><button type="button" class="btn btn-outline" onclick="closeModal()">ปิด</button></div>
     </div></div>`;
   bindCodePicker(picker, 'codeAppsDetail');
   document.querySelector('#codeAppsDetail [data-picker-search]').focus();
@@ -3719,6 +3950,7 @@ async function openCodeModal(id, initialTab) {
     window._allApps = ad.apps || [];
     window._codesApps = ad.apps || [];
     window._codesExams = ed;
+    window._codeGroups = d.groups || [];
     const state = {
       apps:createCodePicker(ad.apps || [], c?.app_ids, 'apps'),
       worksheets:createCodePicker(wd.worksheets || [], c?.worksheet_ids, 'worksheets'),
@@ -3749,6 +3981,11 @@ async function openCodeModal(id, initialTab) {
             <label class="form-label" for="cLabel">ชื่อแพ็กเกจ</label>
             <input type="text" class="form-input" id="cLabel" value="${codeEscape(c?.label)}" placeholder="เช่น VIP รายเดือน">
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cGroup">กลุ่มรหัส</label>
+          <select class="form-input" id="cGroup">${codeGroupOptions(c ? c.group_id : window._codesFlt?.group !== 'ungrouped' ? window._codesFlt?.group : null)}</select>
+          <div class="code-group-editor"><input class="form-input" id="cNewGroup" placeholder="เพิ่มกลุ่มใหม่..." aria-label="ชื่อกลุ่มใหม่" maxlength="80"><button type="button" class="btn btn-outline btn-sm" id="cAddGroup" onclick="createCodeGroupInForm()">+ เพิ่มกลุ่ม</button></div>
         </div>
         <div class="form-group">
           <label class="form-label" for="cDuration">อายุการใช้งานรหัส</label>
@@ -3867,6 +4104,7 @@ async function saveCode(id) {
   }
   const body = {
     code, label, app_ids: appIds, worksheet_ids: wsIds,
+    group_id:document.getElementById('cGroup').value || null,
     exam_app_ids:selectedIds(state.exams),
     exam_category_ids:[...state.examCategories].map(Number),
     expires_at,
@@ -3884,8 +4122,10 @@ async function saveCode(id) {
 }
 
 async function delCode(id, code) {
+  code = code ?? (window._codesAll || []).find(c => Number(c.id) === Number(id))?.code ?? '';
   if (!confirm(`ลบรหัส "${code}" ?`)) return;
-  await api.delete('/codes/'+id);
+  const res = await api.delete('/codes/'+id);
+  if (res.error) { toast('❌ ' + res.error); return; }
   toast('🗑 ลบรหัสแล้ว'); renderCodes();
 }
 
